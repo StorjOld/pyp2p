@@ -4,6 +4,7 @@ from pyp2p.dht_msg import DHT
 from pyp2p.net import *
 import random
 from threading import Thread
+import time
 
 #if sys.version_info >= (3,0,0):
 
@@ -141,13 +142,13 @@ class test_net(TestCase):
 
 
     def test_00000002(self):
-        #Test add node.
+        # Test add node.
         net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
         net.disable_advertise()
         net.disable_bootstrap()
         net.start()
 
-        #Test passive outbound connection.
+        # Test passive outbound connection.
         net.add_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"], "passive")
         assert(len(net.outbound) == 1)
         assert(net.get_connection_no() == 1)
@@ -156,18 +157,46 @@ class test_net(TestCase):
             cons.append(con)
         assert(len(cons))
 
-        #Test active simultaneous connection.
-        #NAT punching node 1:
-        con = net.add_node("192.187.97.131", 0, "simultaneous")
-        if con == None:
-            #This node is not behind a NAT.
-            con = net.add_node("162.218.239.6", 0, "simultaneous")
-            if con == None:
+        # 162.218.239.6
+
+        def threaded_add_node(node_ip, node_port, node_type, net, events):
+            def add_node(node_ip, node_port, node_type, net, events):
+                con = net.add_node(node_ip, node_port, node_type)
+                if con != None:
+                    events["success"](con)
+
+            t = Thread(target=add_node, args=(node_ip, node_port, node_type, net, events))
+            t.start()
+
+        cons = []
+        def success_wrapper(cons):
+            def success(con):
+                cons.append(con)
+
+            return success
+
+        events = {
+            "success": success_wrapper(cons)
+        }
+
+        # Test active simultaneous connection.
+        # NAT punching node 1:
+        timeout = time.time() + 15
+        threaded_add_node("192.187.97.131", 0, "simultaneous", net, events)
+        while not len(cons) and time.time() <= timeout:
+            time.sleep(1)
+
+        if not len(cons):
+            timeout = time.time() + 15
+            threaded_add_node("162.218.239.6", 0, "simultaneous", net, events)
+
+            while not len(cons) and time.time() < timeout:
+                time.sleep(1)
                 assert(0)
-            else:
+
+        if len(cons):
+            for con in cons:
                 con.close()
-        else:
-            con.close()
 
         def failure_notify(con):
             assert(0)
@@ -175,13 +204,13 @@ class test_net(TestCase):
         def success_notify(con):
             con.close()
 
-        #Test threading hasn't broken the timing.
+        # Test threading hasn't broken the timing.
         events = {
             "failure": failure_notify,
             "success": success_notify
         }
 
-        #This is the not-NATed test node.
+        # This is the not-NATed test node.
         net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMUG79qiBu/aos6tMVYAAAAAWMYQkz0OjrI=", events)
 
         assert(net.validate_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"]))

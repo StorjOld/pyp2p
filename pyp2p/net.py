@@ -319,9 +319,7 @@ class Net():
                 try:
                     self.rendezvous.timeout = timeout
                     con = self.rendezvous.simultaneous_challenge(node_ip, node_port, "TCP")
-                    print("yyyy")
                 except Exception as e:
-                    print("xxxx")
                     error = parse_exception(e)
                     log_exception(self.error_log_path, error)
                     return None
