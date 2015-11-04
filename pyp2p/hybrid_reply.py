@@ -1,18 +1,23 @@
 """
-Defines a reply from the hybrid protocol. Used to add more dynamic routing / parsing behaviour for protocol replies.
+Defines a reply from the hybrid protocol. Used to add more dynamic routing /
+ parsing behaviour for protocol replies.
 
 Recipient:
-    source - return reply to connection responsible for sending message that resulted in this reply
+    source - return reply to connection responsible for sending message that
+     resulted in this reply
     everyone - broadcast reply to entire network
-    route - open a new connection to one of the routes and send the reply to that
+    route - open a new connection to one of the routes and send the reply
+     to that
 
-Todo: you need to return a special kind of hybrid reply that has a custom function that must evaluate to true for the reply to be broadcast.
+Todo: you need to return a special kind of hybrid reply that has a custom
+ function that must evaluate to true for the reply to be broadcast.
 """
 
 import time
 
 class HybridReply():
-    def __init__(self, msg, network, recipient, retransmit_interval=0, record_seen=1):
+    def __init__(self, msg, network, recipient, retransmit_interval=0,
+                 record_seen=1):
         self.msg = msg
         self.network = network
         self.recipient = recipient
@@ -44,14 +49,16 @@ class HybridReply():
         self.status_checker = func
 
     def to_str(self):
-        s = "%s %s %s %s %s" % (self.network, self.recipient, str(self.routes), str(self.source_con), self.msg)
+        s = "%s %s %s %s %s" % (self.network, self.recipient, str(self.routes),
+                                str(self.source_con), self.msg)
         return s
 
     def add_routes(self, routes):
         self.routes = routes
 
     def copy(self):
-        copied_hybrid_reply = HybridReply(self.msg, self.network, self.recipient)
+        copied_hybrid_reply = HybridReply(self.msg, self.network,
+                                          self.recipient)
         copied_hybrid_reply.source_con = self.source_con
         copied_hybrid_reply.routes = self.routes
         return copied_hybrid_reply

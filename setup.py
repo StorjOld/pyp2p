@@ -8,7 +8,7 @@ setup(
     author='Matthew Roberts',
     author_email='matthew@roberts.pm',
     license='MIT',
-    packages=find_packages(exclude=('tests','docs')),
+    packages=find_packages(exclude=('tests', 'docs')),
     install_requires=[
         'netifaces',
         'ntplib',

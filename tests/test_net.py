@@ -5,18 +5,21 @@ from pyp2p.net import *
 import random
 from threading import Thread
 
-#if sys.version_info >= (3,0,0):
+# if sys.version_info >= (3,0,0):
+
 
 class test_net(TestCase):
     def test_00000002(self):
-        #Test add node.
-        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
+        # Test add node.
+        net = Net(debug=1, nat_type="preserving", node_type="simultaneous",
+                  net_type="direct")
         net.disable_advertise()
         net.disable_bootstrap()
         net.start()
 
-        #Test passive outbound connection.
-        net.add_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"], "passive")
+        # Test passive outbound connection.
+        net.add_node(forwarding_servers[0]["addr"],
+                     forwarding_servers[0]["port"], "passive")
         assert(len(net.outbound) == 1)
         assert(net.get_connection_no() == 1)
         cons = []
@@ -24,11 +27,11 @@ class test_net(TestCase):
             cons.append(con)
         assert(len(cons))
 
-        #Test active simultaneous connection.
-        #NAT punching node 1:
+        # Test active simultaneous connection.
+        # NAT punching node 1:
         con = net.add_node("192.187.97.131", 0, "simultaneous")
         if con == None:
-            #This node is not behind a NAT.
+            # This node is not behind a NAT.
             con = net.add_node("162.218.239.6", 0, "simultaneous")
             if con == None:
                 assert(0)

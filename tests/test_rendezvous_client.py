@@ -3,14 +3,16 @@ from pyp2p.lib import *
 from pyp2p.rendezvous_client import *
 import random
 
-#if sys.version_info >= (3,0,0):
+# if sys.version_info >= (3,0,0):
+
 
 class test_rendezvous_client(TestCase):
     def test_00001(self):
         from pyp2p.net import rendezvous_servers
-        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        client = RendezvousClient(nat_type="preserving",
+                                  rendezvous_servers=rendezvous_servers)
 
-        #attend_fight (Not tested)
+        # attend_fight (Not tested)
 
         ret = client.sequential_connect()
         assert(ret != None)
@@ -22,10 +24,10 @@ class test_rendezvous_client(TestCase):
 
         assert(client.leave_fight())
 
-        #throw_punch (Not tested)
-        #simultaneous_fight (Not tested)
+        # throw_punch (Not tested)
+        # simultaneous_fight (Not tested)
 
-        #simultaneous_challenge (Not tested)
+        # simultaneous_challenge (Not tested)
 
         assert(client.parse_remote_port("REMOTE TCP 50000") == 50000)
         assert(client.parse_remote_port(u"REMOTE TCP 50000") == 50000)

@@ -142,10 +142,12 @@ class UPnP():
                 spot = rh.index(host)
                 hdata = pdata[spot][1]
                 url = 'http://' + host + ':'
-                port = re.findall("http:\/\/[0-9\.]+:(\d.+)", hdata.decode("utf-8"))
+                port = re.findall("http:\/\/[0-9\.]+:(\d.+)",
+                                  hdata.decode("utf-8"))
                 url += port[0]
                 p = urlopen(url, timeout=self.timeout)
-                rd = re.findall('schemas-upnp-org:device:([^:]+)', p.read().decode("utf-8"))
+                rd = re.findall('schemas-upnp-org:device:([^:]+)',
+                                p.read().decode("utf-8"))
                 if rd[0] == 'InternetGatewayDevice':
                     gateway_addr = url
                     break

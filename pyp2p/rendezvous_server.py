@@ -107,7 +107,7 @@ class RendezvousProtocol(LineReceiver):
         port = re.findall("^[0-9]+$", str(port))
         if len(port):
             port = int(port[0])
-            if port > 0 and port <= 65535:
+            if 0 < port <= 65535:
                 return 1
         return 0
 
