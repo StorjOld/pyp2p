@@ -37,7 +37,7 @@ from .lib import *
 error_log_path = "error.log"
 
 class Sock:
-    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=1):
+    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=0):
         self.reply_filter = None
         self.buf = u""
         self.max_buf = 1024 * 1024 #1 MB.
@@ -133,7 +133,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     def reconnect(self):
         if not self.connected:
             if self.addr != None and self.port != None:
-                return self.connect(self.addr, self.port)
+                try:
+                    return self.connect(self.addr, self.port)
+                except:
+                    self.connected = 0
 
     #Blocking (regardless of socket mode.)
     def connect(self, addr, port):
@@ -158,9 +161,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
         try:
             self.s.connect((addr, int(port)))
-            self.connected = 1
             if not self.blocking:
                 self.set_blocking(self.blocking, self.timeout)
+            self.connected = 1
         except Exception as e:
             self.close()
             error = parse_exception(e)
