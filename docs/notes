@@ -1,0 +1,149 @@
+* It occurs to me that there's another way to get two nodes to talk to each other directly without NAT traversal stuff. If a client needs to download shards from a farmer who can't be reached: they could broadcast a special message to the P2P network instructing the farmer to make a connection back to them. Reverse connection. So now clients can download files from farmers if they can forward ports and the odds of achieving a connection go up without relying on a proxy for file transfer. 
+
+So long as one side can be reached: both sides can communicate.
+
+* Failing:
+    * Manual forwarding
+    * UPnP
+    * NATPMP
+    * TCP Hole punching and
+    * Reverse connect
+
+We can fall back on a simple relay server (maybe even using a p2p architecture since data verification is basically solved with this platform.)
+
+To support this last functionality: maybe an extra field in the UNL could be added indicating an IP (or two) of a neighbouring node that could serve as a proxy in the event of a failure. Maybe also add some kind of public key for encrypted communication.
+
+[no_number_of_neighbours] [neighbour_unl] ...
+
+Neighbour_urls need to be passive nodes to avoid endless proxy routes. Passive nodes should not include a list of neighbours.
+
+How to avoid DoS attacks?
+    * Sim:
+        * Reduce sleep intervals for hole punching
+        * Reduce sleep for add_node
+        * don't connect to the same unl twice
+        * probably needs to be thread based but thats a problem with sim open
+        * this design needs to serve a large number of connections and without delay -- even if the DoS problem with syn open is solved it isn't a good candidate as a NAT traversal technique for storj. Prioritize:
+            1. Disable sim open
+            2. Reverse connect * no - useful for the lib but for this purpose isnt needed
+            3. Neighbour proxying ( * no
+            4. Rendezvous server proxying * no 
+        * Will proxying work well for this design?
+            * Bandwidth costs money and this design is about fair economic incentives for everything. Proxying doesn't make sense.
+        * Does allowing a storjnode to store data if it has no active way for clients to connect to it make sense?
+            * Broadcasting data chunks isn't going to scale.
+            * The nodes need to be contacted directly to distribute data chunks with some kind of overlay network
+                * Not necessarily: the same reverse connect approach can be used by the storing client and compound that with shard redunancy and suddenly there is an alternative way around NATs without proxying or sim open. This provides a (plausible) rational for coding reverse connect but UDP hole punching would probably still be required ...
+                    * Are the shards split across nodes?
+                        * Storing copies of the same shard on the same node wouldn't make sense. And they would need to be for network reliability right? Proof of reundancy copies that. Which means there is now a rational for reverse connections and allowing farmers behind a NAT to enter the network
+
+                * Will reverse connections be fast enough?
+                    * It's a slight overhead but still allows for a large connection number.
+
+                * What's the easier way to do UDP hole punching?
+                    * It -may- be possible to use the DHT that Fabian was working on
+                    * Most likely something custom will be needed
+                    * This is obviously only needed to support reverse connect. You need this if you will allow NATed farmers
+                    
+        * Make UNL.connect multi-threaded for passive connections ONLY (basically ensure that simultaneous cons are done in the main thread and not in a seperate thread.)
+        * MAke UNL.connect callback based: add a success and failure function so the main software can go off and do other things.
+        * It might be possible to use a modifed rendezvous server to route the reverse connect requests. This seems like the simplest approach
+            * What about using nodes in the P2P network directly connected to a given target to relay the reverse connection requests? This would require creating some kind of overlay network but its the best alternative:
+                * Rendezvous server will get clogged since you would need to keep the connection alive and
+                * Broadcasts won't work because it uses up too much con
+                * Solution use the DHT:
+                    * UNL : [sha256 hash of neighbour UNL] ...
+                    * dht[sha256[neighbourunl]] = neoughbour UNL
+                    * Might be easier just to include a list of neighbour UNLs
+
+        * Bucket algorithm:
+            [ ] [ ] [ ] [ ] [ ]
+            * n = 6, Check first bucket
+            * full, go to nth bucket
+                * empty, go to 2 % nth bucket
+                    * 
+                * n += 6, go to nth bucket
+
+            * It might just be easier to centralize this
+                * UDP-based rendezvous server spcifically for p2p subnets could span to thousands of nodes and would be easy to split up 
+ 
+        * Maybe don't remove sim open in spite of its problems. Rely on it as a moon shot, an absolute last resort when everything else has failed.
+
+        * PHP routing tables script to store neighbours.
+            * How slow is DHT lookup?
+                * Seems slow for put operations but fast for GET -- could definitely work to store the routing tables.
+            * Does this work?
+            * scability
+                * Only nodes who aren't passive will store neighbours here so it might not be that many.
+
+        * Does the subnet server idea work?
+
+
+                
+            * Actually, depends on the overlay
+        * What should the connection overlay be?
+            * Theoretically, the whole overlay could be done with multiple rendezvous servers running on VPS. Would need code to return how many nodes in the passive structure though
+
+
+        * What is the ideal overlay for shards?
+            * It isn't the DHT (as you won't know where it will end up and that's memory-based)
+            * DHT for meta-data maybe
+        * Is asking them to port forward and showing them an error message in the UI for driveshare an acceptable solution?
+            * You will have to ask Shawn this. I suspect it will be fine for the MVP
+
+        * You might need to modify UNL to force a slave relationship otherwise the metadisk UI will have to wait on them to connect. Allow manual master. simplify it as this by default. manual overwrite will have the double-sended connect thing.
+
+    * Passive: not much of a problem
+
+* If there's no neighbours it should fall back on using the rendezvous server as the proxy
+
+Is this secure (connecting back to anyone?) After connection request the host can ask the node if it initiated the connection: if it didn't then blacklist it from future requests. This will stop a reflective attack.
+
+* Direct connect:
+
+My direct connect design needs both sides of the con to make an opposite call within a similar time frame. This means there needs to be some way to coordinate connection requests. Maybe UDP would be perfect for this. Just send like 10 packets. One of them is bound to get through.
+
+
+How does reverse connect work with storing data?
+1. Node broadcasts storage request to broadcast channel listing their UNL.
+2. Farmers connect directly to the UNL if it's passive (force master) otherwise they hash the UNL. neighbours = unl[hash], farmers send a connect back request to Node's neighbours instructing the neighbours to route the forwarding connect to Node instructing node to UNL connect to the farmer (don't force master)
+3. Farmer sends offer to resulting connection.
+4. Node accepts and starts sending shards if agreeable.
+
+How does reverse connect work with downloading data?
+1. Node consults dht to retrieve farmer's UNL details.
+2. Node connects directly to farmer if they're passive (force master) otherwise they has the UNL and retrieve neighbours from DHT: neighbours = unl[hash]
+...
+
+
+Enabling simultaneous open: Line: self.rendezvous.attend_fight(self.rendezvous.mappings, candidate_ip  ... in net has a sleep in it that will block the main thread. If there was a way to seperate this it would be safe to enable it. calls to unl.connect would need to be multi-threaded as noted previously
+
+If they can't connect:
+There are plenty of other farmer / client combinations and shards are  distributed. This will work for both read and write without requring crazy obscure NAT techniques and without needed 100% reliability with NAT traversal. The network simply routes around it.
+
+Whether go with sim open or not:
+* It's a last resort and will only occur for sim - sim clients. Just needs some basic queing code I guess.
+
+Now decide 100% on relay channels: does the subnet server idea work or is there a better way?
+
+
+------------------------------------
+
+
+Ok prepare for text bomb
+
+matthewr [10:57 PM]
+To update you a little on the p2p stuff I've been doing: I spent today seriously thinking about the requirements for this project, specifically that this software requires a large number of direct node-to-node communication with a high level of reliability (unlike a flooding network like Bitcoin.) I ended up realising my direct connect approach needed work for this project, but in the process I think I've come up with a really simple design for getting nodes to talk to each other over TCP without all the hackiness or messiness of doing NAT traversal.
+
+It's based on 2 key premises: a connection has two sides and shards are redundant. When you put that together you can build quite a robust direct connect architecture by using reverse connection. So lets say Alice wants to talk to Bob, but Bob is behind a NAT. Alice can send Bob a special request to connect to HER and so long as Alice is reachable the two can communicate. This has quite large implications for reliability when you consider redundancy of shards. It means that clients can interact with NATed farmers and vis-a-versa. But it gets better than that: if neither of them can interact: because shards are distributed across multiple nodes, NATed farmers have their share of non-NATed clients to connect to them, and NATed clients have their share of non-NATed farmers.
+
+How it works is this: nodes store a copy of their non-NATed neighbours in the DHT. To send a reverse connect packet to a NATed node: you lookup their address tuple in the DHT and send the request to all their neighbours. That way, you don't have to route the request through the entire network for every connection and it has natural load balancing. I also did some tests and it seems that while writing to the DHT is quite slow - reading is quite fast - so when falling back to reverse connect for connections there shouldn't be any bottle necks.
+
+Just wondering if I've missed any serious issues with this architecture otherwise I'll probably add this feature to my networking lib.
+
+matthewr [10:58 PM]
+Oh I missed something too: also combine that with showing a simple warning in the UI urging them to forward by saying that some nodes might not be able to communicate with them if they don't fix this.
+
+matthewr [10:59 PM]
+The overall approach now doesn't need 100% forwarding reliability
+
