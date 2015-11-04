@@ -133,7 +133,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     def reconnect(self):
         if not self.connected:
             if self.addr != None and self.port != None:
-                return self.connect(self.addr, self.port)
+                try:
+                    return self.connect(self.addr, self.port)
+                except:
+                    self.connected = 0
 
     #Blocking (regardless of socket mode.)
     def connect(self, addr, port):
@@ -158,9 +161,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
         try:
             self.s.connect((addr, int(port)))
-            self.connected = 1
             if not self.blocking:
                 self.set_blocking(self.blocking, self.timeout)
+            self.connected = 1
         except Exception as e:
             self.close()
             error = parse_exception(e)
@@ -276,6 +279,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     err = e.args[0]
                     self.debug_print(err)
                     if err == "timed out":
+                        repeat = 0
                         break
                 except ssl.SSLError as e:
                     #Will block on non-blocking SSL sockets.
@@ -323,9 +327,15 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
                     chunk_no += 1
 
-            repeat = 0
+            # Repeat is already set -- manual skip.
+            if not repeat:
+                break
+            else:
+                repeat = 0
+
+            # Block until there's a full reply or there's a timeout.
             if self.blocking:
-                if fixed_limit == None:
+                if fixed_limit == None and encoding == "unicode":
                     #Partial response.
                     if self.delimiter not in self.buf:
                         repeat = 1
@@ -466,8 +476,8 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     #Receives a new message delimited by a new line.
     #Blocking or non-blocking.
-    def recv_line(self):
-        t = time.time()
+    def recv_line(self, timeout=2):
+        t = time.time() + timeout
         while True:
             self.update()
 
@@ -475,7 +485,12 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             if not self.connected:
                 return u""
 
+            # Non-blocking.
             if not ((not len(self.replies) or len(self.buf) >= self.max_buf) and self.blocking):
+                break
+
+            # Timeout elapsed.
+            if time.time() >= t and self.blocking:
                 break
 
         if self.blocking:
@@ -533,7 +548,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
         #Execute callbacks on replies.
         if self.reply_filter != None:
-            print("Attempting to filter replies.")
             replies = list(filter(self.reply_filter, self.replies))
         else:
             replies = self.replies

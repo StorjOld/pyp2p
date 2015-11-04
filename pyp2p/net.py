@@ -336,6 +336,8 @@ class Net():
                     }
                     self.outbound.append(node)
                     self.debug_print("SUCCESS")
+                else:
+                    self.debug_print("FAILURE")
 
         #Passive outbound -- easiest to connect to.
         if node_type == "passive":
@@ -351,6 +353,7 @@ class Net():
                 self.outbound.append(node)
                 self.debug_print("SUCCESS")
             except Exception as e:
+                self.debug_print("FAILURE")
                 error = parse_exception(e)
                 self.debug_print(error)
                 log_exception(self.error_log_path, error)
@@ -419,7 +422,7 @@ class Net():
 
                 #Retrieve random nodes to bootstrap with.
                 rendezvous_con.send_line("BOOTSTRAP " + str(self.max_outbound * 2))
-                choices = rendezvous_con.recv_line()
+                choices = rendezvous_con.recv_line(timeout=2)
                 if choices == "NODES EMPTY":
                     rendezvous_con.close()
                     self.debug_print("Node list is empty.")

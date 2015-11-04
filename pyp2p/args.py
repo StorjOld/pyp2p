@@ -1,6 +1,7 @@
 import argparse
+import re
 
-if __name__ == "storjnode.network.file_transfer":
+if re.match("^pyp2p", __name__) != None:
     #Setup parser.
     parser = argparse.ArgumentParser(prog='pyp2p')
 
