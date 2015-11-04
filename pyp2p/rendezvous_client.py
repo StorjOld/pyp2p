@@ -133,7 +133,7 @@ class RendezvousClient:
         #Receive port mapping.
         msg = "SOURCE TCP %s" % (str(mappings[0]["source"]))
         con.send_line(msg)
-        reply = con.recv_line()
+        reply = con.recv_line(timeout=2)
         remote_port = self.parse_remote_port(reply)
         if not remote_port:
             return None
@@ -365,11 +365,13 @@ class RendezvousClient:
         #Tell server to list ourselves as a candidate for node.
         msg = "CANDIDATE %s %s %s" % (node_ip, str(proto), predictions)
         con.send_line(msg)
-        reply = con.recv_line()
+        reply = con.recv_line(timeout=10)
+        if "PREDICTION SET" not in reply:
+            return None
 
         #Wait for node to accept and give us fight time.
         #FIGHT 192.168.0.1 4552 345 34235 TCP 123123123.1\
-        reply = con.recv_line()
+        reply = con.recv_line(timeout=10)
         con.s.close()
         parts = re.findall("^FIGHT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+) (TCP|UDP) ([0-9]+(?:[.][0-9]+)?)$", reply)
         if not len(parts):
@@ -512,7 +514,7 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
             con.s = mappings[i]["sock"]
             con.connect(self.rendezvous_servers[0]["addr"], self.rendezvous_servers[0]["port"]) 
             con.send_line("SOURCE TCP " + str(mappings[i]["source"]))
-            remote_port = self.parse_remote_port(con.recv_line())
+            remote_port = self.parse_remote_port(con.recv_line(timeout=2))
             mappings[i]["remote"] = int(remote_port)
             con.s.close()
 
@@ -557,7 +559,7 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
                 if e.errno != errno.EADDRNOTAVAIL:
                     break
             con.send_line("SOURCE TCP " + str(source_port))
-            remote_port = self.parse_remote_port(con.recv_line())
+            remote_port = self.parse_remote_port(con.recv_line(timeout=2))
             mappings.append({
                 "source": source_port,
                 "remote": int(remote_port)

@@ -1,6 +1,5 @@
 from unittest import TestCase
 from pyp2p.lib import *
-from pyp2p.ipgetter import myip
 import random
 
 class test_ip_getter(TestCase):

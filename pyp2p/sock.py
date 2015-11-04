@@ -37,7 +37,7 @@ from .lib import *
 error_log_path = "error.log"
 
 class Sock:
-    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=0):
+    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=1):
         self.reply_filter = None
         self.buf = u""
         self.max_buf = 1024 * 1024 #1 MB.
@@ -276,6 +276,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     err = e.args[0]
                     self.debug_print(err)
                     if err == "timed out":
+                        repeat = 0
                         break
                 except ssl.SSLError as e:
                     #Will block on non-blocking SSL sockets.
@@ -323,9 +324,15 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
                     chunk_no += 1
 
-            repeat = 0
+            # Repeat is already set -- manual skip.
+            if not repeat:
+                break
+            else:
+                repeat = 0
+
+            # Block until there's a full reply or there's a timeout.
             if self.blocking:
-                if fixed_limit == None:
+                if fixed_limit == None and encoding == "unicode":
                     #Partial response.
                     if self.delimiter not in self.buf:
                         repeat = 1
@@ -466,8 +473,8 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     #Receives a new message delimited by a new line.
     #Blocking or non-blocking.
-    def recv_line(self):
-        t = time.time()
+    def recv_line(self, timeout=2):
+        t = time.time() + timeout
         while True:
             self.update()
 
@@ -475,7 +482,12 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             if not self.connected:
                 return u""
 
+            # Non-blocking.
             if not ((not len(self.replies) or len(self.buf) >= self.max_buf) and self.blocking):
+                break
+
+            # Timeout elapsed.
+            if time.time() >= t and self.blocking:
                 break
 
         if self.blocking:
@@ -533,7 +545,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
         #Execute callbacks on replies.
         if self.reply_filter != None:
-            print("Attempting to filter replies.")
             replies = list(filter(self.reply_filter, self.replies))
         else:
             replies = self.replies
