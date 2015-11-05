@@ -51,6 +51,9 @@ class UNL():
         #Table of in progress UNLs.
         self.pending_unls = []
 
+        #Sim opens are queued to occur sequentially.
+        self.pending_sim_open = []
+
         #Simple mutex.
         self.mutex = Lock()
 
@@ -130,6 +133,15 @@ class UNL():
 
             time.sleep(1)
 
+        # Wait for any other hole punches to finish.
+        if their_unl["node_type"] == "simultaneous" and our_unl["node_type"] != "passive":
+            self.pending_sim_open.append(their_unl["value"])
+            while len(self.pending_sim_open):
+                if self.pending_sim_open[0] == their_unl["value"]:
+                    break
+
+                time.sleep(1)
+
         #Set pending UNL.
         self.pending_unls.append(their_unl)
 
@@ -193,6 +205,10 @@ class UNL():
 
         #Undo pending connect state.
         self.pending_unls.remove(their_unl)
+
+        #Undo pending sim open.
+        if self.pending_sim_open[0] == their_unl["value"]:
+            self.pending_sim_open = self.pending_sim_open[1:]
 
         #Only execute events if this function was called manually.
         if events != None:
