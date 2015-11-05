@@ -1,4 +1,6 @@
 #Pycharm
+UNKNOWN.egg-info
+*.egg-info
 .idea
 error.log
 tests/error.log

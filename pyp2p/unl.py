@@ -74,6 +74,10 @@ class UNL():
         #They are the same.
         return True
 
+    #Operator !=
+    def __ne__(self, other):
+        return not self == other
+
     def connect_handler(self, their_unl, events, force_master):
         #Figure out who should make the connection.
         our_unl = self.value.encode("ascii")
