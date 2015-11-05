@@ -534,7 +534,8 @@ class Net():
                 return "simultaneous"
 
         # Get IP of binding interface.
-        if self.passive_bind == "0.0.0.0":
+        unspecific_bind = ["0.0.0.0", "127.0.0.1", "localhost"]
+        if self.passive_bind in unspecific_bind:
             lan_ip = get_lan_ip(self.interface)
         else:
             lan_ip = self.passive_bind

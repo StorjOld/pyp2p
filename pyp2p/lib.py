@@ -81,9 +81,6 @@ def int2ip(addr):
 true_socket = socket.socket
 def build_bound_socket(source_ip):
     def bound_socket(*a, **k):
-        if not is_ip_private(source_ip):
-            raise Exception("This function requires a LAN IP.")
-
         if source_ip == "127.0.0.1":
             raise Exception("This function requires a LAN IP (127.0.0.1 passed.)")
 
