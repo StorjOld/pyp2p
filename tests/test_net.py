@@ -6,11 +6,9 @@ import random
 from threading import Thread
 import time
 
-#if sys.version_info >= (3,0,0):
-
 class test_net(TestCase):
     def test_00000004(self):
-        #Test broadcast.
+        # Test broadcast.
         nodes = [
             {
                 "port": 40001,
@@ -36,7 +34,7 @@ class test_net(TestCase):
 
                 time.sleep(0.5)
 
-        #Buld networks.
+        # Buld networks.
         for node in nodes:
             node["net"] = Net(net_type="direct", node_type="passive", passive_port=node["port"], debug=1)
             node["net"].disable_forwarding()
@@ -53,27 +51,27 @@ class test_net(TestCase):
         """
         for our_node in nodes:
             for their_node in nodes:
-                #Don't connect to ourself.
+                # Don't connect to ourself.
                 if our_node == their_node:
                     continue
 
-                #Connect to them.
+                # Connect to them.
                 our_node["net"].add_node(get_lan_ip(), their_node["port"], "passive")
 
-        #Accept cons:
+        # Accept cons:
         for node in nodes:
             node["net"].synchronize()
 
-        #Check connection no.
+        # Check connection no.
         for node in nodes:
             assert(len(node["net"]) >= 3)
 
-        #Test broadcast.
+        # Test broadcast.
         for node in nodes:
             node["net"].broadcast("test")
 
-        #Check for broadcast response on node sockets
-        #(Should be on all of them because of duplicate cons.
+        # Check for broadcast response on node sockets
+        # (Should be on all of them because of duplicate cons.
         for node in nodes:
             for con in node["net"]:
                 con.set_blocking(blocking=1, timeout=5)
@@ -81,18 +79,18 @@ class test_net(TestCase):
                 assert(con.connected)
                 assert(line == "test")
 
-        #Close cons.
+        # Close cons.
         for node in nodes:
             for con in node["net"]:
                 con.close()
 
             node["net"].stop()
 
-            #And ... stop threads.
+            # And ... stop threads.
             node["net"] = None
 
     def test_00000001(self):
-        #Test seen messages
+        # Test seen messages
         from pyp2p.net import rendezvous_servers
         net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
         net.disable_advertise()
@@ -101,7 +99,7 @@ class test_net(TestCase):
         net.start()
         con = net.add_node(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], "passive")
 
-        #Test source TCP.
+        # Test source TCP.
         con.send_line("SOURCE TCP")
         con.send_line("SOURCE TCP 0")
         time.sleep(2)
@@ -112,7 +110,7 @@ class test_net(TestCase):
         print(replies)
         assert(len(replies) == 1)
 
-        #Disable duplicates.
+        # Disable duplicates.
         clear_seen_messages()
         net.enable_duplicates = 1
         con.send_line("SOURCE TCP")
@@ -125,7 +123,7 @@ class test_net(TestCase):
         assert(len(replies) == 2)
 
     def test_00000003(self):
-        #Test validate node
+        # Test validate node
         net = Net(debug=1)
         net.disable_advertise()
         net.disable_bootstrap()
@@ -139,7 +137,6 @@ class test_net(TestCase):
         assert(net.validate_node("8.8.8.8"))
         assert(net.validate_node("8.8.8.8", 80000) != 1)
         net.stop()
-
 
     def test_00000002(self):
         # Test add node.
@@ -216,3 +213,17 @@ class test_net(TestCase):
         assert(net.validate_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"]))
 
         net.stop()
+
+    def test_queued_sim_open(self):
+        # Test add node.
+        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
+        net.disable_advertise()
+        net.disable_bootstrap()
+        net.start()
+
+        net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMUG79qiBu/aoqg7O1YAAAAAGkXKuVrNDYE=", events=None)
+        net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMWDYbvALwOowGU8O1YAAAAATYLXRfdc5tc=", events=None)
+        time.sleep(2)
+        assert(len(net.unl.pending_sim_open) == 2)
+        net.stop()
+

@@ -34,13 +34,13 @@ class HybridReply():
         """
 
         def abstract_status_check(hybrid_reply):
-            #Reply can be sent or broadcast.
+            # Reply can be sent or broadcast.
             return 1
 
-            #Reply is not ready to be sent or broadcast.
+            # Reply is not ready to be sent or broadcast.
             return 0
 
-            #Reply is invalid and should be removed from the list.
+            # Reply is invalid and should be removed from the list.
             return -1
 
         self.set_status_checker(abstract_status_check)

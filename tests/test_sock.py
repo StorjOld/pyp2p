@@ -1,9 +1,59 @@
 from unittest import TestCase
 from pyp2p.sock import *
 from pyp2p.net import rendezvous_servers
+import time
+import sys
 
 
 class test_sock(TestCase):
+    def test_blocking_timeout(self):
+        s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], blocking=1)
+        t = time.time()
+        s.recv_line(timeout=1)
+        if time.time() - t >= 4:
+            print("Manual timeout failed.")
+            assert(0)
+        s.close()
+
+    def test_non_blocking_timeout(self):
+        s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], blocking=0)
+        assert(s.recv_line() == u"")
+        assert(s.recv(1) == u"")
+        s.close()
+
+    def test_encoding(self):
+        s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], blocking=1)
+        s.send_line("SOURCE TCP 50")
+        ret = s.recv(1, encoding="ascii")
+        if sys.version_info >= (3,0,0):
+            assert(type(ret) == bytes)
+        else:
+            assert(type(ret) == str)
+        assert(ret == b"R")
+        ret = s.recv_line()
+        assert(u"EMOTE" in ret)
+        s.close()
+
+    def test_recv_recvline_switch(self):
+        s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], blocking=1)
+        s.send_line("SOURCE TCP 32")
+        ret = s.recv(1)
+        assert(ret[0] == u"R")
+        assert(not len(s.buf))
+        s.buf = u"test"
+        ret = s.recv(1)
+        assert(ret[0] == u"E")
+        assert(s.buf == u"test")
+        s.buf = junk = u"example\r\nxsfsdf"
+        s.send_line("SOURCE TCP 50")
+        ret = s.recv_line()
+        assert("MOTE" in ret)
+        assert(s.buf == junk)
+        ret = s.recv_line()
+        assert("REMOTE" in ret)
+        assert(s.buf == junk)
+        s.close()
+
     def test_0000001_sock(self):
         s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"],
                  blocking=1)

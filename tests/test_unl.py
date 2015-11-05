@@ -74,8 +74,46 @@ Overwrite:
                 "expected": "us"
             },
 
-            #Same WAN IP.
-            #Node type should end up passive for both!
+            # Active.
+            {
+                "force_master": 1,
+                "us": {
+                    "node_type": "simultaneous",
+                    "wan_ip": "192.168.0.1"
+                },
+                "them": {
+                    "node_type": "active",
+                    "wan_ip": "192.168.0.2"
+                },
+                "expected": "them"
+            },
+            {
+                "force_master": 1,
+                "us": {
+                    "node_type": "active",
+                    "wan_ip": "192.168.0.1"
+                },
+                "them": {
+                    "node_type": "simultaneous",
+                    "wan_ip": "192.168.0.2"
+                },
+                "expected": "us"
+            },
+            {
+                "force_master": 1,
+                "us": {
+                    "node_type": "active",
+                    "wan_ip": "192.168.0.1"
+                },
+                "them": {
+                    "node_type": "active",
+                    "wan_ip": "192.168.0.2"
+                },
+                "expected": "any"
+            },
+
+            # Same WAN IP.
+            # Node type should end up passive for both!
             {
                 "force_master": 1,
                 "us": {
@@ -89,8 +127,8 @@ Overwrite:
                 "expected": "us"
             },
 
-            #Force master only comes into play when there's two
-            #nodes of the same type. Master = highest IP.
+            # Force master only comes into play when there's two
+            # nodes of the same type. Master = highest IP.
             {
                 "force_master": 0,
                 "us": {
@@ -131,16 +169,16 @@ Overwrite:
 
 
         for test in tests:
-            #Create net object (no start or anything.)
+            # Create net object (no start or anything.)
             net = Net(net_type="direct", node_type="passive")
 
-            #Construct our UNL.
+            # Construct our UNL.
             our_unl_template = unl_template.copy()
             our_unl_template["node_type"] = test["us"]["node_type"]
             our_unl_template["wan_ip"] = test["us"]["wan_ip"]
             our_unl = UNL(net).construct(our_unl_template)
 
-            #Construct their UNL.
+            # Construct their UNL.
             their_unl_template = unl_template.copy()
             their_unl_template["node_type"] = test["them"]["node_type"]
             their_unl_template["wan_ip"] = test["them"]["wan_ip"]
@@ -151,11 +189,11 @@ Overwrite:
             print(UNL(net).deconstruct(our_unl))
             print(UNL(net).deconstruct(their_unl))
 
-            #Simulate our network setup.
+            # Simulate our network setup.
             net.unl = UNL(net)
             net.unl.value = our_unl
 
-            #Create add_node to simulate connections.
+            # Create add_node to simulate connections.
             if test["expected"] == "us":
                 def add_node_hook(node_ip, node_port, node_type, timeout=5):
                     assert(1)
@@ -165,21 +203,21 @@ Overwrite:
                     assert(0)
                     return 1
 
-            #Install add_node hook.
+            # Install add_node hook.
             net.add_node = add_node_hook
 
-            #Bypass initial con_by_ip check.
+            # Bypass initial con_by_ip check.
             def bypass_con_by_ip(ip):
                 return None
             net.con_by_ip = bypass_con_by_ip
 
-            #Simulate a new UNL connection.
+            # Simulate a new UNL connection.
             net.unl.connect(their_unl, None, test["force_master"])
 
-            #Wait for UNL to block (if it needs to.)
+            # Wait for UNL to block (if it needs to.)
             time.sleep(1)
 
-            #Create con_by_ip to return 1 (simulating inbound connection.
+            # Create con_by_ip to return 1 (simulating inbound connection.
             if test["expected"] == "us":
                 def inbound_con_by_ip(ip):
                     assert(0)
@@ -189,7 +227,7 @@ Overwrite:
                     assert(1)
                     return 1
 
-            #Install hook.
+            # Install hook.
             net.con_by_ip = inbound_con_by_ip
 
 

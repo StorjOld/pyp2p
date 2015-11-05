@@ -58,7 +58,7 @@ class RendezvousClient:
         self.rendezvous_servers = rendezvous_servers
         self.interface = interface
         self.ntp_delay = 6
-        self.timeout = 5 #Socket timeout.
+        self.timeout = 5 # Socket timeout.
         self.predictable_nats = ["preserving", "delta"]
 
     def server_connect(self, sock=None):
@@ -85,7 +85,7 @@ class RendezvousClient:
 
         raise Exception("All rendezvous servers are down.")
 
-    #Delete any old rendezvous server state for node.
+    # Delete any old rendezvous server state for node.
     def leave_fight(self):
         con = self.server_connect()
         con.send_line("CLEAR")
@@ -100,12 +100,12 @@ class RendezvousClient:
         may be returned from threads in the simultaneous_fight function.
         """
 
-        #Walk to fight.
+        # Walk to fight.
         self.simultaneous_cons = []
         predictions = predictions.split(" ")
         self.simultaneous_fight(mappings, node_ip, predictions, ntp)
         
-        #Return hole made in opponent.
+        # Return hole made in opponent.
         if len(self.simultaneous_cons):
             """
             There may be a problem here. I noticed that when these lines
@@ -116,14 +116,14 @@ class RendezvousClient:
             this side. Will need to test more.
             """
 
-            #Close unneeded holes.
+            # Close unneeded holes.
             for i in range(1, len(self.simultaneous_cons)):
                 try:
                     self.simultaneous_cons[i].s.close()
                 except:
                     pass
             try:
-                #Return open hole.
+                # Return open hole.
                 return self.simultaneous_cons[0]
             except:
                 return None
@@ -140,7 +140,7 @@ class RendezvousClient:
         the source ports increase by one.
         """
 
-        #Connect to rendezvous server.
+        # Connect to rendezvous server.
         try:
             mappings = sequential_bind(self.mapping_no + 1, self.interface)
             con = self.server_connect(mappings[0]["sock"])
@@ -149,10 +149,10 @@ class RendezvousClient:
             print("this err")
             return None
 
-        #First mapping is used to talk to server.
+        # First mapping is used to talk to server.
         mappings.remove(mappings[0])
 
-        #Receive port mapping.
+        # Receive port mapping.
         msg = "SOURCE TCP %s" % (str(mappings[0]["source"]))
         con.send_line(msg)
         reply = con.recv_line(timeout=2)
@@ -160,7 +160,7 @@ class RendezvousClient:
         if not remote_port:
             return None
 
-        #Generate port predictions.
+        # Generate port predictions.
         predictions = ""
         if self.nat_type != "random":
             mappings = self.predict_mappings(mappings)
@@ -179,16 +179,16 @@ class RendezvousClient:
         to the Rendezvous Server to monitor for new hole punching requests.
         """
 
-        #Close socket.
+        # Close socket.
         if self.server_con != None:
             self.server_con.s.close()
             self.server_con = None
 
-        #Reset predictions + mappings.
+        # Reset predictions + mappings.
         self.mappings = None
         self.predictions = None
         
-        #Connect to rendezvous server.
+        # Connect to rendezvous server.
         parts = self.sequential_connect()
         if parts == None:
             return 0
@@ -200,7 +200,7 @@ class RendezvousClient:
         self.mappings = mappings
         self.predictions = predictions
 
-        #Register simultaneous node with server.
+        # Register simultaneous node with server.
         msg = "SIMULTANEOUS READY 0 0"
         ret = self.server_con.send_line(msg)
         if not ret:
@@ -237,13 +237,13 @@ class RendezvousClient:
                 max_port = 65535
                 mapping["remote"] = int(mapping["source"]) + self.delta
 
-                #Overflow or underflow = wrap port around.
+                # Overflow or underflow = wrap port around.
                 if mapping["remote"] > max_port:
                     mapping["remote"] = mapping["remote"] - max_port
                 if mapping["remote"] < 0:
                     mapping["remote"] = max_port - -mapping["remote"]
 
-                #Unknown error.
+                # Unknown error.
                 if mapping["remote"] < 1 or mapping["remote"] > max_port:
                     mapping["remote"] = 1
                 mapping["remote"] = str(mapping["remote"])
@@ -258,14 +258,14 @@ class RendezvousClient:
         punching / connecting.
         """
 
-        #Parse arguments.
+        # Parse arguments.
         if len(args) != 3:
             return 0
         sock, node_ip, remote_port = args
         if sock == None or node_ip == None or remote_port == None:
             return 0
 
-        #Generous timeout.
+        # Generous timeout.
         con = Sock(blocking=1, interface=self.interface)
         con.set_sock(sock)
         local = 0
@@ -277,7 +277,7 @@ class RendezvousClient:
 
             Speculation: The simulation problem may be to do with CPU cores. If the program is run on the same core then the connects will always be out of synch. If that's the case -- tries will need to be set to ~1000 which was what it was before. Perhaps a delay could be simulated by sleeping for random periods if its a local connection? That could help punch through at least once and then just set the tries to >= 1000.
             """
-            tries = 20 #20
+            tries = 20 # 20
             local = 1
         else:
             tries = 1
@@ -290,20 +290,20 @@ class RendezvousClient:
                 time.sleep(float(random.randrange(0, 500)) / 1000)
             """
             try:
-                #Attempt to connect.
+                # Attempt to connect.
                 con.connect(node_ip, remote_port)
 
-                #FATALITY.
+                # FATALITY.
 
-                #Atomic operation so mutex not required.
-                #Record hole made.
+                # Atomic operation so mutex not required.
+                # Record hole made.
                 con.blocking = 0
                 con.timeout = 0
                 con.s.settimeout(0)
                 self.simultaneous_cons.append(con)
                 return 1
             except Exception as e:
-                #Punch was blocked, opponent is strong.
+                # Punch was blocked, opponent is strong.
                 error = 1
                 continue
 
@@ -331,12 +331,12 @@ class RendezvousClient:
         """
 
 
-        #Get current network time accurate to ~50 ms over WAN (apparently.)
+        # Get current network time accurate to ~50 ms over WAN (apparently.)
         our_ntp = get_ntp()
         if our_ntp == None:
             return 0
 
-        #Synchronize code execution to occur at their NTP time + delay.
+        # Synchronize code execution to occur at their NTP time + delay.
         current = our_ntp
         future = float(their_ntp) + float(self.ntp_delay)
         time.sleep(future - our_ntp)
@@ -347,7 +347,7 @@ class RendezvousClient:
         Think of a better way to do the sleep. Maybe a loop? 
         """
 
-        #Can you dodge my special?
+        # Can you dodge my special?
         """
         Making this algorithm "multi-threaded" has the potential to
         ruin predicted mappings for delta type NATs and NATs that
@@ -355,12 +355,12 @@ class RendezvousClient:
         ports no matter what.
         """
         for mapping in my_mappings:
-            #Tried all predictions.
+            # Tried all predictions.
             prediction_len = len(predictions)
-            if not len(predictions):
+            if not prediction_len:
                 break
 
-            #Throw punch.
+            # Throw punch.
             prediction = predictions[0]
             self.throw_punch([mapping["sock"], node_ip, prediction])
             predictions.remove(prediction)
@@ -368,7 +368,7 @@ class RendezvousClient:
         return 1
         
 
-    #Attempt to open an outbound connect through simultaneous open.
+    # Attempt to open an outbound connect through simultaneous open.
     def simultaneous_challenge(self, node_ip, node_port, proto):
         """
         Used by active simultaneous nodes to attempt to initiate
@@ -384,15 +384,15 @@ class RendezvousClient:
             return None
         con, mappings, predictions = parts
 
-        #Tell server to list ourselves as a candidate for node.
+        # Tell server to list ourselves as a candidate for node.
         msg = "CANDIDATE %s %s %s" % (node_ip, str(proto), predictions)
         con.send_line(msg)
         reply = con.recv_line(timeout=10)
         if "PREDICTION SET" not in reply:
             return None
 
-        #Wait for node to accept and give us fight time.
-        #FIGHT 192.168.0.1 4552 345 34235 TCP 123123123.1\
+        # Wait for node to accept and give us fight time.
+        # FIGHT 192.168.0.1 4552 345 34235 TCP 123123123.1\
         reply = con.recv_line(timeout=10)
         con.s.close()
         parts = re.findall("^FIGHT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+) (TCP|UDP) ([0-9]+(?:[.][0-9]+)?)$", reply)
@@ -428,17 +428,17 @@ class RendezvousClient:
         at determining a delta type NAT.
         """
 
-        #Calculate differences.
+        # Calculate differences.
         mapping_no = len(mappings)
         differences = []
         for i in range(0, mapping_no):
-            #Overflow.
+            # Overflow.
             if i + 1 >= mapping_no:
                 break
             differences.append(mappings[i + 1]["remote"] - mappings[i]["remote"])
         differences = list(set(differences))
 
-        #Record delta pattern results.
+        # Record delta pattern results.
         delta = 0
         for difference in differences:
             """
@@ -449,27 +449,27 @@ class RendezvousClient:
             for i in range(0, mapping_no):
                 matches = 0
                 for j in range(0, mapping_no):
-                    #This is ourself.
+                    # This is ourself.
                     if i == j:
                         continue
 
-                    #Use value of mappings[i] to derive test value for mappings[j].
+                    # Use value of mappings[i] to derive test value for mappings[j].
                     if i > j:
-                        #How many bellow it?
+                        # How many bellow it?
                         test_val = mappings[i]["remote"] - (difference * (i - j))
                     else:
-                        #How many above it?
+                        # How many above it?
                         test_val = mappings[i]["remote"] + (difference * (j - i))
 
-                    #Pattern was predicted for relative comparison so increment matches.
+                    # Pattern was predicted for relative comparison so increment matches.
                     if test_val == mappings[j]["remote"]:
                         matches += 1
                 
-                #Matches parses the minimum threshold so these don't count as collisions.
+                # Matches parses the minimum threshold so these don't count as collisions.
                 if matches + 1 > self.port_collisions:
                     masked.append(mappings[i]["remote"])
 
-            #Check number of collisions satisfies delta requirement.
+            # Check number of collisions satisfies delta requirement.
             collision_no = mapping_no - len(masked)
             if collision_no > self.port_collisions:
                 continue
@@ -520,16 +520,16 @@ class RendezvousClient:
 http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_BitTorrent
 [3] http://en.wikipedia.org/wiki/TCP_hole_punching
         """
-        #Already set.
+        # Already set.
         if self.nat_type != "unknown":
             return self.nat_type
         nat_type = "random"
 
-        #Check collision ration.
+        # Check collision ration.
         if self.port_collisions * 5 > self.nat_tests:
             raise Exception("Port collision number is too high compared to nat tests. Collisions must be in ratio 1 : 5 to avoid ambiguity in test results.")
 
-        #Load mappings for preserving and delta tests.
+        # Load mappings for preserving and delta tests.
         mappings = sequential_bind(self.nat_tests, self.interface)
         for i in range(0, self.nat_tests):
             con = self.server_connect(mappings[i]["sock"])
@@ -538,7 +538,7 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
             mappings[i]["remote"] = int(remote_port)
             con.s.close()
 
-        #Preserving test.
+        # Preserving test.
         preserving = 0
         for mapping in mappings:
             if mapping["source"] == mapping["remote"]:
@@ -547,15 +547,15 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
             nat_type = "preserving"
             return nat_type
 
-        #Delta test.
+        # Delta test.
         delta_ret = self.delta_test(mappings)
         if delta_ret["nat_type"] != "random":
-            #Save delta value.
+            # Save delta value.
             self.delta = delta_ret["delta"]
 
             return nat_type
 
-        #Load mappings for reuse test.
+        # Load mappings for reuse test.
         """
         Notes: This reuse test needs to ideally be performed against
         bootstrapping nodes on at least two different addresses and
@@ -580,7 +580,7 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
         if len(mappings) < self.nat_tests:
             return nat_type
 
-        #Test reuse.
+        # Test reuse.
         reuse = 0
         for mapping in mappings:
             if mapping["source"] == mapping["remote"]:

@@ -48,41 +48,41 @@ class UNL():
         else:
             self.value = self.construct()
 
-        #Table of in progress UNLs.
+        # Table of in progress UNLs.
         self.pending_unls = []
 
-        #Sim opens are queued to occur sequentially.
+        # Sim opens are queued to occur sequentially.
         self.pending_sim_open = []
 
-        #Simple mutex.
+        # Simple mutex.
         self.mutex = Lock()
 
     def __eq__(self, other):
-        #Compare UNLs. Used to check if a UNL is us.
+        # Compare UNLs. Used to check if a UNL is us.
         our_unl = self.deconstruct(self.value)
         their_unl = self.deconstruct(other.value)
 
-        #Different WAN IPs.
+        # Different WAN IPs.
         if our_unl["wan_ip"] != their_unl["wan_ip"]:
             return False
 
-        #Different LAN IPs.
+        # Different LAN IPs.
         if our_unl["lan_ip"] != their_unl["lan_ip"]:
             return False
 
-        #Different passive ports.
+        # Different passive ports.
         if our_unl["listen_port"] != their_unl["listen_port"]:
             return False
 
-        #They are the same.
+        # They are the same.
         return True
 
-    #Operator !=
+    # Operator !=
     def __ne__(self, other):
         return not self == other
 
     def connect_handler(self, their_unl, events, force_master):
-        #Figure out who should make the connection.
+        # Figure out who should make the connection.
         our_unl = self.value.encode("ascii")
         their_unl = their_unl.encode("ascii")
         int_our_unl = int(binascii.hexlify(our_unl), 16)
@@ -98,7 +98,7 @@ class UNL():
         if force_master:
             master = 1
 
-        #Deconstruct binary UNLs into dicts.
+        # Deconstruct binary UNLs into dicts.
         our_unl = self.deconstruct(our_unl)
         their_unl = self.deconstruct(their_unl)
 
@@ -107,27 +107,22 @@ class UNL():
         if their_unl == None:
             raise Exception("Unable to deconstruct their UNL.")
 
-        #Active nodes can't connect to each other.
-        if our_unl["node_type"] == "active" and \
-        their_unl["node_type"] == "active":
-            raise Exception("No way for nodes to connect.")
-
-        #This means the nodes are behind the same router.
+        # This means the nodes are behind the same router.
         if our_unl["wan_ip"] == their_unl["wan_ip"]:
-            #Connect to LAN IP.
+            # Connect to LAN IP.
             our_unl["wan_ip"] = our_unl["lan_ip"]
             their_unl["wan_ip"] = their_unl["lan_ip"]
 
-            #Already behind NAT so no forwarding needed.
+            # Already behind NAT so no forwarding needed.
             our_unl["node_type"] = "passive"
             their_unl["node_type"] = "passive"
 
-        #Aquire mutex.
+        # Aquire mutex.
         self.mutex.acquire()
 
-        #Wait for other UNLs to finish.
+        # Wait for other UNLs to finish.
         while their_unl in self.pending_unls:
-            #This is an undifferentiated duplicate.
+            # This is an undifferentiated duplicate.
             if events == None:
                 return
 
@@ -136,27 +131,29 @@ class UNL():
         # Wait for any other hole punches to finish.
         if their_unl["node_type"] == "simultaneous" and our_unl["node_type"] != "passive":
             self.pending_sim_open.append(their_unl["value"])
+            print("Waiting for queued sim open")
             while len(self.pending_sim_open):
                 if self.pending_sim_open[0] == their_unl["value"]:
                     break
 
                 time.sleep(1)
+            print("Ok, it's our turn now.")
 
-        #Set pending UNL.
+        # Set pending UNL.
         self.pending_unls.append(their_unl)
 
-        #Release mutex.
+        # Release mutex.
         self.mutex.release()
 
-        #Are we asking them to connect to us?
+        # Are we asking them to connect to us?
         reverse_query = 0
 
-        #Are they already connected?
+        # Are they already connected?
         con = self.net.con_by_ip(their_unl["wan_ip"])
         if con == None:
-            #Valid node types.
+            # Valid node types.
             for node_type in ["passive", "simultaneous"]:
-                #Matches for this node type.
+                # Matches for this node type.
                 nodes = []
                 if our_unl["node_type"] == node_type:
                     nodes.append(our_unl)
@@ -164,25 +161,25 @@ class UNL():
                 if their_unl["node_type"] == node_type:
                     nodes.append(their_unl)
 
-                #Try the next node type.
+                # Try the next node type.
                 if len(nodes):
-                    #We only want one connection.
+                    # We only want one connection.
                     if len(nodes) == 2:
                         if not master:
-                            #They will connect to us.
+                            # They will connect to us.
                             nodes.remove(their_unl)
                         else:
-                            #We will connect to them.
+                            # We will connect to them.
                             nodes.remove(our_unl)
 
-                    #Don't connect to ourself.
+                    # Don't connect to ourself.
                     node = nodes[0]
                     if node == their_unl:
                         con = self.net.add_node(their_unl["wan_ip"], their_unl["listen_port"], their_unl["node_type"], timeout=60)
                         if con != None:
                             break
                     else:
-                        #Tell them to connect to us.
+                        # Tell them to connect to us.
                         if self.dht_node != None and force_master:
                             con_request = "REVERSE_CONNECT:%s" % (self.value)
                             node_id = their_unl["node_id"]
@@ -190,7 +187,7 @@ class UNL():
                                 reverse_query = 1
                                 self.dht_node.send_direct_message(node_id, con_request)
 
-                        #They will connect to us.
+                        # They will connect to us.
                         found_con = 0
                         for i in range(0, 60):
                             con = self.net.con_by_ip(their_unl["wan_ip"])
@@ -203,18 +200,19 @@ class UNL():
                         if found_con:
                             break
 
-        #Undo pending connect state.
+        # Undo pending connect state.
         self.pending_unls.remove(their_unl)
 
-        #Undo pending sim open.
-        if self.pending_sim_open[0] == their_unl["value"]:
-            self.pending_sim_open = self.pending_sim_open[1:]
+        # Undo pending sim open.
+        if len(self.pending_sim_open):
+            if self.pending_sim_open[0] == their_unl["value"]:
+                self.pending_sim_open = self.pending_sim_open[1:]
 
-        #Only execute events if this function was called manually.
+        # Only execute events if this function was called manually.
         if events != None:
-            #Success.
+            # Success.
             if con != None:
-                #Confirm we sent the reverse connect request.
+                # Confirm we sent the reverse connect request.
                 if reverse_query:
                     msg = con.recv_line(timeout=2)
                     if "REVERSE_QUERY:" in msg:
@@ -228,7 +226,7 @@ class UNL():
                 if "success" in events:
                     events["success"](con)
 
-            #Failure.
+            # Failure.
             if con == None:
                 if "failure" in events:
                     events["failure"](con)
@@ -255,20 +253,20 @@ class UNL():
                 if isinstance(unl, str):
                     unl = unicode(unl)
 
-            #Separate checksum.
+            # Separate checksum.
             value = unl
             unl = base64.b64decode(unl)
             checksum_size = 4
             checksum = unl[-checksum_size:]
             unl = unl[:-checksum_size]
 
-            #Check checksum.
+            # Check checksum.
             expected_checksum = hashlib.sha256(hashlib.sha256(unl).digest()).digest()
             expected_checksum = expected_checksum[0:4]
             if checksum != expected_checksum:
                 raise Exception("Invalid checksum -- UNL is probably corrupt.")
 
-            #Separate the other fields.
+            # Separate the other fields.
             version, node_id, node_type, nat_type, forwarding_type, passive_port, wan_ip, lan_ip, timestamp, nonce = struct.unpack("<B20sBBBHIIQI", unl)
             node_type = chr(node_type)
             node_type = self.node_type_lookup[node_type]
@@ -279,7 +277,7 @@ class UNL():
             wan_ip = int2ip(wan_ip)
             lan_ip = int2ip(lan_ip)
 
-            #Return meaningful fields.
+            # Return meaningful fields.
             ret = {
                 "value": value,
                 "version": version,
@@ -300,16 +298,16 @@ class UNL():
             return None
 
     def construct(self, details={}):
-        #Sanity check.
+        # Sanity check.
         if self.net == None:
             raise Exception("Missing Net object for UNL.construct")
 
-        #Translate bind address.
+        # Translate bind address.
         wan_ip = get_wan_ip()
         if "wan_ip" in details:
             wan_ip = details["wan_ip"]
 
-        #Lan IP.
+        # Lan IP.
         unspecific_bind = ["0.0.0.0", "127.0.0.1", wan_ip, "localhost"]
         if self.net.passive_bind in unspecific_bind:
             lan_ip = get_lan_ip(self.net.interface)
@@ -318,7 +316,7 @@ class UNL():
         if "lan_ip" in details:
             lan_ip = details["lan_ip"]
 
-        #Node id.
+        # Node id.
         if self.dht_node == None:
             node_id = b"\0"
         else:
@@ -326,42 +324,42 @@ class UNL():
         if "node_id" in details:
             node_id = details["node_id"]
 
-        #Version.
+        # Version.
         version = self.version
         if "version" in details:
             version = details["version"]
 
-        #Node type.
+        # Node type.
         node_type = self.net.node_type
         if "node_type" in details:
             node_type = details["node_type"]
 
-        #Nat type.
+        # Nat type.
         nat_type = self.net.nat_type
         if "nat_type" in details:
             nat_type = details["nat_type"]
 
-        #Forwarding type.
+        # Forwarding type.
         forwarding_type = self.net.forwarding_type
         if "forwarding_type" in details:
             forwarding_type = details["forwarding_type"]
 
-        #Listen port.
+        # Listen port.
         listen_port = self.net.passive_port
         if "listen_port" in details:
             listen_port = details["listen_port"]
 
-        #Timestamp.
+        # Timestamp.
         timestamp = time.time()
         if "timestamp" in details:
             timestamp = details["timestamp"]
 
-        #Nonce.
+        # Nonce.
         nonce = random.randrange(0, 2 ** (4 * 8))
         if "nonce" in details:
             nonce = details["nonce"]
 
-        #Generate UNL.
+        # Generate UNL.
         unl = struct.pack("<B20sBBBHIIQI", \
             version,
             node_id,
@@ -375,7 +373,7 @@ class UNL():
             nonce
         )
 
-        #Build checksum and make base64.
+        # Build checksum and make base64.
         checksum = hashlib.sha256(hashlib.sha256(unl).digest()).digest()
         checksum = checksum[0:4]
         unl = unl + checksum
@@ -385,13 +383,13 @@ class UNL():
         return unl
 
 if __name__ == "__main__":
-    #global direct_net
-    #unl = UNL(direct_net)
-    #print(unl.construct())
+    # global direct_net
+    # unl = UNL(direct_net)
+    # print(unl.construct())
 
-    #print(unl.deconstruct('x'))
+    # print(unl.deconstruct('x'))
 
-    #print(unl.deconstruct(unl.construct()))
+    # print(unl.deconstruct(unl.construct()))
     pass
 
 

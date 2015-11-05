@@ -38,35 +38,35 @@ class UPnP():
         """
         self.listen_port = 49170
 
-        #Port that UPnP configured hosts listen on.
+        # Port that UPnP configured hosts listen on.
         self.upnp_port = 1900
 
-        #Address used for IPv4 multicasts.
+        # Address used for IPv4 multicasts.
         self.multicast = b"239.255.255.250"
 
-        #Number of seconds to wait for replies.
+        # Number of seconds to wait for replies.
         self.reply_wait = 3
 
-        #Socket timeout.
+        # Socket timeout.
         self.timeout = 2
 
-        #Networking interface.
+        # Networking interface.
         self.interface = interface
 
-        #Address of a UPnP gateway.
+        # Address of a UPnP gateway.
         self.gateway = []
 
-    #Uses broadcasting to find default UPnP compatible gateway.
+    # Uses broadcasting to find default UPnP compatible gateway.
     def find_gateway(self):
         replies = []
 
-        #Create socket for UDP broadcasts.
+        # Create socket for UDP broadcasts.
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(('', self.upnp_port)) #All addresses.
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         s.setblocking(0)
 
-        #Broadcast search message to multicast address.
+        # Broadcast search message to multicast address.
         search_msg =  b"M-SEARCH * HTTP/1.1\r\n"
         search_msg += b"HOST: %s" + self.multicast + b":"
         if sys.version_info >= (3,0,0):
@@ -79,7 +79,7 @@ class UPnP():
         search_msg += b"\r\n"
         s.sendto(search_msg, (self.multicast, self.upnp_port))
 
-        #Receive replies for n seconds..
+        # Receive replies for n seconds..
         old_time = time.time()
         while (int(time.time()) - int(old_time)) < self.reply_wait:
             res = select.select([s], [], [], self.timeout)
@@ -87,37 +87,37 @@ class UPnP():
                 (string, addr) = res[0][0].recvfrom(1024)
                 replies.append([addr[0], string])
 
-        #Cleanup socket.
+        # Cleanup socket.
         if s != None:
             s.close()
             s = None
 
-        #Error: no UPnP replies - try guess gateway.
+        # Error: no UPnP replies - try guess gateway.
         if replies == []:
             default_gateway = get_default_gateway(self.interface)
             if default_gateway == None:
                 return None
             else:
-                #Optimise scanning.
+                # Optimise scanning.
                 likely_candidates = [80, 1780, 1900, 1981, 2468, 5555, 5678, 49000, 55345, 65535]
 
                 def check_gateway(self, ip, port):
                     try:
-                        #Fast connect() / SYN open scanning.
+                        # Fast connect() / SYN open scanning.
                         s = Sock(ip, port, blocking=1, timeout=5, interface=self.interface)
                         s.close()
 
-                        #Build http request.
+                        # Build http request.
                         gateway_addr = "http://" + str(ip) + ":" + str(port) + "/"
                         buf = urlopen(gateway_addr, timeout=self.timeout).read().decode("utf-8")
 
-                        #Check response is XML and device is a router.
+                        # Check response is XML and device is a router.
                         if 'InternetGatewayDevice' in buf:
                             return self.gateway.append(gateway_addr)
                     except:
                         return
 
-                #Brute force port by scanning.
+                # Brute force port by scanning.
                 for port in likely_candidates:
                     t = Thread(target=check_gateway, args=(self, default_gateway, port))
                     t.start()
@@ -128,10 +128,10 @@ class UPnP():
                 else:
                     return None
 
-        #Find gateway address in replies.
+        # Find gateway address in replies.
         gateway_addr = None
         pdata = list(dict((x[0], x) for x in replies).values())
-        #return None
+        # return None
         rh = []
         for L in pdata:
             rh.append(L[0])
@@ -180,22 +180,22 @@ class UPnP():
         if src_port not in valid_ports:
             raise Exception("Invalid port for forwarding.")
 
-        #Source port is forwarded to same destination port number.
+        # Source port is forwarded to same destination port number.
         if dest_port == None:
             dest_port = src_port
 
-        #Use UPnP binary for forwarding on Windows.
+        # Use UPnP binary for forwarding on Windows.
         if platform.system() == "Windows":
             cmd = "upnpc-static.exe -a %s %s %s %s" % (get_lan_ip(), str(src_port), str(dest_port), proto)
             subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read()
             return
 
-        #Find gateway address.
+        # Find gateway address.
         gateway_addr = self.find_gateway()
         if gateway_addr == None:
             raise Exception("Unable to find UPnP compatible gateway.")
 
-        #Get control URL.
+        # Get control URL.
         rhost = re.findall('([^/]+)', gateway_addr)
         res = urlopen(gateway_addr, timeout=self.timeout).read().decode("utf-8")
         res = res.replace('\r', '')
@@ -217,7 +217,7 @@ class UPnP():
             + str(dest_port) + '</NewInternalPort><NewInternalClient>' + str(dest_ip) \
             + '</NewInternalClient><NewEnabled>1</NewEnabled><NewPortMappingDescription>' + str(port_map_desc) + '</NewPortMappingDescription><NewLeaseDuration>0</NewLeaseDuration></u:AddPortMapping></s:Body></s:Envelope>'
 
-        #Attempt to add new port map.
+        # Attempt to add new port map.
         x = 'http://' + rhost[1] + '/' + ctrl
         if sys.version_info >= (3,0,0):
             msg = bytes(msg, "utf-8")

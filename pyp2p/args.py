@@ -2,16 +2,16 @@ import argparse
 import re
 
 if re.match("^pyp2p", __name__) != None:
-    #Setup parser.
+    # Setup parser.
     parser = argparse.ArgumentParser(prog='pyp2p')
 
-    #Option: LAN IP.
+    # Option: LAN IP.
     parser.add_argument('-lan_ip', '--lan_ip', action="store", dest="lan_ip", help="query string", default=None)
 
-    #Option: LAN IP.
+    # Option: LAN IP.
     parser.add_argument('-wan_ip', '--wan_ip', action="store", dest="wan_ip", help="query string", default=None)
 
-    #Parse arguments.
+    # Parse arguments.
     args = args, unknown = parser.parse_known_args()
 else:
     class Args():

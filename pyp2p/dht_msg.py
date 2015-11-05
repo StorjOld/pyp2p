@@ -27,41 +27,41 @@ class DHT():
         self.password = self.rand_str(30)
         self.messages_received = Queue(maxsize=100)
 
-        #Register a new "account."
+        # Register a new "account."
         self.register(self.node_id, self.password)
 
     def rand_str(self, length):
         return ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for i in range(length))
 
     def register(self, node_id, password):
-        #Registers a new node to receive messages.
-        call  = dht_msg_endpoint + "?call=register&"
+        # Registers a new node to receive messages.
+        call = dht_msg_endpoint + "?call=register&"
         call += urlencode({"node_id": node_id}) + "&"
         call += urlencode({"password": password})
 
-        #Make API call.
+        # Make API call.
         response = requests.get(call)
 
     def put(self, node_id, msg):
-        #Send a message directly to a node in the "DHT"
-        call  = dht_msg_endpoint + "?call=put&"
+        # Send a message directly to a node in the "DHT"
+        call = dht_msg_endpoint + "?call=put&"
         call += urlencode({"node_id": node_id}) + "&"
         call += urlencode({"msg": msg})
 
-        #Make API call.
+        # Make API call.
         response = requests.get(call)
 
     def list(self, node_id, password):
-        #Get messages send to us in the "DHT"
-        call  = dht_msg_endpoint + "?call=list&"
+        # Get messages send to us in the "DHT"
+        call = dht_msg_endpoint + "?call=list&"
         call += urlencode({"node_id": node_id}) + "&"
         call += urlencode({"password": password})
 
-        #Make API call.
+        # Make API call.
         response = requests.get(call).text
         response = json.loads(response)
 
-        #Return a list of messages.
+        # Return a list of messages.
         return response
 
     def send_direct_message(self, node_id, msg):

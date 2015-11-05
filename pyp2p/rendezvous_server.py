@@ -34,10 +34,10 @@ debug = 1
 class RendezvousProtocol(LineReceiver):
     def __init__(self, factory):
         self.factory = factory
-        self.challege_timeout = 60 * 2 #Seconds.
-        self.node_lifetime = 60 * 60 * 12 #12 hours.
-        self.cleanup = 5 * 60 #Every 5 minutes.
-        self.max_candidates = 100 #Per simultaneous node.
+        self.challege_timeout = 60 * 2 # Seconds.
+        self.node_lifetime = 60 * 60 * 12 # 12 hours.
+        self.cleanup = 5 * 60 # Every 5 minutes.
+        self.max_candidates = 100 # Per simultaneous node.
         self.connected = False
 
     def log_entry(self, msg, direction="none"):
@@ -59,11 +59,11 @@ class RendezvousProtocol(LineReceiver):
         return entry
 
     def send_line(self, msg):
-        #Not connected.
+        # Not connected.
         if not self.connected:
             return
 
-        #Network byte order.
+        # Network byte order.
         try:
             if type(msg) != bytes:
                 msg = msg.encode("ascii")
@@ -72,7 +72,7 @@ class RendezvousProtocol(LineReceiver):
             print(e)
             return
 
-        #stdout for debugging.
+        # stdout for debugging.
         if debug:
             print(self.log_entry(msg, "send"))
 
@@ -136,15 +136,15 @@ class RendezvousProtocol(LineReceiver):
         if node_ip in self.factory.candidates:
             old_candidates = []
             for candidate in self.factory.candidates[node_ip]:
-                #Not connected.
+                # Not connected.
                 if not candidate["con"].connected:
                     continue
 
-                #Already sent -- updated when they accept this challenge.
+                # Already sent -- updated when they accept this challenge.
                 if candidate["propogated"]:
                     continue
 
-                #Notify node of challege from client.
+                # Notify node of challege from client.
                 msg = "CHALLENGE %s %s %s" % (candidate["ip_addr"], " ".join(map(str, candidate["predictions"])), candidate["proto"])
                 
                 self.factory.nodes["simultaneous"][node_ip]["con"].send_line(msg)
@@ -162,11 +162,11 @@ class RendezvousProtocol(LineReceiver):
         """
 
         for candidate in self.factory.candidates[node_ip]:
-            #Only if candidate is connected.
+            # Only if candidate is connected.
             if not candidate["con"].connected:
                 continue
 
-            #Synchronise simultaneous node.
+            # Synchronise simultaneous node.
             if candidate["time"] - self.factory.nodes["simultaneous"][node_ip]["time"] > self.challege_timeout:
                 msg = "RECONNECT"
                 self.factory.nodes["simultaneous"][node_ip]["con"].send_line(msg)
@@ -181,10 +181,10 @@ class RendezvousProtocol(LineReceiver):
             if debug:
                 print(self.log_entry("OPENED =", "none"))
 
-            #Force reconnect if node has candidates and the timeout is old.
+            # Force reconnect if node has candidates and the timeout is old.
             ip_addr = self.transport.getPeer().host
             if ip_addr in self.factory.nodes["simultaneous"]:
-                #Update time.
+                # Update time.
                 self.factory.nodes["simultaneous"][ip_addr]["time"] = time.time()
                 self.synchronize_simultaneous(ip_addr)
         except Exception as e:
@@ -202,51 +202,51 @@ class RendezvousProtocol(LineReceiver):
             if debug:
                 print(self.log_entry("CLOSED =", "none"))
 
-            #Every five minutes: cleanup
+            # Every five minutes: cleanup
             t = time.time()
             if time.time() - self.factory.last_cleanup >= self.cleanup:
                 self.factory.last_cleanup = t
 
-                #Delete old passive nodes.
+                # Delete old passive nodes.
                 old_node_ips = []
                 for node_ip in list(self.factory.nodes["passive"]):
                     passive_node = self.factory.nodes["passive"][node_ip]
-                    #Gives enough time for passive nodes to receive clients.
+                    # Gives enough time for passive nodes to receive clients.
                     if t - passive_node["time"] >= self.node_lifetime:
                         old_node_ips.append(node_ip)
                 for node_ip in old_node_ips:
                     del self.factory.nodes["passive"][node_ip]
 
-                #Delete old simultaneous nodes.
+                # Delete old simultaneous nodes.
                 old_node_ips = []
                 for node_ip in list(self.factory.nodes["simultaneous"]):
                     simultaneous_node = self.factory.nodes["simultaneous"][node_ip]
-                    #Gives enough time for passive nodes to receive clients.
+                    # Gives enough time for passive nodes to receive clients.
                     if t - simultaneous_node["time"] >= self.node_lifetime:
                         old_node_ips.append(node_ip)
                 for node_ip in old_node_ips:
                     del self.factory.nodes["simultaneous"][node_ip]
 
-                #Delete old candidates and candidate structs.
+                # Delete old candidates and candidate structs.
                 old_node_ips = []
                 for node_ip in list(self.factory.candidates):
-                    #Record old candidates.
+                    # Record old candidates.
                     old_candidates = []
                     for candidate in self.factory.candidates[node_ip]:
-                        #Hole punching is ms time sensitive.
-                        #Candidates older than this is safe to assume they're not needed.
+                        # Hole punching is ms time sensitive.
+                        # Candidates older than this is safe to assume they're not needed.
                         if not node_ip in self.factory.nodes["simultaneous"] and t - candidate["time"] >= self.challenge_timeout * 5:
                             old_candidates.append(candidate)
 
-                    #Remove old candidates.
+                    # Remove old candidates.
                     for candidate in old_candidates:
                         self.factory.candidates[node_ip].remove(candidate)
 
-                    #Record old node IPs.
+                    # Record old node IPs.
                     if not len(self.factory.candidates[node_ip]) and not node_ip in self.factory.nodes["simultaneous"]:
                         old_node_ips.append(node_ip)
 
-                #Remove old node IPs.
+                # Remove old node IPs.
                 for node_ip in old_node_ips:
                     del self.factory.candidates[node_ip]
         except Exception as e:
@@ -255,30 +255,30 @@ class RendezvousProtocol(LineReceiver):
             print(self.log_entry("ERROR =", error))
 
     def lineReceived(self, line):
-        #Unicode for text patterns.
+        # Unicode for text patterns.
         try:
             line = line.decode("utf-8")
         except:
-            #Received invalid characters.
+            # Received invalid characters.
             return
         if debug:
             print(self.log_entry(line, "recv"))
 
         try:
-            #Return nodes for bootstrapping.
+            # Return nodes for bootstrapping.
             if re.match("^BOOTSTRAP", line) is not None:
                 parts = re.findall("^BOOTSTRAP ([0-9]+)", line)
                 while 1:
-                    #Invalid response.
+                    # Invalid response.
                     if not len(parts):
                         break
                     n = int(parts[0])
             
-                    #Invalid number.
+                    # Invalid number.
                     if n < 1 or n > 100:
                         break
 
-                    #Bootstrap n passive, n .
+                    # Bootstrap n passive, n .
                     msg = "NODES "
                     node_types = ["passive"]
                     our_ip = self.transport.getPeer().host
@@ -286,51 +286,51 @@ class RendezvousProtocol(LineReceiver):
                     for node_type in node_types:
                         ip_addr_list = list(self.factory.nodes[node_type])
                         for i in range(0, n):
-                            #There's no nodes left to bootstrap with.
+                            # There's no nodes left to bootstrap with.
                             ip_addr_list_len = len(ip_addr_list)
                             if not ip_addr_list_len:
                                 break
 
-                            #Choose a random node.
+                            # Choose a random node.
                             rand_index = random.randrange(0, ip_addr_list_len)
                             ip_addr = ip_addr_list[rand_index]
                             element = self.factory.nodes[node_type][ip_addr]
 
-                            #Skip our own IP.
+                            # Skip our own IP.
                             if our_ip == ip_addr or ip_addr == "127.0.0.1":
                                 i -= 1
                                 ip_addr_list.remove(ip_addr)
                                 continue
 
-                            #Not connected.
+                            # Not connected.
                             if node_type == "simultaneous" and not element["con"].connected:
                                 i -= 1
                                 ip_addr_list.remove(ip_addr)
                                 continue
 
-                            #Append new node.
+                            # Append new node.
                             msg += node_type[0] + ":" + ip_addr + ":" + str(element["port"]) + " "
                             ip_addr_list.remove(ip_addr)
                             node_no += 1
 
-                    #No nodes in response.
+                    # No nodes in response.
                     if not node_no:
                         msg = "NODES EMPTY"
 
-                    #Send nodes list.
+                    # Send nodes list.
                     self.send_line(msg)
                     break
 
-            #Add node details to relevant sections.
+            # Add node details to relevant sections.
             if re.match("^(SIMULTANEOUS|PASSIVE) READY [0-9]+ [0-9]+$", line) is not None:
-                #Get type.
+                # Get type.
                 node_type, passive_port, max_inbound = re.findall("^(SIMULTANEOUS|PASSIVE) READY ([0-9]+) ([0-9]+)", line)[0]
                 node_type = node_type.lower()
                 valid_node_types = ["simultaneous", "passive"]
                 if node_type not in valid_node_types:
                     return
 
-                #Init / setup.
+                # Init / setup.
                 node_ip = self.transport.getPeer().host
                 self.factory.nodes[node_type][node_ip] = {
                     "max_inbound": max_inbound,
@@ -341,7 +341,7 @@ class RendezvousProtocol(LineReceiver):
                     "ip_list": []
                 }
 
-                #Passive doesn't have a candidates list.
+                # Passive doesn't have a candidates list.
                 if node_type == "simultaneous":
                     if not node_ip in self.factory.candidates:
                         self.factory.candidates[node_ip] = []
@@ -349,23 +349,23 @@ class RendezvousProtocol(LineReceiver):
                         self.cleanup_candidates(node_ip)
                         self.propogate_candidates(node_ip)
 
-            #Echo back mapped port.
+            # Echo back mapped port.
             if re.match("^SOURCE TCP", line) is not None:
                 self.send_remote_port()
 
-            #Client wishes to actively initate a simultaneous open.
+            # Client wishes to actively initate a simultaneous open.
             if re.match("^CANDIDATE", line) is not None:
-                #CANDIDATE 192.168.0.1 TCP.
+                # CANDIDATE 192.168.0.1 TCP.
                 parts = re.findall("^CANDIDATE ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) (TCP|UDP) ((?:[0-9]+\s?)+)$", line)
                 while 1:
-                    #Invalid response.
+                    # Invalid response.
                     if not len(parts):
                         break
                     node_ip, proto, predictions = parts[0]
                     predictions = predictions.split(" ")
                     client_ip = self.transport.getPeer().host
 
-                    #Invalid IP address.
+                    # Invalid IP address.
                     if not self.is_valid_ipv4_address(node_ip):
                         print("Candidate invalid ip4" + str(node_ip))
                         break
@@ -376,7 +376,7 @@ class RendezvousProtocol(LineReceiver):
                         print("Candidate node ip == clietn ip")
                         break
 
-                    #Valid port.
+                    # Valid port.
                     valid_ports = 1
                     for port in predictions:
                         if not self.is_valid_port(port):
@@ -385,7 +385,7 @@ class RendezvousProtocol(LineReceiver):
                         print("Candidate not valid port")
                         break
 
-                    #Not connected.
+                    # Not connected.
                     if not self.factory.nodes["simultaneous"][node_ip]["con"].connected:
                         print("Candidate not connected.")
                         break
@@ -399,9 +399,9 @@ class RendezvousProtocol(LineReceiver):
                         "propogated": 0
                     }
 
-                    #Delete candidate if it already exists.
+                    # Delete candidate if it already exists.
                     if node_ip in self.factory.candidates:
-                        #Max candidates reached.
+                        # Max candidates reached.
                         if len(self.factory.candidates[node_ip]) >= self.max_candidates:
                             print("Candidate max candidates reached.")
                             break
@@ -415,32 +415,32 @@ class RendezvousProtocol(LineReceiver):
                     self.factory.candidates[node_ip].append(candidate)
                     candidate_index = len(self.factory.candidates[node_ip]) - 1
 
-                    #Update predictions.
+                    # Update predictions.
                     self.factory.candidates[node_ip][candidate_index]["predictions"] = predictions
                     msg = "PREDICTION SET"
                     self.send_line(msg)
 
-                    #Synchronize simultaneous node.
+                    # Synchronize simultaneous node.
                     self.synchronize_simultaneous(node_ip)
                     break
 
 
-            #Node wishes to respond to a simultaneous open challenge from a client.
+            # Node wishes to respond to a simultaneous open challenge from a client.
             if re.match("^ACCEPT", line) is not None:
-                #ACCEPT 192.168.0.1 4552 345 TCP 1412137849.288068
+                # ACCEPT 192.168.0.1 4552 345 TCP 1412137849.288068
                 parts = re.findall("^ACCEPT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+) (TCP|UDP) ([0-9]+(?:[.][0-9]+)?)$", line)
                 while 1:
-                    #Invalid reply.
+                    # Invalid reply.
                     if not len(parts):
                         break
                     client_ip, predictions, proto, ntp = parts[0]
 
-                    #Invalid IP address.
+                    # Invalid IP address.
                     node_ip = self.transport.getPeer().host                
                     if node_ip not in self.factory.candidates:
                         break
 
-                    #Invalid predictions.
+                    # Invalid predictions.
                     predictions = predictions.split(" ")
                     valid_ports = 1
                     for port in predictions:
@@ -449,15 +449,15 @@ class RendezvousProtocol(LineReceiver):
                     if not valid_ports:
                         break
 
-                    #Invalid NTP.
+                    # Invalid NTP.
                     ntp = ntp
                     t = time.time()
                     minute = 60 * 10
                     if int(float(ntp)) < t - minute or int(float(ntp)) > t + minute:
                         break
 
-                    #Relay fight to client_ip.
-                    #FIGHT 192.168.0.1 4552 345 34235 TCP 123123123.1
+                    # Relay fight to client_ip.
+                    # FIGHT 192.168.0.1 4552 345 34235 TCP 123123123.1
                     msg = "FIGHT %s %s %s %s" % (node_ip, " ".join(map(str, predictions)), proto, str(ntp))
                     for candidate in self.factory.candidates[node_ip]:
                         if candidate["ip_addr"] == client_ip:
@@ -471,7 +471,7 @@ class RendezvousProtocol(LineReceiver):
 
                     break
 
-            #Remove node details.
+            # Remove node details.
             if re.match("^CLEAR", line) is not None:
                 ip_addr = self.transport.getPeer().host
                 if ip_addr in self.factory.nodes["passive"]:
@@ -541,7 +541,7 @@ class RendezvousFactory(Factory):
             'bootstrap': {}
         }
 
-        #Test data.
+        # Test data.
         """
         test_ip = "192.168.0.10"
         self.nodes["passive"][test_ip] = {

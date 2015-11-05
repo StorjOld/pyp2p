@@ -76,8 +76,8 @@ def ip2int(addr):
 def int2ip(addr):                                                               
     return socket.inet_ntoa(struct.pack("!I", addr))    
 
-#Patches for urllib2 and requests to bind on specific interface.
-#http://rossbates.com/2009/10/26/urllib2-with-multiple-network-interfaces/
+# Patches for urllib2 and requests to bind on specific interface.
+# http://rossbates.com/2009/10/26/urllib2-with-multiple-network-interfaces/
 true_socket = socket.socket
 def build_bound_socket(source_ip):
     def bound_socket(*a, **k):
@@ -278,7 +278,7 @@ def get_wan_ip():
     That IP module sucks. Occasionally it returns an IP address behind cloudflare which probably happens when cloudflare tries to proxy your web request because it thinks you're trying to DoS. It's better if we just run our own infrastructure.
     """
 
-    #Fail-safe: use centralized server for IP lookup.
+    # Fail-safe: use centralized server for IP lookup.
     from .net import forwarding_servers
     for forwarding_server in forwarding_servers:
         url = "http://" + forwarding_server["addr"] + ":"
