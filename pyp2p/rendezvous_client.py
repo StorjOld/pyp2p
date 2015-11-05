@@ -61,11 +61,35 @@ class RendezvousClient:
         self.timeout = 5 #Socket timeout.
         self.predictable_nats = ["preserving", "delta"]
 
+    def server_connect(self, sock=None):
+        for server in self.rendezvous_servers:
+            try:
+                # Blank socket object.
+                con = Sock(
+                    blocking=1,
+                    interface=self.interface,
+                    timeout=2
+                )
+
+                # Pre-bound socket.
+                if sock != None:
+                    con.set_sock(sock)
+
+                # Connect the socket.
+                con.connect(server["addr"], server["port"])
+
+                # Return Sock object.
+                return con
+            except:
+                continue
+
+        raise Exception("All rendezvous servers are down.")
+
     #Delete any old rendezvous server state for node.
     def leave_fight(self):
-        rendezvous_con = Sock(self.rendezvous_servers[0]["addr"], self.rendezvous_servers[0]["port"], blocking=1, interface=self.interface)
-        rendezvous_con.send_line("CLEAR")
-        rendezvous_con.close()
+        con = self.server_connect()
+        con.send_line("CLEAR")
+        con.close()
         return 1
 
     def attend_fight(self, mappings, node_ip, predictions, ntp):
@@ -119,9 +143,7 @@ class RendezvousClient:
         #Connect to rendezvous server.
         try:
             mappings = sequential_bind(self.mapping_no + 1, self.interface)
-            con = Sock(blocking=1, interface=self.interface, timeout=self.timeout)
-            con.set_sock(mappings[0]["sock"])
-            con.connect(self.rendezvous_servers[0]["addr"], self.rendezvous_servers[0]["port"])
+            con = self.server_connect(mappings[0]["sock"])
         except Exception as e:
             print(e)
             print("this err")
@@ -187,7 +209,7 @@ class RendezvousClient:
 
     def passive_listen(self, port, max_inbound=10):
         try:
-            con = Sock(self.rendezvous_servers[0]["addr"], self.rendezvous_servers[0]["port"], blocking=1, interface=self.interface)
+            con = self.server_connect()
             msg = "PASSIVE READY %s %s" % (str(port), str(max_inbound))
             con.send_line(msg)
             con.close()
@@ -510,9 +532,7 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
         #Load mappings for preserving and delta tests.
         mappings = sequential_bind(self.nat_tests, self.interface)
         for i in range(0, self.nat_tests):
-            con = Sock(blocking=1, interface=self.interface)
-            con.s = mappings[i]["sock"]
-            con.connect(self.rendezvous_servers[0]["addr"], self.rendezvous_servers[0]["port"]) 
+            con = self.server_connect(mappings[i]["sock"])
             con.send_line("SOURCE TCP " + str(mappings[i]["source"]))
             remote_port = self.parse_remote_port(con.recv_line(timeout=2))
             mappings[i]["remote"] = int(remote_port)
@@ -546,18 +566,11 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
         for i in range(0, self.nat_tests):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            try:
-                sock.bind(('', 0))
-            except:
-                break
+            sock.bind(('', 0))
             con = Sock(blocking=1, interface=self.interface)
             con.s = sock
             source_port = con.s.getsockname()[1]
-            try:
-                con.connect(self.rendezvous_servers[0]["addr"], self.rendezvous_servers[0]["port"])
-            except socket.error as e:
-                if e.errno != errno.EADDRNOTAVAIL:
-                    break
+            con = self.server_connect(sock)
             con.send_line("SOURCE TCP " + str(source_port))
             remote_port = self.parse_remote_port(con.recv_line(timeout=2))
             mappings.append({

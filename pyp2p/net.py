@@ -56,6 +56,10 @@ rendezvous_servers = [
     {
         "addr": "158.69.201.105",
         "port": 8000
+    },
+    {
+        "addr": "185.86.149.128",
+        "port": 8000
     }
 ]
 
@@ -876,10 +880,6 @@ class Net():
                         self.rendezvous.simultaneous_cons = []
                         if self.enable_advertise:
                             self.rendezvous.simultaneous_listen()
-
-        #Attempt to reconnect rendezvous server.
-        if self.rendezvous.server_con != None:
-            self.rendezvous.server_con.reconnect()
 
         #QUIT - remove us from bootstrapping server.
         if len(self.inbound) == self.max_inbound:
