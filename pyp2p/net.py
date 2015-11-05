@@ -533,8 +533,13 @@ class Net():
             if self.nat_type != "unknown":
                 return "simultaneous"
 
+        # Get IP of binding interface.
+        if self.passive_bind == "0.0.0.0":
+            lan_ip = get_lan_ip(self.interface)
+        else:
+            lan_ip = self.passive_bind
+
         # Passive node checks.
-        lan_ip = get_lan_ip(self.interface)
         if lan_ip != None and self.passive_port != None and self.enable_forwarding:
             self.debug_print("Checking if port is forwarded.")
 
