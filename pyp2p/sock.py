@@ -24,6 +24,7 @@ Quirks:
 
 Otherwise, all functions in this class behave how you would expect them to (depending on whether you're using non-blocking mode or blocking mode.) It's assumed that all blocking operations have a timeout by default. This can't be disabled.
 
+Todo: test various functions under connection exit.
 """
 
 import socket
@@ -102,6 +103,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
     def set_blocking(self, blocking, timeout=5):
+        if self.s == None or self.connected == 0:
+            return
+
         # Change blocking state.
         self.s.setblocking(blocking)
 
