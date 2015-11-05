@@ -308,7 +308,7 @@ class UNL():
             wan_ip = details["wan_ip"]
 
         # Lan IP.
-        unspecific_bind = ["0.0.0.0", "127.0.0.1", wan_ip, "localhost"]
+        unspecific_bind = ["0.0.0.0", "127.0.0.1", "localhost"]
         if self.net.passive_bind in unspecific_bind:
             lan_ip = get_lan_ip(self.net.interface)
         else:
