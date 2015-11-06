@@ -64,11 +64,17 @@ rendezvous_servers = [
 ]
 
 # Web server running script to test port forwarding.
+# And get WAN IP address.
 forwarding_servers = [
     {
         "addr": "158.69.201.105",
         "port": 80,
         "url": "/pyp2p/net.php"
+    },
+    {
+        "addr": "185.86.149.128",
+        "port": 80,
+        "url": "/net.php"
     }
 ] 
 
