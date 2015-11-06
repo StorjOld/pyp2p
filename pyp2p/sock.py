@@ -38,7 +38,7 @@ from .lib import *
 error_log_path = "error.log"
 
 class Sock:
-    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=0):
+    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=1):
         self.reply_filter = None
         self.buf = u""
         self.max_buf = 1024 * 1024 # 1 MB.
@@ -60,12 +60,6 @@ class Sock:
         # Disabled after connect if non-blocking is set.
         # (Connect is so far always blocking regardless of blocking mode.)
         self.s.settimeout(5)
-
-        # When was the last connection alive check?
-        self.last_heart_beat = time.time()
-
-        # How often should we check for dead connections?
-        self.heart_beat_interval = 5 * 60
 
         # Set keep alive.
         self.set_keep_alive(self.s)
@@ -298,11 +292,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     err = e.args[0]
                     self.debug_print(err)
                     if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                        # Check connection isn't dead:
-                        if time.time() - self.last_heart_beat >= self.heart_beat_interval:
-                            self.last_heart_beat = time.time()
-                            self.send_line("PING")
-
                         break
                     else:
                         # Connection closed or other problem.
@@ -381,10 +370,12 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     bytes_sent = self.s.send(msg[total_sent:])
                 except socket.timeout as e:
                     err = e.args[0]
+                    self.debug_print("Con send: " + str(e))
                     if err == "timed out":
                         return 0
                 except socket.error as e:
                     err = e.args[0]
+                    self.debug_print("Con send: " + str(e))
                     if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
                         return 0
                     else:
@@ -406,6 +397,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
             return total_sent
         except Exception as e:
+            self.debug_print("Con send: " + str(e))
             error = parse_exception(e)
             log_exception(error_log_path, error)
             self.close()
