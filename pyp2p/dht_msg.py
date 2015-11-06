@@ -40,7 +40,7 @@ class DHT():
         call += urlencode({"password": password})
 
         # Make API call.
-        response = requests.get(call)
+        response = requests.get(call, timeout=3)
 
     def put(self, node_id, msg):
         # Send a message directly to a node in the "DHT"
@@ -49,7 +49,7 @@ class DHT():
         call += urlencode({"msg": msg})
 
         # Make API call.
-        response = requests.get(call)
+        response = requests.get(call, timeout=3)
 
     def list(self, node_id, password):
         # Get messages send to us in the "DHT"
@@ -58,7 +58,7 @@ class DHT():
         call += urlencode({"password": password})
 
         # Make API call.
-        response = requests.get(call).text
+        response = requests.get(call, timeout=3).text
         response = json.loads(response)
 
         # Return a list of messages.
