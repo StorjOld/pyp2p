@@ -100,13 +100,13 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         if self.s == None or self.connected == 0:
             return
 
-        # Change blocking state.
-        self.s.setblocking(blocking)
-
         # Adjust timeout if needed.
         if blocking:
             if timeout != None:
                 self.s.settimeout(timeout)
+        else:
+            # Change blocking state.
+            self.s.setblocking(blocking)
 
         # Update blocking status.
         self.blocking = blocking
@@ -393,6 +393,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
                 # Send the rest if blocking:
                 if not (total_sent < len(msg) and (self.blocking or send_all)):
+                    break
+
+                # Everything sent.
+                if total_sent == len(msg):
                     break
 
             return total_sent

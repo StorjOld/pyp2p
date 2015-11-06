@@ -194,11 +194,14 @@ def is_port_forwarded(source_ip, port, proto, forwarding_servers):
         url += "?action=is_port_forwarded&port=" + str(port)
         url += "&proto=" + str(proto.upper())
 
-        r = urlopen(url, timeout=2)
-        response = r.read().decode("utf-8")
-        if "yes" in response:
-            ret = 1
-            break
+        try:
+            r = urlopen(url, timeout=2)
+            response = r.read().decode("utf-8")
+            if "yes" in response:
+                ret = 1
+                break
+        except:
+            continue
 
     socket.socket = true_socket
     return ret
