@@ -377,7 +377,20 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             while True:
                 # Attempt to send all.
                 # This won't work if the network buffer is already full.
-                bytes_sent = self.s.send(msg[total_sent:])
+                try:
+                    bytes_sent = self.s.send(msg[total_sent:])
+                except socket.timeout as e:
+                    err = e.args[0]
+                    if err == "timed out":
+                        return 0
+                except socket.error as e:
+                    err = e.args[0]
+                    if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                        return 0
+                    else:
+                        # Connection closed or other problem.
+                        self.close()
+                        return 0
 
                 # Connection broken.
                 if not bytes_sent or bytes_sent == None:
