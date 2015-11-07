@@ -19,6 +19,7 @@ setup(
     url='http://github.com/Storj/pyp2p',
     author='Matthew Roberts',
     author_email='matthew@roberts.pm',
+    test_suite="tests",
     license='MIT',
     packages=find_packages(exclude=('tests', 'docs')),
     install_requires=[
