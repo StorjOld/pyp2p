@@ -377,7 +377,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     err = e.args[0]
                     self.debug_print("Con send: " + str(e))
                     if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                        return 0
+                        continue
                     else:
                         # Connection closed or other problem.
                         self.close()
