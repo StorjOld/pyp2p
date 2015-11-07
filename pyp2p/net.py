@@ -391,7 +391,8 @@ class Net():
 
         # Patch sock object to reject duplicate replies.
         # (if enabled)
-        con.reply_filter = filter_msg_check_builder()
+        if con != None:
+            con.reply_filter = filter_msg_check_builder()
 
         # Return new connection.
         return con
