@@ -9,6 +9,7 @@ import select
 import hashlib
 import re
 import signal
+import logging
 
 
 from .upnp import *
