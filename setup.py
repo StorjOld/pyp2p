@@ -13,11 +13,13 @@ setup(
     version='0.0.8',
     name='pyp2p',
     description='Python P2P networking library',
-    ketwords='NAT traversal, TCP hole punching, simultaneous open, UPnP, NATPMP, P2P, Peer-to-peer networking library, python',
+    ketwords=('NAT traversal, TCP hole punching, simultaneous open, UPnP,'
+              ' NATPMP, P2P, Peer-to-peer networking library, python'),
     long_description=long_description,
     url='http://github.com/Storj/pyp2p',
     author='Matthew Roberts',
     author_email='matthew@roberts.pm',
+    test_suite="tests",
     license='MIT',
     packages=find_packages(exclude=('tests', 'docs')),
     install_requires=[
@@ -38,6 +40,3 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
 )
-
-
-

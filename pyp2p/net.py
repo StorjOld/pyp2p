@@ -5,16 +5,11 @@ this class.
 """
 
 import socket
-import random
 import select
-import netifaces
-import copy
-from threading import Thread
 import hashlib
 import re
-import netifaces
 import signal
-import os
+import logging
 
 
 from .upnp import *
@@ -25,6 +20,8 @@ from .rendezvous_client import *
 from .hybrid_reply import *
 from .unl import UNL
 from .dht_msg import DHT
+
+log = logging.getLogger(__name__)
 
 # How many times a single message can be retransmitted.
 max_retransmissions = 100
@@ -76,7 +73,8 @@ forwarding_servers = [
         "port": 80,
         "url": "/net.php"
     }
-] 
+]
+
 
 def is_msg_old(msg, record_seen=0):
     if type(msg) == str:
@@ -95,6 +93,7 @@ def is_msg_old(msg, record_seen=0):
         record_msg_hash(msg)
 
     return 0
+
 
 def record_msg_hash(msg):
     if type(msg) == str:
@@ -117,12 +116,17 @@ def record_msg_hash(msg):
     else:
         return 0
 
+
 def clear_seen_messages():
     global seen_messages
     seen_messages = {}
 
+
 class Net():
-    def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown", max_outbound=10, max_inbound=10, passive_bind="0.0.0.0", passive_port=50500, interface="default", dht_node=None, error_log_path="error.log", debug=1):
+    def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown",
+                 max_outbound=10, max_inbound=10, passive_bind="0.0.0.0",
+                 passive_port=50500, interface="default", dht_node=None,
+                 error_log_path="error.log", debug=0):
         # List of outbound connections (from us, to another node.)
         self.outbound = []
 
@@ -200,7 +204,10 @@ class Net():
         self.net_type = net_type
 
         # Rendezvous / boostrapping client.
-        self.rendezvous = RendezvousClient(self.nat_type, rendezvous_servers=rendezvous_servers, interface=self.interface)
+        self.rendezvous = RendezvousClient(
+            self.nat_type, rendezvous_servers=rendezvous_servers,
+            interface=self.interface
+        )
 
         # DHT node for receiving direct messages from other nodes.
         self.dht_node = dht_node
@@ -220,17 +227,12 @@ class Net():
 
         # Net instances hide their con details to prioritise direct cons.
         if self.net_type == "direct":
-            self.disable_bootstrap()    
+            self.disable_bootstrap()
             self.disable_advertise()
             self.enable_duplicate_ip_cons = 1
 
         # Set to 1 when self.start() has been called.
         self.is_net_started = 0
-
-    # Outputs debug statements if debug mode is enabled.
-    def debug_print(self, msg):
-        if self.debug:
-            print("> " + str(msg))
 
     def disable_duplicates(self):
         self.enable_duplicates = 0
@@ -240,7 +242,7 @@ class Net():
 
     def disable_advertise(self):
         self.enable_advertise = 0
-    
+
     def disable_simultaneous(self):
         self.enable_simultaneous = 0
 
@@ -252,17 +254,17 @@ class Net():
 
     # Used to reject duplicate connections.
     def validate_node(self, node_ip, node_port=None, same_nodes=1):
-        self.debug_print("Validating: " + node_ip)
+        log.debug("Validating: " + node_ip)
 
         # Is this a valid IP?
         if not is_ip_valid(node_ip) or node_ip == "0.0.0.0":
-            self.debug_print("Invalid node ip in validate node")
+            log.debug("Invalid node ip in validate node")
             return 0
 
         # Is this a valid port?
-        if node_port != 0 and node_port != None:
+        if node_port != 0 and node_port is not None:
             if not is_valid_port(node_port):
-                self.debug_print("Invalid node port in validate port")
+                log.debug("Invalid node port in validate port")
                 return 0
 
         """
@@ -271,13 +273,15 @@ class Net():
         """
         if not self.enable_duplicate_ip_cons:
             # Don't connect to ourself.
-            if node_ip == "127.0.0.1" or node_ip == get_lan_ip(self.interface) or node_ip == get_wan_ip():
-                self.debug_print("Cannot connect to ourself.")
+            if (node_ip == "127.0.0.1" or
+                    node_ip == get_lan_ip(self.interface) or
+                    node_ip == get_wan_ip()):
+                log.debug("Cannot connect to ourself.")
                 return 0
 
             # No, really: don't connect to ourself.
             if node_ip == self.passive_bind and node_port == self.passive_port:
-                self.debug_print("Error connecting to same listen server.")
+                log.debug("Error connecting to same listen server.")
                 return 0
 
             # Don't connect to same nodes.
@@ -286,12 +290,12 @@ class Net():
                     try:
                         addr, port = node["con"].s.getpeername()
                         if node_ip == addr:
-                            self.debug_print("Already connected to this node.")
+                            log.debug("Already connected to this node.")
                             return 0
                     except Exception as e:
                         print(e)
                         return 0
-        
+
         return 1
 
     # Make an outbound con to a passive or simultaneous node.
@@ -300,21 +304,23 @@ class Net():
         node_port = int(node_port)
 
         # Debug info.
-        msg = "Attempting to connect to %s:%s:%s" % (node_ip, str(node_port), node_type)
-        self.debug_print(msg)
+        msg = "Attempting to connect to %s:%s:%s" % (
+            node_ip, str(node_port), node_type
+        )
+        log.debug(msg)
 
         # Already connected to them.
         if not self.enable_duplicate_ip_cons:
             for node in self.outbound + self.inbound:
                 if node_ip == node["ip"]:
-                    self.debug_print("Already connected.")
+                    log.debug("Already connected.")
                     return node["con"]
 
         # Avoid connecting to ourself.
         if not self.validate_node(node_ip, node_port):
-            self.debug_print("Validate node failed.")
+            log.debug("Validate node failed.")
             return None
-        
+
         # Make a simultaneous open connection.
         con = None
         if node_type == "simultaneous" and self.enable_simultaneous:
@@ -328,7 +334,9 @@ class Net():
                 old_timeout = self.rendezvous.timeout
                 try:
                     self.rendezvous.timeout = timeout
-                    con = self.rendezvous.simultaneous_challenge(node_ip, node_port, "TCP")
+                    con = self.rendezvous.simultaneous_challenge(
+                        node_ip, node_port, "TCP"
+                    )
                 except Exception as e:
                     error = parse_exception(e)
                     log_exception(self.error_log_path, error)
@@ -337,7 +345,7 @@ class Net():
 
                 # Record node details and return con.
                 self.rendezvous.simultaneous_cons = []
-                if con != None:
+                if con is not None:
                     node = {
                         "con": con,
                         "type": "simultaneous",
@@ -345,15 +353,16 @@ class Net():
                         "port": 0
                     }
                     self.outbound.append(node)
-                    self.debug_print("SUCCESS")
+                    log.debug("SUCCESS")
                 else:
-                    self.debug_print("FAILURE")
+                    log.debug("FAILURE")
 
         # Passive outbound -- easiest to connect to.
         if node_type == "passive":
             try:
                 # Try connect to passive server.
-                con = Sock(node_ip, node_port, blocking=0, timeout=timeout, interface=self.interface)
+                con = Sock(node_ip, node_port, blocking=0,
+                           timeout=timeout, interface=self.interface)
                 node = {
                     "con": con,
                     "type": "passive",
@@ -361,11 +370,11 @@ class Net():
                     "port": node_port
                 }
                 self.outbound.append(node)
-                self.debug_print("SUCCESS")
+                log.debug("SUCCESS")
             except Exception as e:
-                self.debug_print("FAILURE")
+                log.debug("FAILURE")
                 error = parse_exception(e)
-                self.debug_print(error)
+                log.debug(error)
                 log_exception(self.error_log_path, error)
                 return None
 
@@ -378,9 +387,9 @@ class Net():
 
                 # Is this a reply to a reverse query?
                 for reverse_query in self.pending_reverse_queries:
-                    pattern  = "^REVERSE_ORIGIN:" + reverse_query["unl"]
+                    pattern = "^REVERSE_ORIGIN:" + reverse_query["unl"]
                     pattern += "$"
-                    if re.match(pattern, msg) != None:
+                    if re.match(pattern, msg) is not None:
                         self.pending_reverse_queries.remove(reverse_query)
                         return 0
 
@@ -391,7 +400,7 @@ class Net():
 
         # Patch sock object to reject duplicate replies.
         # (if enabled)
-        if con != None:
+        if con is not None:
             con.reply_filter = filter_msg_check_builder()
 
         # Return new connection.
@@ -417,29 +426,31 @@ class Net():
 
         # Avoid raping the rendezvous server.
         t = time.time()
-        if self.last_bootstrap != None:
+        if self.last_bootstrap is not None:
             if t - self.last_bootstrap <= rendezvous_interval:
                 return
         self.last_bootstrap = t
-        self.debug_print("Searching for nodes to connect to.")
+        log.debug("Searching for nodes to connect to.")
 
         try:
             connection_slots = self.max_outbound - (len(self.outbound))
-            passive_outbound = []
-            simultaneous_outbound = []
             if connection_slots > 0:
                 # Connect to rendezvous server.
-                rendezvous_con = Sock(self.rendezvous.rendezvous_servers[0]["addr"], self.rendezvous.rendezvous_servers[0]["port"], blocking=1, interface=self.interface, timeout=3)
+                rendezvous_con = Sock(
+                    self.rendezvous.rendezvous_servers[0]["addr"],
+                    self.rendezvous.rendezvous_servers[0]["port"],
+                    blocking=1, interface=self.interface, timeout=3
+                )
 
                 # Retrieve random nodes to bootstrap with.
                 rendezvous_con.send_line("BOOTSTRAP " + str(self.max_outbound * 2))
                 choices = rendezvous_con.recv_line(timeout=2)
                 if choices == "NODES EMPTY":
                     rendezvous_con.close()
-                    self.debug_print("Node list is empty.")
+                    log.debug("Node list is empty.")
                     return
                 else:
-                    self.debug_print("Found node list.")
+                    log.debug("Found node list.")
 
                 # Parse node list.
                 choices = re.findall("(?:(p|s)[:]([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+)[:]([0-9]+))+\s?", choices)
@@ -452,20 +463,6 @@ class Net():
                     if not connection_slots:
                         break
 
-                    """
-                    Note: This code has been disabled because bootstrapping with simultaneous nodes was never a good idea (plus this code is blocking.) Instead, TCP hole punching is reserved as a last resort.
-
-                    # Attempt TCP hole punch (blocking.)
-                    node_type, node_ip, node_port = node
-                    if node_type == "s":
-                        con = self.add_node(node_ip, node_port, "simultaneous")
-                        if con != None:
-                            connection_slots -= 1
-                            self.debug_print("Con successful.")
-                        else:
-                            self.debug_print("Con failed.")
-                    """
-
                     # Add to list of passive nodes.
                     if node_type == "p":
                         passive_nodes.append(node)
@@ -475,11 +472,11 @@ class Net():
                 while i < len(passive_nodes) and connection_slots > 0:
                     node_type, node_ip, node_port = passive_nodes[i]
                     con = self.add_node(node_ip, node_port, "passive")
-                    if con != None:
+                    if con is not None:
                         connection_slots -= 1
-                        self.debug_print("Con successful.")
+                        log.debug("Con successful.")
                     else:
-                        self.debug_print("Con failed.")
+                        log.debug("Con failed.")
 
                     i += 1
 
@@ -489,7 +486,9 @@ class Net():
 
     def advertise(self):
         """
-        This function tells the rendezvous server that our node is ready to accept connections from other nodes on the P2P network that run the bootstrap function. It's only used when net_type == p2p
+        This function tells the rendezvous server that our node is ready to
+        accept connections from other nodes on the P2P network that run the
+        bootstrap function. It's only used when net_type == p2p
         """
 
         # Advertise is disabled.
@@ -506,7 +505,7 @@ class Net():
 
         # Avoid raping the rendezvous server with excessive requests.
         t = time.time()
-        if self.last_advertise != None:
+        if self.last_advertise is not None:
             if t - self.last_advertise <= advertise_interval:
                 return
 
@@ -518,7 +517,7 @@ class Net():
         # Tell rendezvous server to list us.
         try:
             # We're a passive node.
-            if self.node_type == "passive" and self.passive_port != None and self.enable_advertise:
+            if self.node_type == "passive" and self.passive_port is not None and self.enable_advertise:
                 self.rendezvous.passive_listen(self.passive_port, self.max_inbound)
 
             """
@@ -548,51 +547,51 @@ class Net():
             lan_ip = self.passive_bind
 
         # Passive node checks.
-        if lan_ip != None and self.passive_port != None and self.enable_forwarding:
-            self.debug_print("Checking if port is forwarded.")
+        if lan_ip is not None and self.passive_port is not None and self.enable_forwarding:
+            log.debug("Checking if port is forwarded.")
 
             # Check port isn't already forwarded.
             if is_port_forwarded(lan_ip, self.passive_port, "TCP", self.forwarding_servers):
-                self.debug_print("Port already forwarded. Skipping NAT traversal.")
+                log.debug("Port already forwarded. Skipping NAT traversal.")
 
                 self.forwarding_type = "forwarded"
                 return "passive"
             else:
-                self.debug_print("Port is not already forwarded.")
+                log.debug("Port is not already forwarded.")
 
             # Most routers.
             try:
-                self.debug_print("Trying UPnP")
+                log.debug("Trying UPnP")
 
                 UPnP(self.interface).forward_port("TCP", self.passive_port, lan_ip)
 
                 if is_port_forwarded(lan_ip, self.passive_port, "TCP", self.forwarding_servers):
                     self.forwarding_type = "UPnP"
-                    self.debug_print("Forwarded port with UPnP.")
+                    log.debug("Forwarded port with UPnP.")
                 else:
-                    self.debug_print("UPnP failed to forward port.")
+                    log.debug("UPnP failed to forward port.")
 
             except Exception as e:
                 # Log exception.
                 error = parse_exception(e)
                 log_exception(self.error_log_path, error)
-                self.debug_print("UPnP failed to forward port.")
+                log.debug("UPnP failed to forward port.")
 
                 # Apple devices.
                 try:
-                    self.debug_print("Trying NATPMP.")
+                    log.debug("Trying NATPMP.")
                     NatPMP(self.interface).forward_port("TCP", self.passive_port, lan_ip)
                     if is_port_forwarded(lan_ip, self.passive_port, "TCP", self.forwarding_servers):
                         self.forwarding_type = "NATPMP"
-                        self.debug_print("Port forwarded with NATPMP.")
+                        log.debug("Port forwarded with NATPMP.")
                     else:
-                        self.debug_print("Failed to forward port with NATPMP.")
-                        self.debug_print("Falling back on TCP hole punching or proxying.")
+                        log.debug("Failed to forward port with NATPMP.")
+                        log.debug("Falling back on TCP hole punching or proxying.")
                 except Exception as e:
                     # Log exception
                     error = parse_exception(e)
                     log_exception(self.error_log_path, error)
-                    self.debug_print("Failed to forward port with NATPMP.")
+                    log.debug("Failed to forward port with NATPMP.")
 
             # Check it worked.
             if self.forwarding_type != "manual":
@@ -613,24 +612,19 @@ class Net():
 
     def start(self):
         """
-        This function determines node and NAT type, saves connectivity details, and starts any needed servers to be a part of the network. This is usually the first function called after initialising the Net class.
+        This function determines node and NAT type, saves connectivity details,
+        and starts any needed servers to be a part of the network. This is
+        usually the first function called after initialising the Net class.
         """
 
-        self.debug_print("Starting networking.")
-        self.debug_print("Make sure to iterate over replies if you need connection alive management!")
+        log.debug("Starting networking.")
+        log.debug("Make sure to iterate over replies if you need connection alive management!")
 
         # Register a cnt + c handler
         signal.signal(signal.SIGINT, self.stop)
 
-        # Check this netifaces version supports gateway function.
-        # Older versions don't.
-        try:
-            netifaces.gateways()
-        except AttributeError:
-            raise Exception("You must be using at least version 0.10.0 of netifaces.")
-
         # Save WAN IP.
-        self.debug_print("WAN IP = " + str(get_wan_ip()))
+        log.debug("WAN IP = " + str(get_wan_ip()))
 
         # Check rendezvous server is up.
         try:
@@ -641,24 +635,24 @@ class Net():
 
         # Determine NAT type.
         if self.nat_type == "unknown":
-            self.debug_print("Determining NAT type.")
+            log.debug("Determining NAT type.")
             nat_type = self.rendezvous.determine_nat()
-            if nat_type != None and nat_type != "unknown":
+            if nat_type is not None and nat_type != "unknown":
                 self.nat_type = nat_type
                 self.rendezvous.nat_type = nat_type
-                self.debug_print("NAT type = " + nat_type)
+                log.debug("NAT type = " + nat_type)
             else:
-                self.debug_print("Unable to determine NAT type.")
+                log.debug("Unable to determine NAT type.")
 
         # Check NAT type if node is simultaneous
         # is manually specified.
         if self.node_type == "simultaneous":
             if self.nat_type not in self.rendezvous.predictable_nats:
-                self.debug_print("Manual setting of simultanous specified but ignored since NAT does not support it.")
+                log.debug("Manual setting of simultanous specified but ignored since NAT does not support it.")
                 self.node_type = "unknown"
         else:
             # Determine node type.
-            self.debug_print("Determining node type.")
+            log.debug("Determining node type.")
             self.start_passive_server()
 
             # No checks for manually specifying passive
@@ -673,7 +667,7 @@ class Net():
                         self.node_type = "active"
                         self.disable_simultaneous()
 
-        self.debug_print("Node type = " + self.node_type)
+        log.debug("Node type = " + self.node_type)
 
         # Close stray cons from determine_node() tests.
         self.close_cons()
@@ -685,20 +679,20 @@ class Net():
         self.unl = UNL(self, self.dht_node)
 
     def stop(self, signum=None, frame=None):
-        self.debug_print("Stopping networking.")
+        log.debug("Stopping networking.")
 
-        if self.passive != None:
+        if self.passive is not None:
             self.passive.shutdown(1)
             self.passive.close()
             self.passive = None
 
-        if self.last_advertise != None:
+        if self.last_advertise is not None:
             self.rendezvous.leave_fight()
 
         for con in self:
             con.close()
 
-        if signum != None:
+        if signum is not None:
             raise Exception("Process was interrupted.")
 
     # Return a connection by its IP.
@@ -708,7 +702,7 @@ class Net():
                 return node["con"]
 
         return None
-    
+
     # Send a message to all currently established connections.
     def broadcast(self, msg, source_con=None):
         for node in self.outbound + self.inbound:
@@ -721,7 +715,7 @@ class Net():
             node["con"].close()
 
         # Flush client queue for passive server.
-        if self.node_type == "passive" and self.passive != None:
+        if self.node_type == "passive" and self.passive is not None:
             self.passive.close()
             self.start_passive_server()
 
@@ -735,7 +729,7 @@ class Net():
             node_list = eval(node_list_name)[:]
             for node in node_list:
                 if not node["con"].connected:
-                    self.debug_print("Removing disconnected: " + str(node))
+                    log.debug("Removing disconnected: " + str(node))
                     eval(node_list_name).remove(node)
 
         # Timeout connections that haven't responded to reverse query.
@@ -751,11 +745,11 @@ class Net():
             self.pending_reverse_queries.remove(reverse_query)
 
         # Check for reverse connect requests.
-        if self.dht_node != None and self.net_type == "direct":
+        if self.dht_node is not None and self.net_type == "direct":
             # Don't do this every synch cycle.
             t = time.time()
             skip_dht_check = 0
-            if self.last_dht_msg != None:
+            if self.last_dht_msg is not None:
                 if t - self.last_dht_msg > dht_msg_interval:
                     skip_dht_check = 1
 
@@ -763,7 +757,7 @@ class Net():
                 dht_messages = []
                 for msg in self.dht_node.get_messages():
                     # Found reverse connect request.
-                    if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+$", msg) != None:
+                    if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+$", msg) is not None:
                         call, their_unl = msg.split(":")
 
                         # Ask if the source sent it.
@@ -788,7 +782,7 @@ class Net():
 
                 # Put messages back.
                 for msg in dht_messages:
-                    self.debug_print(msg)
+                    log.debug(msg)
                     self.dht_node.messages_received.put_nowait(msg)
 
             self.last_dht_msg = t
@@ -796,7 +790,7 @@ class Net():
         # Accept inbound connections.
         if len(self.inbound) < self.max_inbound:
             # Accept new passive inbound connections.
-            if self.passive != None:
+            if self.passive is not None:
                 r, w, e = select.select([self.passive], [], [], 0)
                 for s in r:
                     if s == self.passive:
@@ -815,7 +809,7 @@ class Net():
                                 "port": con.s.getpeername()[1],
                             }
                             self.inbound.append(node)
-                            self.debug_print("Accepted new passive connection: " + str(node))
+                            log.debug("Accepted new passive connection: " + str(node))
                         else:
                             con.close()
 
@@ -836,10 +830,10 @@ class Net():
 
                 # try:
                 t = time.time()
-                if self.rendezvous.server_con != None:
+                if self.rendezvous.server_con is not None:
                     for reply in self.rendezvous.server_con:
                         # Reconnect.
-                        if re.match("^RECONNECT$", reply) != None:
+                        if re.match("^RECONNECT$", reply) is not None:
                             if self.enable_advertise:
                                 self.rendezvous.simultaneous_listen()
                             continue
@@ -849,7 +843,7 @@ class Net():
                         parts = re.findall("^CHALLENGE ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+) (TCP|UDP)$", reply)
                         if not len(parts):
                             continue
-                        candidate_ip, candidate_predictions, candidate_proto = parts[0]
+                        (candidate_ip, candidate_predictions, candidate_proto) = parts[0]
 
                         # Already connected.
                         if not self.validate_node(candidate_ip):
@@ -861,9 +855,13 @@ class Net():
 
                         # Accept challenge.
                         our_ntp = get_ntp()
-                        if our_ntp == None:
+                        if our_ntp is None:
                             continue
-                        msg = "ACCEPT %s %s TCP %s" % (candidate_ip, self.rendezvous.predictions, str(our_ntp))
+                        msg = "ACCEPT %s %s TCP %s" % (
+                            candidate_ip,
+                            self.rendezvous.predictions,
+                            str(our_ntp)
+                        )
                         ret = self.rendezvous.server_con.send_line(msg)
                         if not ret:
                             continue
@@ -875,12 +873,15 @@ class Net():
                         code running on the same host or in a LAN. Will
                         compensate by reducing the NTP delay to have the
                         meetings occur faster and setting a limit for meetings
-                        to occur within the same period. 
+                        to occur within the same period.
                         """
                         # Walk to fight and return holes made.
                         self.last_passive_sim_open = t
-                        con = self.rendezvous.attend_fight(self.rendezvous.mappings, candidate_ip, candidate_predictions, our_ntp)
-                        if con != None:
+                        con = self.rendezvous.attend_fight(
+                            self.rendezvous.mappings, candidate_ip,
+                            candidate_predictions, our_ntp
+                        )
+                        if con is not None:
                             node = {
                                 "type": "simultaneous",
                                 "con": con,
@@ -907,7 +908,7 @@ class Net():
 
         # Relist node again if noded.
         self.advertise()
-                    
+
     """
     These functions here make the class behave like a list. The
     list is a collection of connections (inbound) + (outbound.)
@@ -953,28 +954,19 @@ if __name__ == "__main__":
     p2p_net.disable_advertise()
     p2p_net.disable_bootstrap()
     # p2p_net.add_node("192.187.97.131", 0, "simultaneous") # Behind NAT
-    # print(p2p_net.add_node("162.218.239.6", 0, "simultaneous")) # Not behind NAT
 
     def success_notify(con):
         print("SUCCESS THREADING.")
-
 
     #Test UNL
     events = {
         "success": success_notify
     }
-    #print(p2p_net.unl.deconstruct("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMUG79qiBu/aos6tMVYAAAAAWMYQkz0OjrI="))
-    #exit()
-
-
-    #p2p_net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMUG79qiBu/aos6tMVYAAAAAWMYQkz0OjrI=", events)
 
     while 1:
         time.sleep(0.5)
 
     exit()
-
-
 
     #P2P network example.
     p2p_net = Net(debug=1)
@@ -1007,4 +999,3 @@ if __name__ == "__main__":
     #Note: this isn't a valid UNL.
     #To get your UNL do: direct_net.unl.value.
     direct_net.unl.connect("Some guys UNL...", {"success": success})
-
