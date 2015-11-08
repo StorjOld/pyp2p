@@ -62,7 +62,7 @@ class Sock:
         self.s.settimeout(5)
 
         # Set keep alive.
-        self.set_keep_alive(self.s)
+        # self.set_keep_alive(self.s)
 
         # Connect socket.
         if addr != None and port != None:
@@ -112,6 +112,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         self.blocking = blocking
 
     def set_sock(self, s):
+        self.debug_print("Setting sock")
         self.close() # Close old socket.
         self.s = s
         self.connected = 1
@@ -163,6 +164,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 self.set_blocking(self.blocking, self.timeout)
             self.connected = 1
         except Exception as e:
+            self.debug_print("Connect failed")
             self.close()
             error = parse_exception(e)
             log_exception(error_log_path, error)
@@ -170,6 +172,8 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     def close(self):
         self.connected = 0
+
+        self.debug_print("Closing con!!!")
 
         # Attempt graceful shutdown.
         try:
@@ -284,6 +288,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     if e.errno == ssl.SSL_ERROR_WANT_READ:
                         break
                     else:
+                        self.debug_print("Get chunks ssl error")
                         self.close()
                         return
                 except socket.error as e:
@@ -295,6 +300,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                         break
                     else:
                         # Connection closed or other problem.
+                        self.debug_print("get chunks other closing")
                         self.close()
                         return
                 else:
@@ -315,6 +321,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                         chunk_no += 1
                         continue
 
+                    # Otherwise the loop will be endless.
                     if self.blocking:
                         break
 
@@ -344,6 +351,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     # Blocking or non-blocking.
     def send(self, msg, send_all=0, timeout=5):
+        # Sanity check.
+        if not len(msg):
+            raise Exception("Cannot send empty string.")
+
         # Update timeout.
         if self.blocking and timeout != None:
             self.set_blocking(1, timeout)
@@ -353,8 +364,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             if not self.connected:
                 return 0
 
-            total_sent = 0
-
             # Convert to bytes Python 2 & 3
             if sys.version_info >= (3,0,0):
                 if type(msg) == str:
@@ -363,41 +372,56 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 if type(msg) == unicode:
                     msg = str(msg)
 
-            while True:
-                # Attempt to send all.
-                # This won't work if the network buffer is already full.
-                try:
-                    bytes_sent = self.s.send(msg[total_sent:])
-                except socket.timeout as e:
-                    err = e.args[0]
-                    self.debug_print("Con send: " + str(e))
-                    if err == "timed out":
-                        return 0
-                except socket.error as e:
-                    err = e.args[0]
-                    self.debug_print("Con send: " + str(e))
-                    if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                        continue
-                    else:
-                        # Connection closed or other problem.
+            repeat = 1
+            total_sent = 0
+            while repeat:
+                repeat = 0
+                while True:
+                    # Attempt to send all.
+                    # This won't work if the network buffer is already full.
+                    try:
+                        bytes_sent = self.s.send(msg[total_sent:])
+                    except socket.timeout as e:
+                        err = e.args[0]
+                        self.debug_print("Con send: " + str(e))
+                        if err == "timed out":
+                            return 0
+                    except socket.error as e:
+                        err = e.args[0]
+                        self.debug_print("Con send: " + str(e))
+                        if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                            break
+                        else:
+                            # Connection closed or other problem.
+                            self.debug_print("Con send closing other")
+                            self.close()
+                            return 0
+
+                    # Connection broken.
+                    if not bytes_sent or bytes_sent == None:
+                        self.debug_print(bytes_sent)
+                        self.debug_print("Con send bytes none!")
                         self.close()
-                        return 0
+                        break
 
-                # Connection broken.
-                if not bytes_sent or bytes_sent == None:
-                    self.close()
-                    break
+                    # How much has been sent?
+                    total_sent += bytes_sent
 
-                # How much has been sent?
-                total_sent += bytes_sent
+                    # Avoid looping forever.
+                    if self.blocking and not send_all:
+                        break
+
+                    # Everything sent.
+                    if total_sent >= len(msg):
+                        break
+
+                    # Don't block.
+                    if not send_all:
+                        break
 
                 # Send the rest if blocking:
-                if not (total_sent < len(msg) and (self.blocking or send_all)):
-                    break
-
-                # Everything sent.
-                if total_sent == len(msg):
-                    break
+                if total_sent < len(msg) and send_all:
+                    repeat = 1
 
             return total_sent
         except Exception as e:
@@ -411,6 +435,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     # Blocking or non-blocking.
     def recv(self, n, encoding="unicode", timeout=10):
+        # Sanity checking.
+        if not n:
+            raise Exception("N of 0 for recv")
+
         # Update timeout.
         if self.blocking and timeout != None:
             self.set_blocking(1, timeout)
@@ -441,6 +469,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             # Restore old buffer.
             self.buf = temp_buf
 
+            if not self.connected:
+                self.debug_print("Recv disconnected error!")
+
             # Return results.
             if encoding != "unicode":
                 # Convert from unicode string with latin-1 encoding
@@ -450,7 +481,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     for ch in ret:
                         codes.append(ord(ch))
 
-                    return bytes(codes)
+                    if not len(codes):
+                        return b""
+                    else:
+                        return bytes(codes)
                 else:
                     byte_str = b""
                     for ch in ret:
@@ -460,6 +494,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
             return ret
         except Exception as e:
+            self.debug_print("Recv closign e" + str(e))
             error = parse_exception(e)
             log_exception(error_log_path, error)
             self.close()
@@ -503,6 +538,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
             return ret
         except Exception as e:
+            self.debug_print("Send line closing" + str(e))
             error = parse_exception(e)
             log_exception(error_log_path, error)
             self.close()

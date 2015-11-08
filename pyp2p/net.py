@@ -122,7 +122,7 @@ def clear_seen_messages():
     seen_messages = {}
 
 class Net():
-    def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown", max_outbound=10, max_inbound=10, passive_bind="0.0.0.0", passive_port=50500, interface="default", dht_node=None, error_log_path="error.log", debug=0):
+    def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown", max_outbound=10, max_inbound=10, passive_bind="0.0.0.0", passive_port=50500, interface="default", dht_node=None, error_log_path="error.log", debug=1):
         # List of outbound connections (from us, to another node.)
         self.outbound = []
 
@@ -802,7 +802,7 @@ class Net():
                     if s == self.passive:
                         # Accept a new con from the listen queue.
                         client, address = self.passive.accept()
-                        con = Sock()
+                        con = Sock(blocking=0)
                         con.set_sock(client)
                         node_ip, node_port = con.s.getpeername()
 

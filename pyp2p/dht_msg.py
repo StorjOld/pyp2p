@@ -22,16 +22,16 @@ except ImportError:
 dht_msg_endpoint = "http://158.69.201.105/pyp2p/dht_msg.php"
 
 class DHT():
-    def __init__(self):
-        self.node_id = self.rand_str(20)
-        self.password = self.rand_str(30)
+    def __init__(self, node_id=None, password=None):
+        self.node_id = node_id or self.rand_str(20)
+        self.password = password or self.rand_str(30)
         self.messages_received = Queue(maxsize=100)
 
         # Register a new "account."
         self.register(self.node_id, self.password)
 
     def rand_str(self, length):
-        return ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for i in range(length))
+        return ''.join(random.choice(u'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for i in range(length))
 
     def register(self, node_id, password):
         # Registers a new node to receive messages.

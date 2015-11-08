@@ -81,7 +81,7 @@ class UNL():
     def __ne__(self, other):
         return not self == other
 
-    def connect_handler(self, their_unl, events, force_master):
+    def is_master(self, their_unl):
         # Figure out who should make the connection.
         our_unl = self.value.encode("ascii")
         their_unl = their_unl.encode("ascii")
@@ -91,6 +91,15 @@ class UNL():
             master = 1
         else:
             master = 0
+
+        return master
+
+
+    def connect_handler(self, their_unl, events, force_master):
+        # Figure out who should make the connection.
+        our_unl = self.value.encode("ascii")
+        their_unl = their_unl.encode("ascii")
+        master = self.is_master(their_unl)
 
         """
         Master defines who connects if either side can. It's used to eliminate having multiple connections with the same host.
