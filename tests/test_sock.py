@@ -48,9 +48,13 @@ class test_sock(TestCase):
         s.send_line("SOURCE TCP 50")
         ret = s.recv_line()
         assert("MOTE" in ret)
+        print(s.buf)
+        print(junk)
         assert(s.buf == junk)
         ret = s.recv_line()
         assert("REMOTE" in ret)
+        print(s.buf)
+        print(junk)
         assert(s.buf == junk)
         s.close()
 

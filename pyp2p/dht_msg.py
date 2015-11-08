@@ -19,6 +19,8 @@ try:
 except ImportError:
     from queue import Queue, Full  # py3
 
+import time
+
 dht_msg_endpoint = "http://158.69.201.105/pyp2p/dht_msg.php"
 
 class DHT():
@@ -26,6 +28,8 @@ class DHT():
         self.node_id = node_id or self.rand_str(20)
         self.password = password or self.rand_str(30)
         self.messages_received = Queue(maxsize=100)
+        self.check_interval = 1
+        self.last_check = time.time()
 
         # Register a new "account."
         self.register(self.node_id, self.password)
@@ -52,6 +56,13 @@ class DHT():
         response = requests.get(call, timeout=3)
 
     def list(self, node_id, password):
+        # Limit check time to prevent DoSing check server.
+        current = time.time()
+        elapsed = current - self.last_check
+        if elapsed <= self.check_interval:
+            return []
+        self.last_check = current
+
         # Get messages send to us in the "DHT"
         call = dht_msg_endpoint + "?call=list&"
         call += urlencode({"node_id": node_id}) + "&"
