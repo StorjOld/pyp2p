@@ -1,16 +1,17 @@
 language: python
-python:
-  - "2.7"
-  - "3.3"
+
+matrix:
+  include:
+    - python: "2.7"
+      env: TEST_SUITE=2_7_tests.sh
+    - python: "3.3"
+      env: TEST_SUITE=3_3_tests.sh
+script: ./$TEST_SUITE
 
 # install dependencies, e.g. pip install -r requirements.txt
 install:
   - pip install -r requirements.txt
   - python setup.py install
-
-# run tests, e.g. python setup.py test
-script:
-  - ./run_tests.sh
 
 # post to slack
 notifications:
