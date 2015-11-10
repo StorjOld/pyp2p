@@ -624,6 +624,8 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             return u""
         except:
             pass
+        finally:
+            self.buf = old_buf
 
     """
     These functions here make the class behave like a list. The

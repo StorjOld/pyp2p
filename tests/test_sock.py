@@ -44,7 +44,8 @@ class test_sock(TestCase):
         ret = s.recv(1)
         assert(ret[0] == u"E")
         assert(s.buf == u"test")
-        s.buf = junk = u"example\r\nxsfsdf"
+        s.buf = u"example\r\nxsfsdf"
+        junk = s.buf[:]
         s.send_line("SOURCE TCP 50")
         ret = s.recv_line()
         assert("MOTE" in ret)

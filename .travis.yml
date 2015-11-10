@@ -6,7 +6,11 @@ matrix:
       env: TEST_SUITE=2_7_tests.sh
     - python: "3.3"
       env: TEST_SUITE=3_3_tests.sh
-script: ./$TEST_SUITE
+script:
+  - rm -rf test_out
+  - ./$TEST_SUITE &> test_out
+  - cat ./test_out
+  - cat ./test_out | '/FAILED/{s/f/b/;q}; /FAILED/!{q1}'
 
 # install dependencies, e.g. pip install -r requirements.txt
 install:
