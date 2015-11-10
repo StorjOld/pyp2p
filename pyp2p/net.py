@@ -378,31 +378,6 @@ class Net():
                 log_exception(self.error_log_path, error)
                 return None
 
-        # Filter(): Remove undesirable messages from replies.
-        # Save message: 0 = no, 1 = yes.
-        def filter_msg_check_builder():
-            def filter_msg_check(msg):
-                # Allow duplicate replies?
-                record_seen = not self.enable_duplicates
-
-                # Is this a reply to a reverse query?
-                for reverse_query in self.pending_reverse_queries:
-                    pattern = "^REVERSE_ORIGIN:" + reverse_query["unl"]
-                    pattern += "$"
-                    if re.match(pattern, msg) is not None:
-                        self.pending_reverse_queries.remove(reverse_query)
-                        return 0
-
-                # Check if message is old.
-                return not is_msg_old(msg, record_seen)
-
-            return filter_msg_check
-
-        # Patch sock object to reject duplicate replies.
-        # (if enabled)
-        if con is not None:
-            con.reply_filter = filter_msg_check_builder()
-
         # Return new connection.
         return con
 
@@ -678,6 +653,9 @@ class Net():
         # Initialise our UNL details.
         self.unl = UNL(self, self.dht_node)
 
+        # Nestled calls.
+        return self
+
     def stop(self, signum=None, frame=None):
         log.debug("Stopping networking.")
 
@@ -698,7 +676,98 @@ class Net():
     # Return a connection by its IP.
     def con_by_ip(self, ip):
         for node in self.outbound + self.inbound:
+            # Used to block UNLs until nonces are received.
+            # Otherwise they might try do I/O and ruin their protocols.
+            if self.net_type == "direct":
+                if node["con"].nonce == None:
+                    continue
+
             if node["ip"] == ip:
+                return node["con"]
+
+        return None
+
+    def generate_con_id(self, nonce, their_wan_ip, our_wan_ip):
+        # Convert WAN IPs to bytes.
+        if sys.version_info >= (3, 0, 0):
+            if type(their_wan_ip) == str:
+                their_wan_ip = their_wan_ip.encode("ascii")
+
+                if type(our_wan_ip) == str:
+                    our_wan_ip = our_wan_ip.encode("ascii")
+        else:
+            if type(their_wan_ip) == unicode:
+                their_wan_ip = str(their_wan_ip)
+
+            if type(our_wan_ip) == our_wan_ip:
+                our_wan_ip = str(our_wan_ip)
+
+        # Hash WAN IPs to make them the same length.
+        their_wan_ip = hashlib.sha256(their_wan_ip).hexdigest()
+        our_wan_ip = hashlib.sha256(our_wan_ip).hexdigest()
+
+        # XOR WAN IPs together.
+        fingerprint = b""
+        assert(len(their_wan_ip) == len(our_wan_ip))
+        for i in range(0, len(their_wan_ip)):
+            code1 = their_wan_ip[i]
+            if type(code1) != int:
+                code1 = ord(code1)
+
+            code2 = our_wan_ip[i]
+            if type(code2) != int:
+                code2 = ord(code2)
+
+            fingerprint += chr(code1 ^ code2).encode("ascii")
+
+        # Convert nonce to bytes.
+        if sys.version_info >= (3, 0, 0):
+            if type(nonce) == str:
+                nonce = nonce.encode("ascii")
+        else:
+            if type(nonce) == unicode:
+                nonce = str(nonce)
+
+        # Generate con ID.
+        con_id = hashlib.sha256(nonce + fingerprint).hexdigest()
+
+        # Convert to unicode.
+        if sys.version_info >= (3, 0, 0):
+            if type(con_id) == bytes:
+                con_id = con_id.decode("utf-8")
+        else:
+            if type(con_id) == str:
+                con_id = unicode(con_id)
+
+        # Return con ID.
+        return con_id
+
+    def con_by_id(self, expected_id):
+        for node in self.outbound + self.inbound:
+            # Nothing to test.
+            if node["con"].nonce is None:
+                print("Nonce not set")
+                continue
+
+            print("Testing nonce")
+
+            # Generate con_id from con.
+            their_wan_ip, junk = node["con"].s.getpeername()
+            if is_ip_private(their_wan_ip):
+                our_wan_ip = get_lan_ip(self.interface)
+            else:
+                our_wan_ip = get_wan_ip()
+            found_id = self.generate_con_id(
+                node["con"].nonce,
+                their_wan_ip,
+                our_wan_ip
+            )
+
+            # Check result.
+            print(found_id)
+            print(expected_id)
+            print("------------")
+            if found_id == expected_id:
                 return node["con"]
 
         return None
@@ -744,6 +813,23 @@ class Net():
         for reverse_query in old_reverse_queries:
             self.pending_reverse_queries.remove(reverse_query)
 
+        # Get connection nonce (for building IDs.)
+        if self.net_type == "direct":
+            for node in self.inbound + self.outbound:
+                if node["con"].nonce != None:
+                    continue
+
+                # Receive nonce part.
+                if len(node["con"].nonce_buf) < 64:
+                    remaining = 64 - len(node["con"].nonce_buf)
+                    nonce_part = node["con"].recv(remaining)
+                    if len(nonce_part):
+                        node["con"].nonce_buf += nonce_part
+
+                # Set nonce.
+                if len(node["con"].nonce_buf) == 64:
+                    node["con"].nonce = node["con"].nonce_buf
+
         # Check for reverse connect requests.
         if self.dht_node is not None and self.net_type == "direct":
             # Don't do this every synch cycle.
@@ -757,18 +843,25 @@ class Net():
                 dht_messages = []
                 for msg in self.dht_node.get_messages():
                     # Found reverse connect request.
-                    if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+$", msg) is not None:
-                        call, their_unl = msg.split(":")
+                    if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+:[a-fA-F0-9]{64}$", msg) is not None:
+                        call, their_unl, nonce = msg.split(":")
+                        their_unl = UNL(value=their_unl).deconstruct()
+                        node_id = their_unl["node_id"]
 
                         # Ask if the source sent it.
                         def success_builder():
                             def success(con):
+                                # Indicate status.
+                                log.debug("Received reverse connect notice")
+                                log.debug(nonce)
+
                                 # Did you send this?
-                                con.send_line("REVERSE_QUERY:" + self.unl.value)
+                                query = "REVERSE_QUERY:" + self.unl.value
+                                self.dht_node.send_direct_message(node_id, query)
 
                                 # Record pending query state.
                                 query = {
-                                    "unl": their_unl,
+                                    "unl": their_unl["value"],
                                     "con": con,
                                     "timestamp": time.time()
                                 }
@@ -776,7 +869,28 @@ class Net():
 
                             return success
 
-                        self.unl.connect(their_unl, {"success": success_builder()}, reverse_connect=1)
+                        log.debug("Attempting to do reverse connect")
+                        self.unl.connect(their_unl["value"], {"success": success_builder()}, nonce=nonce)
+
+                    # Found reverse query (did you make this?)
+                    elif re.match("^REVERSE_QUERY:[a-zA-Z0-9+/-=_\s]+$", msg) is not None:
+                        log.debug("Received reverse query")
+                        call, their_unl = msg.split(":")
+                        their_unl = UNL(value=their_unl).deconstruct()
+                        node_id = their_unl["node_id"]
+                        query = "REVERSE_ORIGIN:" + self.unl.value
+                        self.dht_node.send_direct_message(node_id, query)
+
+
+                    # Found reverse origin (yes I made this.)
+                    elif re.match("^REVERSE_ORIGIN:[a-zA-Z0-9+/-=_\s]+$", msg) is not None:
+                        log.debug("Received reverse origin")
+                        for reverse_query in self.pending_reverse_queries:
+                            pattern = "^REVERSE_ORIGIN:" + reverse_query["unl"]
+                            pattern += "$"
+                            if re.match(pattern, msg) is not None:
+                                log.debug("Removing pending reverse query: success!")
+                                self.pending_reverse_queries.remove(reverse_query)
                     else:
                         dht_messages.append(msg)
 
@@ -923,12 +1037,32 @@ class Net():
         # Process connections.
         self.synchronize()
 
+        # Filter(): Remove undesirable messages from replies.
+        # Save message: 0 = no, 1 = yes.
+        def filter_msg_check_builder():
+            def filter_msg_check(msg):
+                # Allow duplicate replies?
+                record_seen = not self.enable_duplicates
+
+                # Check if message is old.
+                return not is_msg_old(msg, record_seen)
+
+            return filter_msg_check
+
         # Copy all connections to single buffer.
         cons = []
-        for node in self.inbound:
+        for node in self.inbound + self.outbound:
+            if node["con"].nonce is None:
+                if self.net_type == "direct":
+                    continue
+
             cons.append(node["con"])
-        for node in self.outbound:
-            cons.append(node["con"])
+
+        # Patch sock object to reject duplicate replies.
+        # (if enabled)
+        for con in cons:
+            if con is not None:
+                con.reply_filter = filter_msg_check_builder()
 
         # Return all cons.
         return iter(cons)

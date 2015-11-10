@@ -38,7 +38,9 @@ from .lib import *
 error_log_path = "error.log"
 
 class Sock:
-    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=0):
+    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=1):
+        self.nonce = None
+        self.nonce_buf = u""
         self.reply_filter = None
         self.buf = u""
         self.max_buf = 1024 * 1024 # 1 MB.
@@ -373,6 +375,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
         # Check socket is in correct blocking mode.
         blocking = self.s.gettimeout()
+        print(blocking)
         if self.blocking:
             assert(blocking >= 1 or blocking == None)
         else:

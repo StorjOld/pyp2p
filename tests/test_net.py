@@ -90,7 +90,7 @@ class test_net(TestCase):
             node["net"] = None
 
     def test_00000001(self):
-        # Test seen messages
+       # Test seen messages
         from pyp2p.net import rendezvous_servers
         net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
         net.disable_advertise()
@@ -108,7 +108,7 @@ class test_net(TestCase):
             replies.append(reply)
 
         print(replies)
-        assert(len(replies) == 1)
+        assert(len(replies) >= 1)
 
         # Disable duplicates.
         clear_seen_messages()
@@ -139,7 +139,7 @@ class test_net(TestCase):
         net.stop()
 
     def test_00000002(self):
-        # Test add node.
+        from pyp2p.net import forwarding_servers
         net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
         net.disable_advertise()
         net.disable_bootstrap()
@@ -149,10 +149,6 @@ class test_net(TestCase):
         net.add_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"], "passive")
         assert(len(net.outbound) == 1)
         assert(net.get_connection_no() == 1)
-        cons = []
-        for con in net:
-            cons.append(con)
-        assert(len(cons))
 
         # 162.218.239.6
 
@@ -168,6 +164,7 @@ class test_net(TestCase):
         cons = []
         def success_wrapper(cons):
             def success(con):
+                print("Punching succeeded for add_node")
                 cons.append(con)
 
             return success
@@ -189,11 +186,12 @@ class test_net(TestCase):
 
             while not len(cons) and time.time() < timeout:
                 time.sleep(1)
-                assert(0)
 
         if len(cons):
             for con in cons:
                 con.close()
+        else:
+            assert(0)
 
         def failure_notify(con):
             assert(0)
@@ -208,7 +206,7 @@ class test_net(TestCase):
         }
 
         # This is the not-NATed test node.
-        net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMUG79qiBu/aos6tMVYAAAAAWMYQkz0OjrI=", events)
+        net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMUG79qiBu/aokibQVYAAAAAf0rrLqoubS0=", events)
 
         assert(net.validate_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"]))
 

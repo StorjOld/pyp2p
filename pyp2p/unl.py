@@ -110,8 +110,7 @@ class UNL():
 
         return master
 
-
-    def connect_handler(self, their_unl, events, force_master):
+    def connect_handler(self, their_unl, events, force_master, hairpin, nonce):
         # Figure out who should make the connection.
         our_unl = self.value.encode("ascii")
         their_unl = their_unl.encode("ascii")
@@ -140,8 +139,31 @@ class UNL():
             their_unl["wan_ip"] = their_unl["lan_ip"]
 
             # Already behind NAT so no forwarding needed.
-            our_unl["node_type"] = "passive"
-            their_unl["node_type"] = "passive"
+            if hairpin:
+                our_unl["node_type"] = "passive"
+                their_unl["node_type"] = "passive"
+
+        # Generate con ID.
+        if nonce != "0" * 64:
+            # Convert nonce to bytes.
+            if sys.version_info >= (3, 0, 0):
+                if type(nonce) == str:
+                    nonce.encode("ascii")
+            else:
+                if type(nonce) == unicode:
+                    nonce = str(nonce)
+
+            # Check nonce length.
+            assert(len(nonce) == 64)
+
+            # Create con ID.
+            con_id = self.net.generate_con_id(
+                nonce,
+                our_unl["wan_ip"],
+                their_unl["wan_ip"]
+            )
+        else:
+            con_id = None
 
         # Aquire mutex.
         self.mutex.acquire()
@@ -172,11 +194,13 @@ class UNL():
         # Release mutex.
         self.mutex.release()
 
-        # Are we asking them to connect to us?
-        reverse_query = 0
-
         # Are they already connected?
-        con = self.net.con_by_ip(their_unl["wan_ip"])
+        if con_id is None:
+            con = self.net.con_by_ip(their_unl["wan_ip"])
+        else:
+            con = self.net.con_by_id(con_id)
+
+        # Attempt to connect.
         if con is None:
             # Valid node types.
             for node_type in ["passive", "simultaneous"]:
@@ -202,26 +226,38 @@ class UNL():
                     # Don't connect to ourself.
                     node = nodes[0]
                     if node == their_unl:
+                        # Make connection.
                         con = self.net.add_node(
                             their_unl["wan_ip"], their_unl["listen_port"],
                             their_unl["node_type"], timeout=60
                         )
+
+                        # Send nonce.
                         if con is not None:
+                            con.nonce = nonce
+                            if con.connected:
+                                bytes_sent = con.send(nonce, send_all=1)
+                                assert(bytes_sent == 64)
+                            else:
+                                con = None
                             break
                     else:
                         # Tell them to connect to us.
                         if self.dht_node is not None and force_master:
-                            con_request = "REVERSE_CONNECT:%s" % (self.value)
+                            con_request = "REVERSE_CONNECT:%s:%s" % (self.value, nonce)
                             node_id = their_unl["node_id"]
                             if int(binascii.hexlify(node_id), 16):
-                                reverse_query = 1
                                 self.dht_node.send_direct_message(node_id,
                                                                   con_request)
 
                         # They will connect to us.
                         found_con = 0
                         for i in range(0, 60):
-                            con = self.net.con_by_ip(their_unl["wan_ip"])
+                            if con_id is None:
+                                con = self.net.con_by_ip(their_unl["wan_ip"])
+                            else:
+                                con = self.net.con_by_id(con_id)
+
                             if con is not None:
                                 found_con = 1
                                 break
@@ -243,17 +279,6 @@ class UNL():
         if events is not None:
             # Success.
             if con is not None:
-                # Confirm we sent the reverse connect request.
-                if reverse_query:
-                    msg = con.recv_line(timeout=2)
-                    if "REVERSE_QUERY:" in msg:
-                        reverse_accept = "REVERSE_ORIGIN:" + self.value
-                        con.send_line(reverse_accept)
-                    else:
-                        con.close()
-                        del events["success"]
-                        con = None
-
                 if "success" in events:
                     events["success"](con)
 
@@ -262,14 +287,14 @@ class UNL():
                 if "failure" in events:
                     events["failure"](con)
 
-    def connect(self, their_unl, events, force_master=1):
+    def connect(self, their_unl, events, force_master=1, hairpin=1, nonce="0" * 64):
         """
         A new thread is spawned because many of the connection techniques
         rely on sleep to determine connection outcome or to synchronise hole
         punching techniques. If the sleep is in its own thread it won't
         block main execution.
         """
-        parms = (their_unl, events, force_master)
+        parms = (their_unl, events, force_master, hairpin, nonce)
         t = Thread(target=self.connect_handler, args=parms)
         t.start()
 
