@@ -38,7 +38,7 @@ from .lib import *
 error_log_path = "error.log"
 
 class Sock:
-    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=1):
+    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=0):
         self.nonce = None
         self.nonce_buf = u""
         self.reply_filter = None

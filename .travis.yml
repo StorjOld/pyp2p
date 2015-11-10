@@ -1,0 +1,18 @@
+language: python
+python:
+  - "2.7"
+  - "3.3"
+
+# install dependencies, e.g. pip install -r requirements.txt
+install:
+  - pip install -r requirements.txt
+  - python setup.py install
+
+# run tests, e.g. python setup.py test
+script:
+  - ./run_tests.sh
+
+# post to slack
+notifications:
+  slack: storjcommunity:TZfUO9ycY8R9UYwztWZTo0jk
+  email: false
