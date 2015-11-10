@@ -75,6 +75,9 @@ class DHT():
         # Return a list of messages.
         return response
 
+    def direct_message(self, node_id, msg):
+        return self.send_direct_message(node_id, msg)
+
     def send_direct_message(self, node_id, msg):
         if type(node_id) != str:
             node_id = node_id.decode("utf-8")
