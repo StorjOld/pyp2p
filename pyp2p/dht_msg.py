@@ -28,8 +28,8 @@ class DHT():
         self.node_id = node_id or self.rand_str(20)
         self.password = password or self.rand_str(30)
         self.messages_received = Queue(maxsize=100)
-        self.check_interval = 1
-        self.last_check = time.time()
+        self.check_interval = 3 # For slow connections, unfortunately.
+        self.last_check = 0
 
         # Register a new "account."
         self.register(self.node_id, self.password)
@@ -58,10 +58,13 @@ class DHT():
     def list(self, node_id, password):
         # Limit check time to prevent DoSing check server.
         current = time.time()
-        elapsed = current - self.last_check
-        if elapsed <= self.check_interval:
-            return []
-        self.last_check = current
+        if self.last_check:
+            elapsed = current - self.last_check
+            if elapsed >= self.check_interval:
+                self.last_check = current
+                return []
+        else:
+            self.last_check = current
 
         # Get messages send to us in the "DHT"
         call = dht_msg_endpoint + "?call=list&"
@@ -109,5 +112,3 @@ if __name__ == "__main__":
     print(dht_node.node_id)
     print(dht_node.password)
     print(dht_node.list(dht_node.node_id, dht_node.password))
-
-

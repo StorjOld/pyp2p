@@ -10,6 +10,10 @@ class test_dht_msg(TestCase):
         content = u"content"
         dht_node.send_direct_message(dht_node.node_id, content)
         replies = dht_node.list(dht_node.node_id, dht_node.password)
+        time.sleep(1)
+        dht_node.send_direct_message(dht_node.node_id, content)
+        replies = dht_node.list(dht_node.node_id, dht_node.password)
+        print(replies)
         assert (len(replies) == 1)
         assert (replies[0] == content)
 

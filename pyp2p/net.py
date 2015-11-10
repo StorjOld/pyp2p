@@ -220,7 +220,7 @@ class Net():
         self.pending_reverse_queries = []
 
         # Time frame for connection to respond to reverse query.
-        self.reverse_query_expiry = 5
+        self.reverse_query_expiry = 60
 
         # Enable more than one connection to the same IP.
         self.enable_duplicate_ip_cons = 0
@@ -764,6 +764,7 @@ class Net():
             )
 
             # Check result.
+            print(node["con"].nonce)
             print(found_id)
             print(expected_id)
             print("------------")
