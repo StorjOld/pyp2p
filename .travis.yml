@@ -11,7 +11,7 @@ script:
   - rm -rf test_out
   - ./$TEST_SUITE &> test_out
   - cat ./test_out
-  - cat ./test_out | sed '/FAILED/{s/f/b/;q}; /FAILED/!{q1}'
+  - cat ./test_out | sed '/FAILED/{s/f/b/;q}; /FAILED/!{q0}'
 
 # install dependencies, e.g. pip install -r requirements.txt
 install:
