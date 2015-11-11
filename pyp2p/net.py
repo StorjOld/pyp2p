@@ -125,7 +125,7 @@ def clear_seen_messages():
 class Net():
     def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown",
                  max_outbound=10, max_inbound=10, passive_bind="0.0.0.0",
-                 passive_port=50500, interface="default", dht_node=None,
+                 passive_port=50500, interface="default", wan_ip=None, dht_node=None,
                  error_log_path="error.log", debug=0):
         # List of outbound connections (from us, to another node.)
         self.outbound = []
@@ -212,6 +212,9 @@ class Net():
         # DHT node for receiving direct messages from other nodes.
         self.dht_node = dht_node
 
+        # External IP of this node.
+        self.wan_ip = wan_ip or get_wan_ip()
+
         # Node type details only known after network is start()ed.
         self.unl = None
 
@@ -275,7 +278,7 @@ class Net():
             # Don't connect to ourself.
             if (node_ip == "127.0.0.1" or
                     node_ip == get_lan_ip(self.interface) or
-                    node_ip == get_wan_ip()):
+                    node_ip == self.wan_ip):
                 log.debug("Cannot connect to ourself.")
                 return 0
 
@@ -599,7 +602,7 @@ class Net():
         signal.signal(signal.SIGINT, self.stop)
 
         # Save WAN IP.
-        log.debug("WAN IP = " + str(get_wan_ip()))
+        log.debug("WAN IP = " + str(self.wan_ip))
 
         # Check rendezvous server is up.
         try:
@@ -654,7 +657,11 @@ class Net():
         self.is_net_started = 1
 
         # Initialise our UNL details.
-        self.unl = UNL(self, self.dht_node)
+        self.unl = UNL(
+            net=self,
+            dht_node=self.dht_node,
+            wan_ip=self.wan_ip
+        )
 
         # Nestled calls.
         return self
@@ -759,7 +766,7 @@ class Net():
             if is_ip_private(their_wan_ip):
                 our_wan_ip = get_lan_ip(self.interface)
             else:
-                our_wan_ip = get_wan_ip()
+                our_wan_ip = self.wan_ip
             found_id = self.generate_con_id(
                 node["con"].nonce,
                 their_wan_ip,
@@ -845,8 +852,15 @@ class Net():
 
             if not skip_dht_check and self.dht_node.has_messages():
                 dht_messages = []
-                for msg in self.dht_node.get_messages():
+                for dht_response in self.dht_node.get_messages():
+                    # Invalid response.
+                    if type(dht_response) != dict:
+                        continue
+
                     # Found reverse connect request.
+                    print(dht_response)
+                    print(type(dht_response))
+                    msg = dht_response["message"]
                     if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+:[a-fA-F0-9]{64}$", msg) is not None:
                         call, their_unl, nonce = msg.split(":")
                         their_unl = UNL(value=their_unl).deconstruct()
@@ -901,7 +915,7 @@ class Net():
                 # Put messages back.
                 for msg in dht_messages:
                     log.debug(msg)
-                    self.dht_node.messages_received.put_nowait(msg)
+                    self.dht_node.protocol.messages_received.put_nowait(msg)
 
             self.last_dht_msg = t
 

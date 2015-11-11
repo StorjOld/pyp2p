@@ -23,6 +23,10 @@ import time
 
 dht_msg_endpoint = "http://158.69.201.105/pyp2p/dht_msg.php"
 
+class DHTProtocol():
+    def __init__(self, messages_received):
+        self.messages_received = messages_received
+
 class DHT():
     def __init__(self, node_id=None, password=None):
         self.node_id = node_id or self.rand_str(20)
@@ -30,6 +34,7 @@ class DHT():
         self.messages_received = Queue(maxsize=100)
         self.check_interval = 3 # For slow connections, unfortunately.
         self.last_check = 0
+        self.protocol = DHTProtocol(self.messages_received)
 
         # Register a new "account."
         self.register(self.node_id, self.password)
@@ -72,11 +77,19 @@ class DHT():
         call += urlencode({"password": password})
 
         # Make API call.
-        response = requests.get(call, timeout=3).text
-        response = json.loads(response)
+        messages = requests.get(call, timeout=3).text
+        messages = json.loads(messages)
 
-        # Return a list of messages.
-        return response
+        # Return a list of responses.
+        ret = []
+        for msg in messages:
+            dht_response = {
+                u"message": msg
+            }
+
+            ret.append(dht_response)
+
+        return ret
 
     def direct_message(self, node_id, msg):
         return self.send_direct_message(node_id, msg)

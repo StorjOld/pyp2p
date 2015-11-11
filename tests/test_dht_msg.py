@@ -15,9 +15,9 @@ class test_dht_msg(TestCase):
         replies = dht_node.list(dht_node.node_id, dht_node.password)
         print(replies)
         assert (len(replies) == 1)
-        assert (replies[0] == content)
+        assert (replies[0]["message"] == content)
 
         if sys.version_info >= (3, 0, 0):
-            assert (type(replies[0]) == str)
+            assert (type(replies[0]["message"]) == str)
         else:
-            assert (type(replies[0]) == unicode)
+            assert (type(replies[0]["message"]) == unicode)

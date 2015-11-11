@@ -22,7 +22,7 @@ def is_valid_unl(value):
 
 
 class UNL():
-    def __init__(self, net=None, dht_node=None, value=None):
+    def __init__(self, net=None, dht_node=None, value=None, wan_ip=None):
         self.version = 1
         self.net = net
         self.nat_type_lookup = {
@@ -43,6 +43,8 @@ class UNL():
             "a": "active",
             "s": "simultaneous"
         }
+
+        self.wan_ip = wan_ip or get_wan_ip()
 
         self.dht_node = dht_node
         if value is not None:
@@ -366,7 +368,7 @@ class UNL():
             raise Exception("Missing Net object for UNL.construct")
 
         # Translate bind address.
-        wan_ip = get_wan_ip()
+        wan_ip = self.wan_ip
         if "wan_ip" in details:
             wan_ip = details["wan_ip"]
 
