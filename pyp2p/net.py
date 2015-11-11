@@ -853,13 +853,7 @@ class Net():
             if not skip_dht_check and self.dht_node.has_messages():
                 dht_messages = []
                 for dht_response in self.dht_node.get_messages():
-                    # Invalid response.
-                    if type(dht_response) != dict:
-                        continue
-
                     # Found reverse connect request.
-                    print(dht_response)
-                    print(type(dht_response))
                     msg = dht_response["message"]
                     if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+:[a-fA-F0-9]{64}$", msg) is not None:
                         call, their_unl, nonce = msg.split(":")
@@ -910,7 +904,7 @@ class Net():
                                 log.debug("Removing pending reverse query: success!")
                                 self.pending_reverse_queries.remove(reverse_query)
                     else:
-                        dht_messages.append(msg)
+                        dht_messages.append(dht_response)
 
                 # Put messages back.
                 for msg in dht_messages:

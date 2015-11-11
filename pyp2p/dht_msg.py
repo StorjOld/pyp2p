@@ -24,17 +24,16 @@ import time
 dht_msg_endpoint = "http://158.69.201.105/pyp2p/dht_msg.php"
 
 class DHTProtocol():
-    def __init__(self, messages_received):
-        self.messages_received = messages_received
+    def __init__(self):
+        self.messages_received = Queue(maxsize=100)
 
 class DHT():
     def __init__(self, node_id=None, password=None):
         self.node_id = node_id or self.rand_str(20)
         self.password = password or self.rand_str(30)
-        self.messages_received = Queue(maxsize=100)
         self.check_interval = 3 # For slow connections, unfortunately.
         self.last_check = 0
-        self.protocol = DHTProtocol(self.messages_received)
+        self.protocol = DHTProtocol()
 
         # Register a new "account."
         self.register(self.node_id, self.password)
@@ -49,7 +48,7 @@ class DHT():
         call += urlencode({"password": password})
 
         # Make API call.
-        response = requests.get(call, timeout=3)
+        response = requests.get(call, timeout=5)
 
     def put(self, node_id, msg):
         # Send a message directly to a node in the "DHT"
@@ -58,7 +57,7 @@ class DHT():
         call += urlencode({"msg": msg})
 
         # Make API call.
-        response = requests.get(call, timeout=3)
+        response = requests.get(call, timeout=5)
 
     def list(self, node_id, password):
         # Limit check time to prevent DoSing check server.
@@ -77,8 +76,16 @@ class DHT():
         call += urlencode({"password": password})
 
         # Make API call.
-        messages = requests.get(call, timeout=3).text
+        messages = requests.get(call, timeout=5).text
         messages = json.loads(messages)
+
+        if len(messages):
+            print("DHT MSG = " + str(messages))
+            print(type(messages))
+
+        # List.
+        if type(messages) == dict:
+            messages = [messages]
 
         # Return a list of responses.
         ret = []
@@ -105,14 +112,14 @@ class DHT():
 
     def has_messages(self):
         for msg in self.list(self.node_id, self.password):
-            self.messages_received.put_nowait(msg)
+            self.protocol.messages_received.put_nowait(msg)
 
-        return not self.messages_received.empty()
+        return not self.protocol.messages_received.empty()
 
     def get_messages(self):
         result = []
-        while not self.messages_received.empty():
-            result.append(self.messages_received.get())
+        while not self.protocol.messages_received.empty():
+            result.append(self.protocol.messages_received.get())
 
         return result
 
