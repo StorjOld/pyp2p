@@ -50,7 +50,7 @@ class Sock:
         self.blocking = blocking
         self.timeout = timeout
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        # self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.use_ssl = use_ssl
         self.alive = time.time()
         if self.use_ssl:
@@ -68,7 +68,7 @@ class Sock:
         self.s.settimeout(5)
 
         # Set keep alive.
-        self.set_keep_alive(self.s)
+        # self.set_keep_alive(self.s)
 
         # Connect socket.
         if addr != None and port != None:
@@ -130,10 +130,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         self.s = s
         self.connected = 1
         self.set_blocking(self.blocking, self.timeout)
-        self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        # self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         # Set keep alive.
-        self.set_keep_alive(self.s)
+        # self.set_keep_alive(self.s)
 
         # Save addr + port.
         try:

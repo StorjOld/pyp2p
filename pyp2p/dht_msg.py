@@ -79,10 +79,6 @@ class DHT():
         messages = requests.get(call, timeout=5).text
         messages = json.loads(messages)
 
-        if len(messages):
-            print("DHT MSG = " + str(messages))
-            print(type(messages))
-
         # List.
         if type(messages) == dict:
             messages = [messages]
