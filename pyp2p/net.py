@@ -632,15 +632,18 @@ class Net():
 
             # No checks for manually specifying passive
             # (there probably should be.)
-            if (self.node_type != "passive" and self.debug != 1) or self.node_type == "unknown":
+            if self.node_type == "unknown":
                 self.node_type = self.determine_node()
-                if self.net_type == "p2p":
-                    """
-                    TCP hole punching is reserved specifically for direct networks (a net object reserved for receiving direct connections -- p2p is for connecting to the main network. The reason for this is you can't do multiple TCP hole punches at the same time so its reserved for direct network where it's most needed.
-                    """
-                    if self.node_type == "simultaneous":
-                        self.node_type = "active"
-                        self.disable_simultaneous()
+
+
+        # Prevent P2P nodes from running as simultaneous.
+        if self.net_type == "p2p":
+            """
+            TCP hole punching is reserved specifically for direct networks (a net object reserved for receiving direct connections -- p2p is for connecting to the main network. The reason for this is you can't do multiple TCP hole punches at the same time so its reserved for direct network where it's most needed.
+            """
+            if self.node_type == "simultaneous":
+                self.node_type = "active"
+                self.disable_simultaneous()
 
         log.debug("Node type = " + self.node_type)
 
