@@ -404,9 +404,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     # This won't work if the network buffer is already full.
                     try:
                         self.debug_print("Attempting to send: ")
-                        self.debug_print(str(len(msg[total_sent:1024])))
+                        self.debug_print(str(len(msg[total_sent:self.chunk_size])))
                         self.debug_print("Blocking mode = " + str(self.s.gettimeout()))
-                        bytes_sent = self.s.send(msg[total_sent:1024])
+                        bytes_sent = self.s.send(msg[total_sent:self.chunk_size])
                     except socket.timeout as e:
                         err = e.args[0]
                         self.debug_print("Con send: " + str(e))

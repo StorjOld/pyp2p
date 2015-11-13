@@ -630,8 +630,7 @@ class Net():
                 self.node_type = "unknown"
         else:
             # Determine node type.
-            log.debug("Determining node type.")
-            self.start_passive_server()
+            log.info("Determining node type.")
 
             # No checks for manually specifying passive
             # (there probably should be.)
@@ -649,6 +648,10 @@ class Net():
                 self.disable_simultaneous()
 
         log.debug("Node type = " + self.node_type)
+
+        # Started no matter what
+        # since LAN connections are always possible.
+        self.start_passive_server()
 
         # Close stray cons from determine_node() tests.
         self.close_cons()
@@ -756,10 +759,8 @@ class Net():
         for node in self.outbound + self.inbound:
             # Nothing to test.
             if node["con"].nonce is None:
-                print("Nonce not set")
+                log.info("Nonce not set")
                 continue
-
-            print("Testing nonce")
 
             # Generate con_id from con.
             their_wan_ip, junk = node["con"].s.getpeername()
@@ -774,10 +775,6 @@ class Net():
             )
 
             # Check result.
-            print(node["con"].nonce)
-            print(found_id)
-            print(expected_id)
-            print("------------")
             if found_id == expected_id:
                 return node["con"]
 

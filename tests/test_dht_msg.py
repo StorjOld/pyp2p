@@ -10,14 +10,15 @@ class test_dht_msg(TestCase):
         content = u"content"
         dht_node.send_direct_message(dht_node.node_id, content)
         replies = dht_node.list(dht_node.node_id, dht_node.password)
-        time.sleep(1)
-        dht_node.send_direct_message(dht_node.node_id, content)
-        replies = dht_node.list(dht_node.node_id, dht_node.password)
-        print(replies)
         assert (len(replies) == 1)
         assert (replies[0]["message"] == content)
-
         if sys.version_info >= (3, 0, 0):
             assert (type(replies[0]["message"]) == str)
         else:
             assert (type(replies[0]["message"]) == unicode)
+
+        dht_node.send_direct_message(dht_node.node_id, content)
+        replies = dht_node.list(dht_node.node_id, dht_node.password)
+        print(replies)
+        assert (not len(replies))
+

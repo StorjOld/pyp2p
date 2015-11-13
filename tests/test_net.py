@@ -140,7 +140,7 @@ class test_net(TestCase):
 
     def test_00000002(self):
         from pyp2p.net import forwarding_servers
-        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
+        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct", passive_port=40408)
         net.disable_advertise()
         net.disable_bootstrap()
         net.start()

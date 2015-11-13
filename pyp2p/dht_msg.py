@@ -66,6 +66,7 @@ class DHT():
             elapsed = current - self.last_check
             if elapsed >= self.check_interval:
                 self.last_check = current
+            else:
                 return []
         else:
             self.last_check = current
