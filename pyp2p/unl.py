@@ -22,7 +22,8 @@ def is_valid_unl(value):
 
 
 class UNL():
-    def __init__(self, net=None, dht_node=None, value=None, wan_ip=None):
+    def __init__(self, net=None, dht_node=None, value=None, wan_ip=None, debug=0):
+        self.debug = debug
         self.version = 1
         self.net = net
         self.nat_type_lookup = {
@@ -60,6 +61,10 @@ class UNL():
 
         # Simple mutex.
         self.mutex = Lock()
+
+    def debug_print(self, msg):
+        if self.debug:
+            print(str(msg))
 
     def __eq__(self, other):
         # Compare UNLs. Used to check if a UNL is us.
@@ -229,6 +234,7 @@ class UNL():
                     node = nodes[0]
                     if node == their_unl:
                         # Make connection.
+                        self.debug_print("Attempting to add node.")
                         con = self.net.add_node(
                             their_unl["wan_ip"], their_unl["listen_port"],
                             their_unl["node_type"], timeout=60
@@ -236,13 +242,18 @@ class UNL():
 
                         # Send nonce.
                         if con is not None:
+                            self.debug_print("Con is not none.")
                             con.nonce = nonce
                             if con.connected:
                                 bytes_sent = con.send(nonce, send_all=1)
                                 assert(bytes_sent == 64)
+                                assert(con.connected)
                             else:
+                                self.debug_print("Con is not connected!")
                                 con = None
                             break
+                        else:
+                            self.debug_print("Add node returned None! \a")
                     else:
                         # Tell them to connect to us.
                         if self.dht_node is not None and force_master:
@@ -254,6 +265,7 @@ class UNL():
 
                         # They will connect to us.
                         found_con = 0
+                        self.debug_print("Waiting for connection")
                         for i in range(0, 60):
                             if con_id is None:
                                 con = self.net.con_by_ip(their_unl["wan_ip"])

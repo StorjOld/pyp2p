@@ -92,7 +92,7 @@ class RendezvousClient:
         con.close()
         return 1
 
-    def attend_fight(self, mappings, node_ip, predictions, ntp):
+    def attend_fight(self, mappings, node_ip, predictions, ntp, passive_sim=0):
         """
         This function is for starting and managing a fight
         once the details are known. It also handles the
@@ -103,7 +103,7 @@ class RendezvousClient:
         # Walk to fight.
         self.simultaneous_cons = []
         predictions = predictions.split(" ")
-        self.simultaneous_fight(mappings, node_ip, predictions, ntp)
+        self.simultaneous_fight(mappings, node_ip, predictions, ntp, passive_sim)
         
         # Return hole made in opponent.
         if len(self.simultaneous_cons):
@@ -114,14 +114,21 @@ class RendezvousClient:
             the timing for connections to succeed so that a close on
             one side of the fight ends up ruining valid connections on
             this side. Will need to test more.
+
+            Notes: the UNL synchronization code could actually fix
+            this (potential) problem as a cool unintended side-effect.
             """
 
             # Close unneeded holes.
+            """
             for i in range(1, len(self.simultaneous_cons)):
                 try:
-                    self.simultaneous_cons[i].s.close()
+                    print("Closing unneeded hole")
+                    #self.simultaneous_cons[i].s.close()
                 except:
                     pass
+            """
+
             try:
                 # Return open hole.
                 return self.simultaneous_cons[0]
@@ -312,7 +319,7 @@ class RendezvousClient:
 
         return 0
 
-    def simultaneous_fight(self, my_mappings, node_ip, predictions, their_ntp):
+    def simultaneous_fight(self, my_mappings, node_ip, predictions, their_ntp, passive_sim=0):
         """
         TCP hole punching algorithm. It uses network time servers to
         synchronize two nodes to connect to each other on their
@@ -332,14 +339,26 @@ class RendezvousClient:
 
 
         # Get current network time accurate to ~50 ms over WAN (apparently.)
-        our_ntp = get_ntp()
-        if our_ntp == None:
-            return 0
+        if passive_sim:
+            # We're the one accepting the con + specifying the time.
+            our_ntp = their_ntp
+        else:
+            # They're the ones figuring out sleep relative to us.
+            our_ntp = get_ntp()
+            if our_ntp == None:
+                return 0
 
         # Synchronize code execution to occur at their NTP time + delay.
         current = our_ntp
         future = float(their_ntp) + float(self.ntp_delay)
-        time.sleep(future - our_ntp)
+        sleep_time = future - current
+
+        # Check sleep time:
+        if sleep_time < 0:
+            print("We missed the meeting! It happened " + str(-sleep_time) + "seconds ago!")
+            return 0
+        else:
+            time.sleep(sleep_time)
         """
         Time.sleep isn't guaranteed to sleep for the time specified
         which could cause synchronisation to be off between nodes

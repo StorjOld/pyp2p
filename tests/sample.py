@@ -1,15 +1,26 @@
 from pyp2p.lib import *
 from pyp2p.dht_msg import DHT
-from pyp2p.net import Net, log
+from pyp2p.net import Net
 import random
 from threading import Thread
 import time
 import logging
 from pyp2p.sock import Sock
 
-# Test add node.
+import random
+import os
+import tempfile
+import hashlib
+if sys.version_info >= (3, 0, 0):
+    from urllib.parse import urlparse
+else:
+    from urlparse import urlparse
+
+from pyp2p.unl import UNL
+
+
 from pyp2p.net import forwarding_servers
-net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
+net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct", passive_port=40408)
 net.disable_advertise()
 net.disable_bootstrap()
 net.start()
@@ -43,7 +54,7 @@ events = {
 }
 
 # Test active simultaneous connection.
-# NAT punching node 1:
+# NATed node 1:
 timeout = time.time() + 15
 threaded_add_node("192.187.97.131", 0, "simultaneous", net, events)
 while not len(cons) and time.time() <= timeout:
@@ -62,46 +73,4 @@ if len(cons):
 else:
     assert(0)
 
-def failure_notify(con):
-    assert(0)
-
-def success_notify(con):
-    con.close()
-
-# Test threading hasn't broken the timing.
-events = {
-    "failure": failure_notify,
-    "success": success_notify
-}
-
-# This is the not-NATed test node.
-net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMUG79qiBu/aokibQVYAAAAAf0rrLqoubS0=", events)
-
-assert(net.validate_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"]))
-
-net.stop()
-
-
-exit()
-
-
-
-x = Sock()
-print(x.blocking)
-print()
-
-# Update timeout.
-if x.blocking and timeout != None:
-    x.set_blocking(1, timeout)
-
-# Check socket is in correct blocking mode.
-blocking = x.s.gettimeout()
-print(blocking)
-
-exit()
-print(blocking)
-if x.blocking:
-    assert(blocking >= 1 or blocking == None)
-else:
-    assert(blocking == 0.0)
 

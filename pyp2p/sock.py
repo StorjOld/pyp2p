@@ -62,17 +62,19 @@ class Sock:
         self.delimiter = u"\r\n"
         self.debug = debug
 
-        # Set a timeout for blocking operations so they don't DoS the program.
-        # Disabled after connect if non-blocking is set.
-        # (Connect is so far always blocking regardless of blocking mode.)
-        self.s.settimeout(5)
-
         # Set keep alive.
         # self.set_keep_alive(self.s)
 
         # Connect socket.
         if addr != None and port != None:
+            # Set a timeout for blocking operations so they don't DoS the program.
+            # Disabled after connect if non-blocking is set.
+            # (Connect is so far always blocking regardless of blocking mode.)
+            self.s.settimeout(5)
+
             self.connect(addr, port)
+        else:
+            self.set_blocking(self.blocking, self.timeout)
 
     def debug_print(self, msg):
         msg = "> " + str(msg)
@@ -104,10 +106,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     def set_blocking(self, blocking, timeout=5):
         self.debug_print(self.s == None)
-        self.debug_print(self.connected == 0)
         self.debug_print("TRYING to set blocking")
 
-        if self.s == None or self.connected == 0:
+        if self.s == None:
             return
 
         self.debug_print("Setting blocking")

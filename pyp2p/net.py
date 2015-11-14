@@ -398,13 +398,15 @@ class Net():
         """
         # Disable bootstrap.
         if not self.enable_bootstrap:
-            return
+            self.debug_print("Bootstrapping is disabled.")
+            return None
 
         # Avoid raping the rendezvous server.
         t = time.time()
         if self.last_bootstrap is not None:
             if t - self.last_bootstrap <= rendezvous_interval:
-                return
+                self.debug_print("Bootstrapped recently")
+                return None
         self.last_bootstrap = t
         self.debug_print("Searching for nodes to connect to.")
 
@@ -424,7 +426,7 @@ class Net():
                 if choices == "NODES EMPTY":
                     rendezvous_con.close()
                     self.debug_print("Node list is empty.")
-                    return
+                    return self
                 else:
                     self.debug_print("Found node list.")
 
@@ -457,8 +459,11 @@ class Net():
                     i += 1
 
         except Exception as e:
+            self.debug_print("Unknown error in bootstrap()")
             error = parse_exception(e)
             log_exception(self.error_log_path, error)
+
+        return self
 
     def advertise(self):
         """
@@ -470,14 +475,14 @@ class Net():
         # Advertise is disabled.
         if not self.enable_advertise:
             self.debug_print("Advertise is disbled!")
-            return
+            return None
         else:
             self.debug_print("Advertise is enabled.")
 
         # Direct net server is reserved for direct connections only.
         if self.net_type == "direct" and self.node_type == "passive":
             self.debug_print("P2P nodes should not consume direct conncetions.")
-            return
+            return None
 
         # Net isn't started!.
         if not self.is_net_started:
@@ -487,10 +492,10 @@ class Net():
         t = time.time()
         if self.last_advertise is not None:
             if t - self.last_advertise <= advertise_interval:
-                return
+                return None
 
             if len(self.inbound) >= self.min_connected:
-                return
+                return None
 
         self.last_advertise = t
 
@@ -508,6 +513,8 @@ class Net():
         except Exception as e:
             error = parse_exception(e)
             log_exception(self.error_log_path, error)
+
+        return self
 
     def determine_node(self):
         """
@@ -629,7 +636,7 @@ class Net():
         if self.node_type == "simultaneous":
             if self.nat_type not in self.rendezvous.predictable_nats:
                 self.debug_print("Manual setting of simultanous specified but ignored since NAT does not support it.")
-                self.node_type = "unknown"
+                self.node_type = "active"
         else:
             # Determine node type.
             self.debug_print("Determining node type.")
@@ -646,6 +653,7 @@ class Net():
             TCP hole punching is reserved specifically for direct networks (a net object reserved for receiving direct connections -- p2p is for connecting to the main network. The reason for this is you can't do multiple TCP hole punches at the same time so its reserved for direct network where it's most needed.
             """
             if self.node_type == "simultaneous":
+                self.debug_print("Simultaneous is not allowed for P2P")
                 self.node_type = "active"
                 self.disable_simultaneous()
 
@@ -1004,7 +1012,7 @@ class Net():
                         self.last_passive_sim_open = t
                         con = self.rendezvous.attend_fight(
                             self.rendezvous.mappings, candidate_ip,
-                            candidate_predictions, our_ntp
+                            candidate_predictions, our_ntp, passive_sim=1
                         )
                         if con is not None:
                             node = {

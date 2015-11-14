@@ -7,6 +7,378 @@ from threading import Thread
 import time
 
 class test_net(TestCase):
+    def test_nat_tcp_hole_punch(self):
+        """
+        If the test fails the node may actually be down.
+        """
+
+        net = Net(
+            net_type="direct_connect",
+            node_type="simultaneous",
+            nat_type="preserving",
+            passive_port=48310
+        ).start()
+
+        connected = 0
+
+        def failure_notify(con):
+            assert(0)
+
+        def success_notify(con):
+            global connected
+            connected = 1
+            print("SUCCESS NOTIFY")
+
+        # Test threading hasn't broken the timing.
+        events = {
+            "failure": failure_notify,
+            "success": success_notify
+        }
+
+        # This is the not-NATed test node.
+        net.unl.connect("AXRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowIeVRlYAAAAAlpukaxkSssw=", events)
+
+        looping = 1
+        future = time.time() + 15
+        while time.time() < future:
+            # Synchronize.
+            for con in net:
+                print("Success")
+                connected = 1
+                future = time.time() - 100
+                break
+
+            time.sleep(0.5)
+
+        net.stop()
+
+        if not connected:
+            assert(0)
+
+    def test_net_config(self):
+        """
+        Tests whether the Net class behaviours as expected relative to manually setting networking info and interacting with key functions.
+
+        "enable_bootstrap": "default",
+        "enable_advertise": "default",
+        "enable_duplicates": "default",
+        """
+
+        tests = [
+            # P2P, passive, preserving
+            {
+                "options": {},
+                "config": {
+                    "net_type": "p2p",
+                    "node_type": "passive",
+                    "nat_type": "unknown"
+                },
+                "expected": {
+                    "duplicate_cons": 0,
+                    "advertise": "self",
+                    "bootstrap": "self",
+                    "config": {
+                        "net_type": "p2p",
+                        "node_type": "passive",
+                        "nat_type": "!input"
+                    }
+                }
+            },
+
+            # P2P, simultaneous, preserving
+            {
+                "options": {},
+                "config": {
+                    "net_type": "p2p",
+                    "node_type": "simultaneous",
+                    "nat_type": "preserving"
+                },
+                "expected": {
+                    "duplicate_cons": 0,
+                    "advertise": "self",
+                    "bootstrap": "self",
+                    "config": {
+                        "net_type": "p2p",
+                        "node_type": "active",
+                        "nat_type": "preserving"
+                    }
+                }
+            },
+
+            # P2P, unknown, unknown
+            {
+                "options": {},
+                "config": {
+                    "net_type": "p2p",
+                    "node_type": "unknown",
+                    "nat_type": "unknown"
+                },
+                "expected": {
+                    "duplicate_cons": 0,
+                    "advertise": "self",
+                    "bootstrap": "self",
+                    "config": {
+                        "net_type": "p2p",
+                        "node_type": "!input",
+                        "nat_type": "!input"
+                    }
+                }
+            },
+
+            # Direct, unknown, unknown (forwarding disabled.)
+            {
+                "options": {
+                    "enable_forwarding": 0
+                },
+                "config": {
+                    "net_type": "direct",
+                    "node_type": "unknown",
+                    "nat_type": "unknown"
+                },
+                "expected": {
+                    "duplicate_cons": 1,
+                    "advertise": "self",
+                    "bootstrap": None,
+                    "config": {
+                        "net_type": "direct",
+                        "node_type": "!input",
+                        "nat_type": "!input"
+                    }
+                }
+            },
+
+            # Direct, unknown, random (forwarding disabled.)
+            {
+                "options": {
+                    "enable_forwarding": 0
+                },
+                "config": {
+                    "net_type": "direct",
+                    "node_type": "unknown",
+                    "nat_type": "random"
+                },
+                "expected": {
+                    "duplicate_cons": 1,
+                    "advertise": "self",
+                    "bootstrap": None,
+                    "config": {
+                        "net_type": "direct",
+                        "node_type": "!input",
+                        "nat_type": "random"
+                    }
+                }
+            },
+
+            # Direct, passive, preserving.
+            {
+                "options": {},
+                "config": {
+                    "net_type": "direct",
+                    "node_type": "passive",
+                    "nat_type": "preserving"
+                },
+                "expected": {
+                    "duplicate_cons": 1,
+                    "advertise": None,
+                    "bootstrap": None,
+                    "config": {
+                        "net_type": "direct",
+                        "node_type": "passive",
+                        "nat_type": "preserving"
+                    }
+                }
+            },
+
+            # Direct, passive, unknown.
+            {
+                "options": {},
+                "config": {
+                    "net_type": "direct",
+                    "node_type": "passive",
+                    "nat_type": "unknown"
+                },
+                "expected": {
+                    "duplicate_cons": 1,
+                    "advertise": None,
+                    "bootstrap": None,
+                    "config": {
+                        "net_type": "direct",
+                        "node_type": "passive",
+                        "nat_type": "!input"
+                    }
+                }
+            },
+
+            # Direct, unknown, unknown.
+            {
+                "options": {},
+                "config": {
+                    "net_type": "direct",
+                    "node_type": "unknown",
+                    "nat_type": "unknown"
+                },
+                "expected": {
+                    "duplicate_cons": 1,
+                    "advertise": "unknown",
+                    "bootstrap": "unknown",
+                    "config": {
+                        "net_type": "direct",
+                        "node_type": "!input",
+                        "nat_type": "!input"
+                    }
+                }
+            },
+
+            # Direct, simultaneous, preserving.
+            {
+                "options": {},
+                "config": {
+                    "net_type": "direct",
+                    "node_type": "simultaneous",
+                    "nat_type": "preserving"
+                },
+                "expected": {
+                    "duplicate_cons": 1,
+                    "advertise": "self",
+                    "bootstrap": None,
+                    "config": {
+                        "net_type": "direct",
+                        "node_type": "simultaneous",
+                        "nat_type": "preserving"
+                    }
+                }
+            },
+
+            # Direct, simultaneous, random.
+            {
+                "options": {},
+                "config": {
+                    "net_type": "direct",
+                    "node_type": "simultaneous",
+                    "nat_type": "random"
+                },
+                "expected": {
+                    "duplicate_cons": 1,
+                    "advertise": "self",
+                    "bootstrap": None,
+                    "config": {
+                        "net_type": "direct",
+                        "node_type": "active",
+                        "nat_type": "random"
+                    }
+                }
+            },
+
+            # Direct, simultaneous, unknown.
+            {
+                "options": {},
+                "config": {
+                    "net_type": "direct",
+                    "node_type": "simultaneous",
+                    "nat_type": "unknown"
+                },
+                "expected": {
+                    "duplicate_cons": 1,
+                    "advertise": "self",
+                    "bootstrap": None,
+                    "config": {
+                        "net_type": "direct",
+                        "node_type": "simultaneous",
+                        "nat_type": "!input"
+                    }
+                }
+            }
+        ]
+
+        wan_ip = get_wan_ip()
+        test_no = 0
+        for test in tests:
+            # Separate tests in output.
+            print()
+            print()
+            print()
+
+            # Setup net object.
+            config = test["config"]
+            net = Net(
+                passive_port=50512,
+                net_type=config["net_type"],
+                node_type=config["node_type"],
+                nat_type=config["nat_type"],
+                wan_ip=wan_ip
+            )
+
+            # Enable any options.
+            options = test["options"]
+            for name in list(options):
+                option = options[name]
+
+                if option == 1 or option == 0:
+                    cmd = "net." + name + " = " + str(option)
+                    exec(cmd)
+                    assert(eval("net." + name) == option)
+
+            # Start networking.
+            net.start()
+
+            # Check net is started.
+            assert(net != None)
+            assert(net.is_net_started == 1)
+
+
+            # Check duplicate connections state.
+            assert(net.enable_duplicate_ip_cons == test["expected"]["duplicate_cons"])
+
+            # Check config.
+            for key in list(config):
+                conf_in = test["config"][key]
+                conf_out = test["expected"]["config"][key]
+                print(str(test_no) + " Checking config " + str(key))
+                print(str(test_no) + " Conf in = " + str(conf_in))
+                print(str(test_no) + " Conf out = " + str(conf_out))
+
+
+                # Check that the net settings changed.
+                if conf_out == "!input":
+                    assert(conf_out != conf_in)
+
+                # Check the net settings matched what we wanted.
+                if conf_out != "!input":
+                    found = eval("net." + str(key))
+                    assert(conf_out == found)
+
+            # Check the passive server is started.
+            if config["node_type"] == "passive":
+                assert(net.passive != None)
+
+            # Setup functions to check.
+            functions = {
+                "advertise": net.advertise,
+                "bootstrap": net.bootstrap
+            }
+
+            # Check functions work.
+            for func_name in list(functions):
+                print(str(test_no) + " Testing " + str(func_name))
+
+                func_body = functions[func_name]
+                expected = test["expected"][func_name]
+                ret = func_body()
+                print(ret)
+                if expected == "self":
+                    assert(ret == net)
+
+                if expected == None:
+                    assert(ret == None)
+
+            # Stop net.
+            net.stop()
+
+            # Increment test no.
+            test_no += 1
+
+
+
     def test_00000004(self):
         # Test broadcast.
         nodes = [
@@ -92,7 +464,7 @@ class test_net(TestCase):
     def test_00000001(self):
        # Test seen messages
         from pyp2p.net import rendezvous_servers
-        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
+        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct", passive_port=10234)
         net.disable_advertise()
         net.disable_bootstrap()
         net.disable_duplicates()
@@ -124,7 +496,7 @@ class test_net(TestCase):
 
     def test_00000003(self):
         # Test validate node
-        net = Net(debug=1)
+        net = Net(debug=1, passive_port=10532)
         net.disable_advertise()
         net.disable_bootstrap()
         assert(net.validate_node("127.0.0.1") != 1)
@@ -205,16 +577,20 @@ class test_net(TestCase):
             "success": success_notify
         }
 
+        # NATed VPS: AXRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowIeVRlYAAAAAlpukaxkSssw=
+
         # This is the not-NATed test node.
-        net.unl.connect("AVNFMHVDaEVJZ3FnZjl2cXVLcVV1YWdtRMUG79qiBu/aojaLRlYAAAAAqweYHi3x+Ww=", events)
+        net.unl.connect("AVNFMHVDaEVJZ3FnZjl2cXVLcVV1c2dtRMUG79qiBu/aonUQR1YAAAAARBbIOsJH2Vg=", events)
 
         assert(net.validate_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"]))
+
+        time.sleep(15)
 
         net.stop()
 
     def test_queued_sim_open(self):
         # Test add node.
-        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct")
+        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct", passive_port=20283)
         net.disable_advertise()
         net.disable_bootstrap()
         net.start()
