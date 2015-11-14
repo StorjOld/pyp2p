@@ -28,7 +28,6 @@ except:
     import simplejson as json
 import traceback
 
-from .args import args
 from decimal import Decimal
 
 class Tee(object):
@@ -130,9 +129,6 @@ def get_default_gateway(interface="default"):
         return None
 
 def get_lan_ip(interface="default"):
-    if args.lan_ip != None:
-        return args.lan_ip
-
     if sys.version_info < (3,0,0):
         if type(interface) == str:
             interface = unicode(interface)
@@ -271,9 +267,6 @@ def memoize(function):
 
 @memoize
 def get_wan_ip():
-    if args.wan_ip != None:
-        return args.wan_ip
-
     """
     That IP module sucks. Occasionally it returns an IP address behind cloudflare which probably happens when cloudflare tries to proxy your web request because it thinks you're trying to DoS. It's better if we just run our own infrastructure.
     """

@@ -206,7 +206,7 @@ class test_net(TestCase):
         }
 
         # This is the not-NATed test node.
-        net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMUG79qiBu/aokibQVYAAAAAf0rrLqoubS0=", events)
+        net.unl.connect("AVNFMHVDaEVJZ3FnZjl2cXVLcVV1YWdtRMUG79qiBu/aojaLRlYAAAAAqweYHi3x+Ww=", events)
 
         assert(net.validate_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"]))
 
