@@ -24,7 +24,7 @@ def is_valid_unl(value):
 class UNL():
     def __init__(self, net=None, dht_node=None, value=None, wan_ip=None, debug=0):
         self.debug = debug
-        self.version = 1
+        self.version = 2
         self.net = net
         self.nat_type_lookup = {
             "m": "random",
@@ -342,8 +342,8 @@ class UNL():
             # Separate the other fields.
             (
                 version, node_id, node_type, nat_type, forwarding_type,
-                passive_port, wan_ip, lan_ip, timestamp, nonce
-            ) = struct.unpack("<B20sBBBHIIQI", unl)
+                passive_port, wan_ip, lan_ip
+            ) = struct.unpack("<B20sBBBHII", unl)
 
             node_type = chr(node_type)
             node_type = self.node_type_lookup[node_type]
@@ -365,8 +365,6 @@ class UNL():
                 "listen_port": passive_port,
                 "wan_ip": wan_ip,
                 "lan_ip": lan_ip,
-                "timestamp": timestamp,
-                "nonce": nonce
             }
 
             return ret
@@ -423,19 +421,9 @@ class UNL():
         if "listen_port" in details:
             listen_port = details["listen_port"]
 
-        # Timestamp.
-        timestamp = time.time()
-        if "timestamp" in details:
-            timestamp = details["timestamp"]
-
-        # Nonce.
-        nonce = random.randrange(0, 2 ** (4 * 8))
-        if "nonce" in details:
-            nonce = details["nonce"]
-
         # Generate UNL.
         unl = struct.pack(
-            "<B20sBBBHIIQI",
+            "<B20sBBBHII",
             version,
             node_id,
             ord(node_type[0]),
@@ -444,8 +432,6 @@ class UNL():
             listen_port,
             ip2int(wan_ip),
             ip2int(lan_ip),
-            int(timestamp),
-            nonce
         )
 
         # Build checksum and make base64.

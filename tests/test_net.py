@@ -35,8 +35,8 @@ class test_net(TestCase):
             "success": success_notify
         }
 
-        # This is the not-NATed test node.
-        net.unl.connect("AXRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowIeVRlYAAAAAlpukaxkSssw=", events)
+        # This is the NATed test node.
+        net.unl.connect("AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc=", events)
 
         looping = 1
         future = time.time() + 15
@@ -577,10 +577,10 @@ class test_net(TestCase):
             "success": success_notify
         }
 
-        # NATed VPS: AXRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowIeVRlYAAAAAlpukaxkSssw=
+        # NATed VPS: AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc=
 
         # This is the not-NATed test node.
-        net.unl.connect("AVNFMHVDaEVJZ3FnZjl2cXVLcVV1c2dtRMUG79qiBu/aonUQR1YAAAAARBbIOsJH2Vg=", events)
+        net.unl.connect("AlNFMHVDaEVJZ3FnZjl2cXVLcVV1c2dtRMUG79qiBu/aotbFMn4=", events)
 
         assert(net.validate_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"]))
 
@@ -595,8 +595,8 @@ class test_net(TestCase):
         net.disable_bootstrap()
         net.start()
 
-        net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMUG79qiBu/aoqg7O1YAAAAAGkXKuVrNDYE=", events=None)
-        net.unl.connect("AQAAAAAAAAAAAAAAAAAAAAAAAAAAc2dtRMWDYbvALwOowGU8O1YAAAAATYLXRfdc5tc=", events=None)
+        net.unl.connect("AlNFMHVDaEVJZ3FnZjl2cXVLcVV1c2dtRMUG79qiBu/aotbFMn4=", events=None)
+        net.unl.connect("AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc=", events=None)
         time.sleep(2)
         assert(len(net.unl.pending_sim_open) == 2)
         net.stop()
