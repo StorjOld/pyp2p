@@ -51,49 +51,55 @@ class DHT():
         response = requests.get(call, timeout=5)
 
     def put(self, node_id, msg):
-        # Send a message directly to a node in the "DHT"
-        call = dht_msg_endpoint + "?call=put&"
-        call += urlencode({"node_id": node_id}) + "&"
-        call += urlencode({"msg": msg})
+        try:
+            # Send a message directly to a node in the "DHT"
+            call = dht_msg_endpoint + "?call=put&"
+            call += urlencode({"node_id": node_id}) + "&"
+            call += urlencode({"msg": msg})
 
-        # Make API call.
-        response = requests.get(call, timeout=5)
+            # Make API call.
+            response = requests.get(call, timeout=5)
+        except:
+            pass
 
     def list(self, node_id, password):
-        # Limit check time to prevent DoSing check server.
-        current = time.time()
-        if self.last_check:
-            elapsed = current - self.last_check
-            if elapsed >= self.check_interval:
-                self.last_check = current
+        try:
+            # Limit check time to prevent DoSing check server.
+            current = time.time()
+            if self.last_check:
+                elapsed = current - self.last_check
+                if elapsed >= self.check_interval:
+                    self.last_check = current
+                else:
+                    return []
             else:
-                return []
-        else:
-            self.last_check = current
+                self.last_check = current
 
-        # Get messages send to us in the "DHT"
-        call = dht_msg_endpoint + "?call=list&"
-        call += urlencode({"node_id": node_id}) + "&"
-        call += urlencode({"password": password})
+            # Get messages send to us in the "DHT"
+            call = dht_msg_endpoint + "?call=list&"
+            call += urlencode({"node_id": node_id}) + "&"
+            call += urlencode({"password": password})
 
-        # Make API call.
-        messages = requests.get(call, timeout=5).text
-        messages = json.loads(messages)
+            # Make API call.
+            messages = requests.get(call, timeout=5).text
+            messages = json.loads(messages)
 
-        # List.
-        if type(messages) == dict:
-            messages = [messages]
+            # List.
+            if type(messages) == dict:
+                messages = [messages]
 
-        # Return a list of responses.
-        ret = []
-        for msg in messages:
-            dht_response = {
-                u"message": msg
-            }
+            # Return a list of responses.
+            ret = []
+            for msg in messages:
+                dht_response = {
+                    u"message": msg
+                }
 
-            ret.append(dht_response)
+                ret.append(dht_response)
 
-        return ret
+            return ret
+        except:
+            return []
 
     def direct_message(self, node_id, msg):
         return self.send_direct_message(node_id, msg)

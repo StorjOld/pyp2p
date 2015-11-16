@@ -25,6 +25,7 @@ Quirks:
 Otherwise, all functions in this class behave how you would expect them to (depending on whether you're using non-blocking mode or blocking mode.) It's assumed that all blocking operations have a timeout by default. This can't be disabled.
 
 Todo: test various functions under connection exit.
+Timeouts are needed for non-blocking too under conditions where you attempt to send all / recv all.
 """
 
 import socket
@@ -342,6 +343,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     if self.blocking:
                         break
 
+                    # Used to avoid DoS of small packets.
                     chunk_no += 1
 
             # Repeat is already set -- manual skip.
@@ -398,6 +400,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
             repeat = 1
             total_sent = 0
+            future = time.time() + (timeout or self.timeout)
             while repeat:
                 repeat = 0
                 while True:
@@ -446,6 +449,14 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     if not send_all:
                         break
 
+                    # Avoid 100% CPU.
+                    time.sleep(0.002)
+
+                # Avoid looping forever.
+                if time.time() >= future:
+                    repeat = 0
+                    break
+
                 # Send the rest if blocking:
                 if total_sent < len(msg) and send_all:
                     repeat = 1
@@ -459,7 +470,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             self.close()
 
     # Blocking or non-blocking.
-    def recv(self, n, encoding="unicode", timeout=10):
+    def recv(self, n, encoding="unicode", timeout=5):
         # Sanity checking.
         assert(n)
 
@@ -490,9 +501,17 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             self.buf = u""
 
             # Get data.
+            future = time.time() + (timeout or self.timeout)
             while True:
                 self.get_chunks(n, encoding=encoding)
                 if not (len(self.buf) < n and self.connected and self.blocking):
+                    break
+
+                # Avoid 100% CPU.
+                time.sleep(0.002)
+
+                # Avoid looping forever.
+                if time.time() >= future:
                     break
 
             # Save current buffer.
@@ -584,7 +603,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     # Receives a new message delimited by a new line.
     # Blocking or non-blocking.
-    def recv_line(self, timeout=2):
+    def recv_line(self, timeout=5):
         # Update timeout.
         if timeout != self.timeout and self.blocking:
             self.set_blocking(self.blocking, timeout)
@@ -600,7 +619,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         old_buf = self.buf[:]
         self.buf = u""
         try:
-            t = time.time() + timeout
+            future = time.time() + (timeout or self.timeout)
             while True:
                 self.update()
 
@@ -613,14 +632,16 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     break
 
                 # Timeout elapsed.
-                if time.time() >= t and self.blocking:
+                if time.time() >= future and self.blocking:
                     break
 
-            if self.blocking:
-                if len(self.replies):
-                    temp = self.replies[0]
-                    self.replies = self.replies[1:]
-                    return temp
+                # Avoid 100% CPU.
+                time.sleep(0.002)
+
+            if len(self.replies):
+                temp = self.replies[0]
+                self.replies = self.replies[1:]
+                return temp
 
             return u""
         except:

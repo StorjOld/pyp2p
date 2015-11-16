@@ -398,7 +398,6 @@ class Net():
         """
         # Disable bootstrap.
         if not self.enable_bootstrap:
-            self.debug_print("Bootstrapping is disabled.")
             return None
 
         # Avoid raping the rendezvous server.
@@ -476,8 +475,6 @@ class Net():
         if not self.enable_advertise:
             self.debug_print("Advertise is disbled!")
             return None
-        else:
-            self.debug_print("Advertise is enabled.")
 
         # Direct net server is reserved for direct connections only.
         if self.net_type == "direct" and self.node_type == "passive":
