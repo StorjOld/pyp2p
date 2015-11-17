@@ -1,4 +1,6 @@
 import requests
+import sys
+import base64
 
 try:
     from urllib.parse import urlencode
@@ -30,6 +32,13 @@ class DHTProtocol():
 class DHT():
     def __init__(self, node_id=None, password=None):
         self.node_id = node_id or self.rand_str(20)
+        if sys.version_info >= (3, 0, 0):
+            if type(self.node_id) == bytes:
+                self.node_id = base64.b64encode(node_id).decode('utf-8')
+        else:
+            if type(self.node_id) == str:
+                self.node_id = base64.b64encode(node_id).decode('utf-8')
+
         self.password = password or self.rand_str(30)
         self.check_interval = 3 # For slow connections, unfortunately.
         self.last_check = 0
@@ -59,7 +68,7 @@ class DHT():
 
             # Make API call.
             response = requests.get(call, timeout=5)
-        except:
+        except Exception as e:
             pass
 
     def list(self, node_id, password):
@@ -98,20 +107,35 @@ class DHT():
                 ret.append(dht_response)
 
             return ret
-        except:
+        except Exception as e:
             return []
 
     def direct_message(self, node_id, msg):
         return self.send_direct_message(node_id, msg)
 
     def send_direct_message(self, node_id, msg):
+        if sys.version_info >= (3, 0, 0):
+            if type(node_id) == bytes:
+                node_id = base64.b64encode(node_id)
+        else:
+            if type(node_id) == str:
+                node_id = base64.b64encode(node_id)
+
         if type(node_id) != str:
             node_id = node_id.decode("utf-8")
 
         self.put(node_id, msg)
 
     def get_id(self):
-        return self.node_id.encode("ascii")
+        node_id = self.node_id
+        if sys.version_info >= (3, 0, 0):
+            if type(node_id) == str:
+                node_id = node_id.encode("ascii")
+        else:
+            if type(node_id) == unicode:
+                node_id = str(node_id)
+
+        return base64.b64decode(node_id)
 
     def has_messages(self):
         for msg in self.list(self.node_id, self.password):
@@ -128,10 +152,19 @@ class DHT():
 
 
 if __name__ == "__main__":
-    dht_node = DHT()
+    dht_node = DHT(node_id=b"\111" * 20, password="svymQQzF1j7FGmYf8fENs4mvRdAX6f")
 
-    dht_node.send_message(dht_node.node_id, u"sdfsdf")
-    dht_node.send_message(dht_node.node_id, b"sdfsdf")
+    print(dht_node.node_id)
+    print(dht_node.get_id())
+    print(type(dht_node.get_id()))
+
+
+    dht_node.send_direct_message(dht_node.node_id, u"test")
+    print(dht_node.list(dht_node.node_id, dht_node.password))
+    exit()
+
+
+
     print(dht_node.node_id)
     print(dht_node.password)
     print(dht_node.list(dht_node.node_id, dht_node.password))
