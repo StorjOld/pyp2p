@@ -770,7 +770,10 @@ class Net():
                 continue
 
             # Generate con_id from con.
-            their_wan_ip, junk = node["con"].s.getpeername()
+            try:
+                their_wan_ip, junk = node["con"].s.getpeername()
+            except:
+                continue
             if is_ip_private(their_wan_ip):
                 our_wan_ip = get_lan_ip(self.interface)
             else:

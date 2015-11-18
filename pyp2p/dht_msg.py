@@ -67,12 +67,8 @@ class DHT():
             call += urlencode({"node_id": node_id}) + "&"
             call += urlencode({"msg": msg})
 
-            print(call)
-
             # Make API call.
             response = requests.get(call, timeout=5)
-            print(response.text)
-            print("Sent direct message")
 
         except Exception as e:
             print(e)
