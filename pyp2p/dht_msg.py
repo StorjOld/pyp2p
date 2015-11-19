@@ -47,6 +47,10 @@ class DHT():
 
         # Register a new "account."
         self.register(self.node_id, self.password)
+        self.message_handlers = set()
+
+    def add_message_handler(self, handler):
+        self.message_handlers.add(handler)
 
     def rand_str(self, length):
         return ''.join(random.choice(u'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for i in range(length))
@@ -115,6 +119,12 @@ class DHT():
             return []
 
     def direct_message(self, node_id, msg):
+        return self.send_direct_message(node_id, msg)
+
+    def relay_message(self, node_id, msg):
+        return self.send_direct_message(node_id, msg)
+
+    def async_direct_message(self, node_id, msg):
         return self.send_direct_message(node_id, msg)
 
     def send_direct_message(self, node_id, msg):

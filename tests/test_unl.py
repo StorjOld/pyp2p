@@ -6,6 +6,7 @@ from pyp2p.unl import UNL
 from pyp2p.sock import Sock
 
 success_no = 0
+found_con = 0
 
 class test_unl(TestCase):
     def test_nonce_synchronization(self):
@@ -111,22 +112,23 @@ class test_unl(TestCase):
         assert(bob_direct.node_type == "active")
 
         # Setup connection handlers.
-        def success(con):
-            assert(1)
+        def success_builder():
+            def success(con):
+                print("IN SUCCESS HANDLER \a")
+                global found_con
+                found_con = 1
 
-        def failure(con):
-            assert(0)
+            return success
 
         events = {
-            "success": success,
-            "failure": failure
+            "success": success_builder()
         }
 
         # Make Bob connect back to Alice.
         alice_direct.unl.connect(bob_direct.unl.value, events, hairpin=0)
 
         # Process connections.
-        end_time = time.time() + 5
+        end_time = time.time() + 15
         while time.time() < end_time:
             for direct in [alice_direct, bob_direct]:
                 for con in direct:
@@ -135,7 +137,12 @@ class test_unl(TestCase):
                         print("Reply in con = ")
                         print(reply)
 
-            time.sleep(0.05)
+            time.sleep(0.5)
+
+        print("Found con = " + str(found_con))
+        assert(found_con == 1)
+
+        assert(len(alice_direct.pending_reverse_queries) == 0)
 
         # Close networking.
         for direct in [alice_direct, bob_direct]:

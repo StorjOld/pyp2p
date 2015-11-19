@@ -8,6 +8,7 @@ import socket
 import select
 import hashlib
 import re
+from threading import Thread
 import signal
 
 from .upnp import *
@@ -206,6 +207,58 @@ class Net():
 
         # DHT node for receiving direct messages from other nodes.
         self.dht_node = dht_node
+
+        # DHT messages received from DHT.
+        self.dht_messages = []
+
+        # Subscribes to certain messages from DHT.
+        def build_dht_msg_handler():
+            def dht_msg_handler(source, msg):
+                print(source)
+                print(msg)
+                print(type(msg))
+
+                valid_needles = [
+                    '^REVERSE_CONNECT',
+                    '^REVERSE_QUERY',
+                    '^REVERSE_ORIGIN',
+                    '{\s*u?"status":\s+u?"SYN"',
+                    '{\s*u?"status":\s+u?"SYN-ACK"',
+                    '{\s*u?"status":\s+u?"ACK"',
+                    '{\s*u?"status":\s+u?"RST"',
+                ]
+
+                for needle in valid_needles:
+                    if re.match(needle, msg) is not None:
+                        msg = {
+                            "message": msg,
+                            "source": source
+                        }
+                        self.dht_messages.append(msg)
+                        return
+
+            return dht_msg_handler
+
+        # Setup message dispatcher.
+        self.dht_msg_dispatcher_thread_stop = 0
+        if isinstance(self.dht_node, DHT):
+            def dht_sim_receive_builder():
+                def dht_sim_receive():
+                    while not self.dht_msg_dispatcher_thread_stop:
+                        if self.dht_node.has_messages():
+                            for received in self.dht_node.get_messages():
+                                for handler in self.dht_node.message_handlers:
+                                    handler(None, received["message"])
+                        time.sleep(0.002)
+
+                return dht_sim_receive
+
+            Thread(target=dht_sim_receive_builder()).start()
+
+        # Add message handler to DHT for our messages.
+        if self.dht_node is not None:
+            self.dht_node.add_message_handler(build_dht_msg_handler())
+
 
         # External IP of this node.
         self.wan_ip = wan_ip or get_wan_ip()
@@ -478,7 +531,6 @@ class Net():
 
         # Direct net server is reserved for direct connections only.
         if self.net_type == "direct" and self.node_type == "passive":
-            self.debug_print("P2P nodes should not consume direct conncetions.")
             return None
 
         # Net isn't started!.
@@ -690,6 +742,8 @@ class Net():
         for con in self:
             con.close()
 
+        self.dht_msg_dispatcher_thread_stop = 1
+
         if signum is not None:
             raise Exception("Process was interrupted.")
 
@@ -857,9 +911,9 @@ class Net():
                 if t - self.last_dht_msg > dht_msg_interval:
                     skip_dht_check = 1
 
-            if not skip_dht_check and self.dht_node.has_messages():
-                dht_messages = []
-                for dht_response in self.dht_node.get_messages():
+            if not skip_dht_check and len(self.dht_messages):
+                processed = []
+                for dht_response in self.dht_messages:
                     # Found reverse connect request.
                     msg = dht_response["message"]
                     if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+:[a-fA-F0-9]{64}$", msg) is not None:
@@ -876,7 +930,7 @@ class Net():
 
                                 # Did you send this?
                                 query = "REVERSE_QUERY:" + self.unl.value
-                                self.dht_node.send_direct_message(node_id, query)
+                                self.dht_node.relay_message(node_id, query)
 
                                 # Record pending query state.
                                 query = {
@@ -891,6 +945,8 @@ class Net():
                         self.debug_print("Attempting to do reverse connect")
                         self.unl.connect(their_unl["value"], {"success": success_builder()}, nonce=nonce)
 
+                        processed.append(dht_response)
+
                     # Found reverse query (did you make this?)
                     elif re.match("^REVERSE_QUERY:[a-zA-Z0-9+/-=_\s]+$", msg) is not None:
                         self.debug_print("Received reverse query")
@@ -898,7 +954,9 @@ class Net():
                         their_unl = UNL(value=their_unl).deconstruct()
                         node_id = their_unl["node_id"]
                         query = "REVERSE_ORIGIN:" + self.unl.value
-                        self.dht_node.send_direct_message(node_id, query)
+                        self.dht_node.relay_message(node_id, query)
+
+                        processed.append(dht_response)
 
 
                     # Found reverse origin (yes I made this.)
@@ -910,13 +968,12 @@ class Net():
                             if re.match(pattern, msg) is not None:
                                 self.debug_print("Removing pending reverse query: success!")
                                 self.pending_reverse_queries.remove(reverse_query)
-                    else:
-                        dht_messages.append(dht_response)
+                                processed.append(dht_response)
 
-                # Put messages back.
-                for msg in dht_messages:
+                # Remove processed messages.
+                for msg in processed:
                     self.debug_print(msg)
-                    self.dht_node.protocol.messages_received.put_nowait(msg)
+                    self.dht_messages.remove(msg)
 
             self.last_dht_msg = t
 
