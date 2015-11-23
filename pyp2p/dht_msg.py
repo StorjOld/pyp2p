@@ -98,8 +98,7 @@ class DHT():
 
             # Make API call.
             messages = requests.get(call, timeout=5).text
-            if "{" in messages:
-                messages = json.loads(messages)
+            messages = json.loads(messages)
 
             # List.
             if type(messages) == dict:
