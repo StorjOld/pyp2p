@@ -54,6 +54,7 @@ class Sock:
         # self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.use_ssl = use_ssl
         self.alive = time.time()
+        self.unl = None
         if self.use_ssl:
             self.s = ssl.wrap_socket(self.s)
 

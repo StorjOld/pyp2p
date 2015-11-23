@@ -187,13 +187,13 @@ class UNL():
         if (their_unl["node_type"] == "simultaneous" and
                 our_unl["node_type"] != "passive"):
             self.pending_sim_open.append(their_unl["value"])
-            print("Waiting for queued sim open")
+            #print("Waiting for queued sim open")
             while len(self.pending_sim_open):
                 if self.pending_sim_open[0] == their_unl["value"]:
                     break
 
                 time.sleep(1)
-            print("Ok, it's our turn now.")
+            #print("Ok, it's our turn now.")
 
         # Set pending UNL.
         self.pending_unls.append(their_unl)
@@ -240,14 +240,19 @@ class UNL():
                             their_unl["node_type"], timeout=60
                         )
 
-                        # Send nonce.
+                        # Configure connection.
                         if con is not None:
                             self.debug_print("Con is not none.")
                             con.nonce = nonce
                             if con.connected:
+                                # Send nonce.
                                 bytes_sent = con.send(nonce, send_all=1)
                                 assert(bytes_sent == 64)
                                 assert(con.connected)
+
+                                # Set UNL for sock.
+                                con.unl = their_unl["value"]
+                                assert(con.unl is not None)
                             else:
                                 self.debug_print("Con is not connected!")
                                 con = None
@@ -267,12 +272,19 @@ class UNL():
                         found_con = 0
                         self.debug_print("Waiting for connection")
                         for i in range(0, 60):
+                            # Wait for connection.
                             if con_id is None:
                                 con = self.net.con_by_ip(their_unl["wan_ip"])
                             else:
                                 con = self.net.con_by_id(con_id)
 
+                            # Indicate con was found.
                             if con is not None:
+                                # Set UNL for sock.
+                                con.unl = their_unl["value"]
+                                assert(con.unl is not None)
+
+                                # Con was found. Break.
                                 found_con = 1
                                 break
 

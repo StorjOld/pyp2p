@@ -98,22 +98,26 @@ class DHT():
 
             # Make API call.
             messages = requests.get(call, timeout=5).text
-            messages = json.loads(messages)
+            if "{" in messages:
+                messages = json.loads(messages)
 
             # List.
             if type(messages) == dict:
                 messages = [messages]
 
             # Return a list of responses.
-            ret = []
-            for msg in messages:
-                dht_response = {
-                    u"message": msg
-                }
+            if type(messages) == list:
+                ret = []
+                for msg in messages:
+                    dht_response = {
+                        u"message": msg
+                    }
 
-                ret.append(dht_response)
+                    ret.append(dht_response)
 
-            return ret
+                return ret
+
+            return []
         except Exception as e:
             print(e)
             return []

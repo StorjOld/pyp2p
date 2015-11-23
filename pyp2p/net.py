@@ -747,6 +747,27 @@ class Net():
         if signum is not None:
             raise Exception("Process was interrupted.")
 
+    # Return a connection that matches a remote UNL.
+    def con_by_unl(self, unl, cons=None):
+        if cons is None:
+            cons = self.outbound + self.inbound
+        for con in cons:
+            if not isinstance(con, Sock):
+                con = con["con"]
+
+            if con.unl is not None:
+                print("CMP")
+                print(unl)
+                print(con.unl)
+                if unl == con.unl:
+                    return con
+            else:
+                print("\a")
+                print("Con UNL is None (in con by unl)")
+                print(cons)
+
+        return None
+
     # Return a connection by its IP.
     def con_by_ip(self, ip):
         for node in self.outbound + self.inbound:
@@ -870,6 +891,7 @@ class Net():
             node_list = eval(node_list_name)[:]
             for node in node_list:
                 if not node["con"].connected:
+                    self.debug_print("\a")
                     self.debug_print("Removing disconnected: " + str(node))
                     eval(node_list_name).remove(node)
 
