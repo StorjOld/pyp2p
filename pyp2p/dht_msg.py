@@ -30,7 +30,7 @@ class DHTProtocol():
         self.messages_received = Queue(maxsize=100)
 
 class DHT():
-    def __init__(self, node_id=None, password=None):
+    def __init__(self, node_id=None, password=None, debug=0):
         self.node_id = node_id or self.rand_str(20)
         if sys.version_info >= (3, 0, 0):
             if type(self.node_id) == str:
@@ -43,11 +43,16 @@ class DHT():
         self.password = password or self.rand_str(30)
         self.check_interval = 3 # For slow connections, unfortunately.
         self.last_check = 0
+        self.debug = debug
         self.protocol = DHTProtocol()
 
         # Register a new "account."
         self.register(self.node_id, self.password)
         self.message_handlers = set()
+
+    def debug_print(self, msg):
+        if self.debug:
+            print(str(msg))
 
     def add_message_handler(self, handler):
         self.message_handlers.add(handler)
@@ -65,6 +70,8 @@ class DHT():
         response = requests.get(call, timeout=5)
 
     def put(self, node_id, msg):
+        self.debug_print("Sim DHT Put " + str(node_id) + ": " + str(msg))
+
         try:
             # Send a message directly to a node in the "DHT"
             call = dht_msg_endpoint + "?call=put&"
@@ -72,7 +79,7 @@ class DHT():
             call += urlencode({"msg": msg})
 
             # Make API call.
-            response = requests.get(call, timeout=5)
+            response = requests.get(call, timeout=5).text
 
         except Exception as e:
             print(e)
@@ -91,6 +98,9 @@ class DHT():
             else:
                 self.last_check = current
 
+            # Record DHT list.
+            self.debug_print("In sim DHT list")
+
             # Get messages send to us in the "DHT"
             call = dht_msg_endpoint + "?call=list&"
             call += urlencode({"node_id": node_id}) + "&"
@@ -99,6 +109,7 @@ class DHT():
             # Make API call.
             messages = requests.get(call, timeout=5).text
             messages = json.loads(messages)
+            self.debug_print(messages)
 
             # List.
             if type(messages) == dict:
@@ -109,7 +120,8 @@ class DHT():
                 ret = []
                 for msg in messages:
                     dht_response = {
-                        u"message": msg
+                        u"message": msg,
+                        u"source": None
                     }
 
                     ret.append(dht_response)
@@ -162,8 +174,11 @@ class DHT():
 
     def get_messages(self):
         result = []
-        while not self.protocol.messages_received.empty():
-            result.append(self.protocol.messages_received.get())
+        if self.has_messages():
+            while not self.protocol.messages_received.empty():
+                result.append(self.protocol.messages_received.get())
+
+            return result
 
         return result
 

@@ -214,10 +214,6 @@ class Net():
         # Subscribes to certain messages from DHT.
         def build_dht_msg_handler():
             def dht_msg_handler(source, msg):
-                print(source)
-                print(msg)
-                print(type(msg))
-
                 valid_needles = [
                     '^REVERSE_CONNECT',
                     '^REVERSE_QUERY',
@@ -230,18 +226,25 @@ class Net():
 
                 for needle in valid_needles:
                     if re.match(needle, msg) is not None:
+                        self.debug_print("DHT msg match in Net")
                         msg = {
-                            "message": msg,
-                            "source": source
+                            u"message": msg,
+                            u"source": source
                         }
                         self.dht_messages.append(msg)
                         return
 
             return dht_msg_handler
 
+        # Add message handler to DHT for our messages.
+        self.dht_msg_handler = build_dht_msg_handler()
+        if self.dht_node is not None:
+            self.dht_node.add_message_handler(self.dht_msg_handler)
+
         # Setup message dispatcher.
         self.dht_msg_dispatcher_thread_stop = 0
         if isinstance(self.dht_node, DHT):
+            self.debug_print("Installing DHT hook in Net.")
             def dht_sim_receive_builder():
                 def dht_sim_receive():
                     while not self.dht_msg_dispatcher_thread_stop:
@@ -254,11 +257,6 @@ class Net():
                 return dht_sim_receive
 
             Thread(target=dht_sim_receive_builder()).start()
-
-        # Add message handler to DHT for our messages.
-        if self.dht_node is not None:
-            self.dht_node.add_message_handler(build_dht_msg_handler())
-
 
         # External IP of this node.
         self.wan_ip = wan_ip or get_wan_ip()
