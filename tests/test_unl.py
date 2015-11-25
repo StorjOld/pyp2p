@@ -17,7 +17,7 @@ class test_unl(TestCase):
             net_type="direct",
             node_type="passive",
             nat_type="preserving",
-            passive_port="34001",
+            passive_port="34003",
             dht_node=alice_dht,
             debug=1
         ).start()
@@ -26,11 +26,12 @@ class test_unl(TestCase):
 
         # Setup Bob as slave.
         bob_dht = DHT()
+        bob_port = 34010
         bob_direct = Net(
             net_type="direct",
             node_type="active",
             nat_type="preserving",
-            passive_port="34002",
+            passive_port=str(bob_port),
             dht_node=bob_dht,
             debug=1
         ).start()
@@ -38,7 +39,7 @@ class test_unl(TestCase):
         assert(bob_direct.node_type == "active")
 
         # Setup bogus connection on bob.
-        first_con = bob_direct.add_node(get_lan_ip(), 34001, "passive")
+        first_con = bob_direct.add_node(get_lan_ip(), bob_port, "passive")
         assert(first_con is not None)
 
         # Accept connections.
@@ -92,7 +93,7 @@ class test_unl(TestCase):
             net_type="direct",
             node_type="passive",
             nat_type="preserving",
-            passive_port="34001",
+            passive_port="34005",
             dht_node=alice_dht,
             debug=1
         ).start()
@@ -105,7 +106,7 @@ class test_unl(TestCase):
             net_type="direct",
             node_type="active",
             nat_type="preserving",
-            passive_port="34002",
+            passive_port="34009",
             dht_node=bob_dht,
             debug=1
         ).start()

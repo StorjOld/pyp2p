@@ -662,7 +662,7 @@ class Net():
 
         # Check rendezvous server is up.
         try:
-            rendezvous_con = Sock(self.rendezvous.rendezvous_servers[0]["addr"], self.rendezvous.rendezvous_servers[0]["port"], blocking=1, interface=self.interface, timeout=3)
+            rendezvous_con = self.rendezvous.server_connect()
             rendezvous_con.close()
         except:
             raise Exception("Unable to connect to rendezvous server.")
@@ -796,8 +796,8 @@ class Net():
                 our_wan_ip = str(our_wan_ip)
 
         # Hash WAN IPs to make them the same length.
-        their_wan_ip = hashlib.sha256(their_wan_ip).hexdigest()
-        our_wan_ip = hashlib.sha256(our_wan_ip).hexdigest()
+        their_wan_ip = hashlib.sha256(their_wan_ip).hexdigest().encode("ascii")
+        our_wan_ip = hashlib.sha256(our_wan_ip).hexdigest().encode("ascii")
 
         # Derive fingerprint.
         int_their_wan_ip = int(their_wan_ip, 16)
@@ -807,7 +807,7 @@ class Net():
         else:
             # If both are the same the order doesn't matter.
             fingerprint = hashlib.sha256(their_wan_ip + our_wan_ip)
-        fingerprint = fingerprint.hexdigest()
+        fingerprint = fingerprint.hexdigest().encode("ascii")
 
         # Convert nonce to bytes.
         if sys.version_info >= (3, 0, 0):

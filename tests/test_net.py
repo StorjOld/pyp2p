@@ -13,7 +13,7 @@ class test_net(TestCase):
         """
 
         net = Net(
-            net_type="direct_connect",
+            net_type="direct",
             node_type="simultaneous",
             nat_type="preserving",
             passive_port=48310
