@@ -7,6 +7,7 @@ from pyp2p.sock import Sock
 
 success_no = 0
 found_con = 0
+test_no_1_success = 1
 
 class test_unl(TestCase):
     def test_nonce_synchronization(self):
@@ -309,7 +310,15 @@ Overwrite:
             "wan_ip": None
         }
 
+        # Monkey patch for sock.send
+        def patched_send(self, msg, send_all=0, timeout=5):
+            return 64
 
+        # Patch sock.send
+        unpatched_send = Sock.send
+        Sock.send = patched_send
+
+        test_no = 1
         for test in tests:
             # Create net object (no start or anything.)
             net = Net(net_type="direct", node_type="passive")
@@ -328,22 +337,29 @@ Overwrite:
 
             print()
             print()
+            print("Test no: " + str(test_no))
             print(UNL(net).deconstruct(our_unl))
             print(UNL(net).deconstruct(their_unl))
 
             # Simulate our network setup.
+            test_no += 1
             net.unl = UNL(net)
             net.unl.value = our_unl
 
             # Create add_node to simulate connections.
             if test["expected"] == "us":
                 def add_node_hook(node_ip, node_port, node_type, timeout=5):
-                    assert(1)
-                    return Sock()
+                    s = Sock()
+                    s.connected = 1
+                    return s
             else:
                 def add_node_hook(node_ip, node_port, node_type, timeout=5):
-                    assert(0)
-                    return Sock()
+                    print("Failure 1")
+                    global test_no_1_success
+                    test_no_1_success = 0
+                    s = Sock()
+                    s.connected = 1
+                    return s
 
             # Install add_node hook.
             net.add_node = add_node_hook
@@ -362,14 +378,31 @@ Overwrite:
             # Create con_by_ip to return 1 (simulating inbound connection.
             if test["expected"] == "us":
                 def inbound_con_by_ip(ip):
-                    assert(0)
-                    return Sock()
+                    print("Failure 2")
+                    global test_no_1_success
+                    test_no_1_success = 0
+                    s = Sock()
+                    s.connected = 1
+                    return s
             else:
                 def inbound_con_by_ip(ip):
-                    assert(1)
-                    return Sock()
+                    s = Sock()
+                    s.connected = 1
+                    return s
 
             # Install hook.
             net.con_by_ip = inbound_con_by_ip
+
+            # Stop net.
+            net.stop()
+
+            # Failure.
+            if not test_no_1_success:
+                assert(0)
+                break
+
+        # Unpatch sock.send.
+        Sock.send = unpatched_send
+
 
 

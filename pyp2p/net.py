@@ -799,19 +799,15 @@ class Net():
         their_wan_ip = hashlib.sha256(their_wan_ip).hexdigest()
         our_wan_ip = hashlib.sha256(our_wan_ip).hexdigest()
 
-        # XOR WAN IPs together.
-        fingerprint = b""
-        assert(len(their_wan_ip) == len(our_wan_ip))
-        for i in range(0, len(their_wan_ip)):
-            code1 = their_wan_ip[i]
-            if type(code1) != int:
-                code1 = ord(code1)
-
-            code2 = our_wan_ip[i]
-            if type(code2) != int:
-                code2 = ord(code2)
-
-            fingerprint += chr(code1 ^ code2).encode("ascii")
+        # Derive fingerprint.
+        int_their_wan_ip = int(their_wan_ip, 16)
+        int_our_wan_ip = int(our_wan_ip, 16)
+        if int_our_wan_ip > int_their_wan_ip:
+            fingerprint = hashlib.sha256(our_wan_ip + their_wan_ip)
+        else:
+            # If both are the same the order doesn't matter.
+            fingerprint = hashlib.sha256(their_wan_ip + our_wan_ip)
+        fingerprint = fingerprint.hexdigest()
 
         # Convert nonce to bytes.
         if sys.version_info >= (3, 0, 0):

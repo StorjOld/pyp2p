@@ -13,13 +13,16 @@ from threading import Thread, Lock
 
 
 def is_valid_unl(value):
-    unl = UNL(value=value)
-    ret = unl.deconstruct()
+    try:
+        unl = UNL(value=value)
+        ret = unl.deconstruct()
+    except:
+        return 0
+
     if ret is None:
         return 0
     else:
         return 1
-
 
 class UNL():
     def __init__(self, net=None, dht_node=None, value=None, wan_ip=None, debug=0):
@@ -136,6 +139,7 @@ class UNL():
 
         if our_unl is None:
             raise Exception("Unable to deconstruct our UNL.")
+
         if their_unl is None:
             raise Exception("Unable to deconstruct their UNL.")
 
@@ -179,6 +183,7 @@ class UNL():
         while their_unl in self.pending_unls:
             # This is an undifferentiated duplicate.
             if events is None:
+                self.mutex.release()
                 return
 
             time.sleep(1)
@@ -187,13 +192,11 @@ class UNL():
         if (their_unl["node_type"] == "simultaneous" and
                 our_unl["node_type"] != "passive"):
             self.pending_sim_open.append(their_unl["value"])
-            #print("Waiting for queued sim open")
             while len(self.pending_sim_open):
                 if self.pending_sim_open[0] == their_unl["value"]:
                     break
 
                 time.sleep(1)
-            #print("Ok, it's our turn now.")
 
         # Set pending UNL.
         self.pending_unls.append(their_unl)
@@ -201,85 +204,78 @@ class UNL():
         # Release mutex.
         self.mutex.release()
 
-        # Are they already connected?
-        if con_id is None:
-            con = self.net.con_by_ip(their_unl["wan_ip"])
-        else:
-            con = self.net.con_by_id(con_id)
-
         # Attempt to connect.
-        if con is None:
-            # Valid node types.
-            for node_type in ["passive", "simultaneous"]:
-                # Matches for this node type.
-                nodes = []
-                if our_unl["node_type"] == node_type:
-                    nodes.append(our_unl)
+        for node_type in ["passive", "simultaneous"]:
+            # Matches for this node type.
+            nodes = []
+            if our_unl["node_type"] == node_type:
+                nodes.append(our_unl)
 
-                if their_unl["node_type"] == node_type:
-                    nodes.append(their_unl)
+            if their_unl["node_type"] == node_type:
+                nodes.append(their_unl)
 
-                # Try the next node type.
-                if len(nodes):
-                    # We only want one connection.
-                    if len(nodes) == 2:
-                        if not master:
-                            # They will connect to us.
-                            nodes.remove(their_unl)
-                        else:
-                            # We will connect to them.
-                            nodes.remove(our_unl)
-
-                    # Don't connect to ourself.
-                    node = nodes[0]
-                    if node == their_unl:
-                        # Make connection.
-                        self.debug_print("Attempting to add node.")
-                        con = self.net.add_node(
-                            their_unl["wan_ip"], their_unl["listen_port"],
-                            their_unl["node_type"], timeout=60
-                        )
-
-                        # Configure connection.
-                        if con is not None:
-                            self.debug_print("Con is not none.")
-                            con.nonce = nonce
-                            if con.connected:
-                                # Send nonce.
-                                bytes_sent = con.send(nonce, send_all=1)
-                                assert(bytes_sent == 64)
-                                assert(con.connected)
-
-                                # Set UNL for sock.
-                                con.unl = their_unl["value"]
-                                assert(con.unl is not None)
-                            else:
-                                self.debug_print("Con is not connected!")
-                                con = None
-                            break
-                        else:
-                            self.debug_print("Add node returned None! \a")
-                    else:
-                        # Tell them to connect to us.
-                        if self.dht_node is not None and force_master:
-                            con_request = "REVERSE_CONNECT:%s:%s" % (self.value, nonce)
-                            node_id = their_unl["node_id"]
-                            if int(binascii.hexlify(node_id), 16):
-                                self.dht_node.relay_message(node_id,
-                                                                  con_request)
-
+            # Try the next node type.
+            if len(nodes):
+                # We only want one connection.
+                if len(nodes) == 2:
+                    if not master:
                         # They will connect to us.
-                        found_con = 0
-                        self.debug_print("Waiting for connection")
-                        for i in range(0, 60):
-                            # Wait for connection.
-                            if con_id is None:
-                                con = self.net.con_by_ip(their_unl["wan_ip"])
-                            else:
-                                con = self.net.con_by_id(con_id)
+                        nodes.remove(their_unl)
+                    else:
+                        # We will connect to them.
+                        nodes.remove(our_unl)
 
-                            # Indicate con was found.
-                            if con is not None:
+                # Don't connect to ourself.
+                node = nodes[0]
+                if node == their_unl:
+                    # Make connection.
+                    self.debug_print("Attempting to add node.")
+                    con = self.net.add_node(
+                        their_unl["wan_ip"], their_unl["listen_port"],
+                        their_unl["node_type"], timeout=60
+                    )
+
+                    # Configure connection.
+                    if con is not None:
+                        self.debug_print("Con is not none.")
+                        con.nonce = nonce
+                        if con.connected:
+                            # Send nonce.
+                            bytes_sent = con.send(nonce, send_all=1)
+                            assert(bytes_sent == 64)
+                            assert(con.connected)
+
+                            # Set UNL for sock.
+                            con.unl = their_unl["value"]
+                            assert(con.unl is not None)
+                        else:
+                            self.debug_print("Con is not connected!")
+                            con = None
+                        break
+                    else:
+                        self.debug_print("Add node returned None! \a")
+                else:
+                    # Tell them to connect to us.
+                    if self.dht_node is not None and force_master:
+                        con_request = "REVERSE_CONNECT:%s:%s" % (self.value, nonce)
+                        node_id = their_unl["node_id"]
+                        if int(binascii.hexlify(node_id), 16):
+                            self.dht_node.relay_message(node_id,
+                                                              con_request)
+
+                    # They will connect to us.
+                    found_con = 0
+                    self.debug_print("Waiting for connection")
+                    for i in range(0, 60):
+                        # Wait for connection.
+                        if con_id is None:
+                            con = self.net.con_by_ip(their_unl["wan_ip"])
+                        else:
+                            con = self.net.con_by_id(con_id)
+
+                        # Indicate con was found.
+                        if con is not None:
+                            if con.connected:
                                 # Set UNL for sock.
                                 con.unl = their_unl["value"]
                                 assert(con.unl is not None)
@@ -287,11 +283,15 @@ class UNL():
                                 # Con was found. Break.
                                 found_con = 1
                                 break
+                            else:
+                                self.debug_print("Con is not connected!")
+                                con = None
+                                break
 
-                            time.sleep(1)
+                        time.sleep(1)
 
-                        if found_con:
-                            break
+                    if found_con:
+                        break
 
         # Undo pending connect state.
         self.pending_unls.remove(their_unl)
@@ -363,8 +363,15 @@ class UNL():
             nat_type = self.nat_type_lookup[nat_type]
             forwarding_type = chr(forwarding_type)
             forwarding_type = self.forwarding_type_lookup[forwarding_type]
+
+            # Will throw exceptions if invalid IPs.
             wan_ip = int2ip(wan_ip)
             lan_ip = int2ip(lan_ip)
+
+            # Check ports.
+            if passive_port:
+                if not is_valid_port(passive_port):
+                    raise Exception("Invalid passive port for UNL.")
 
             # Return meaningful fields.
             ret = {

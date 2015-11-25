@@ -60,17 +60,33 @@ class DHT():
     def rand_str(self, length):
         return ''.join(random.choice(u'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for i in range(length))
 
-    def register(self, node_id, password):
-        # Registers a new node to receive messages.
-        call = dht_msg_endpoint + "?call=register&"
-        call += urlencode({"node_id": node_id}) + "&"
-        call += urlencode({"password": password})
+    def register(self, node_id, password, no=1):
+        # Only retry up to 5 times.
+        if no >= 5:
+            return
+        else:
+            no += 1
 
-        # Make API call.
-        response = requests.get(call, timeout=5)
+        try:
+            # Registers a new node to receive messages.
+            call = dht_msg_endpoint + "?call=register&"
+            call += urlencode({"node_id": node_id}) + "&"
+            call += urlencode({"password": password})
 
-    def put(self, node_id, msg):
+            # Make API call.
+            response = requests.get(call, timeout=5)
+        except Exception as e:
+            print(e)
+            self.debug_print("Register timed out in DHT msg")
+            self.register(node_id, password, no)
+
+    def put(self, node_id, msg, no=1):
         self.debug_print("Sim DHT Put " + str(node_id) + ": " + str(msg))
+
+        if no >= 5:
+            return
+        else:
+            no += 1
 
         try:
             # Send a message directly to a node in the "DHT"
@@ -82,6 +98,9 @@ class DHT():
             response = requests.get(call, timeout=5).text
 
         except Exception as e:
+            # Reschedule call.
+            self.put(node_id, msg, no)
+
             print(e)
             pass
 
