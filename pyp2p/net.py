@@ -212,6 +212,7 @@ class Net():
         self.dht_messages = []
 
         # Subscribes to certain messages from DHT.
+        # Todo: move status messages to file transfer client
         def build_dht_msg_handler():
             def dht_msg_handler(source, msg):
                 valid_needles = [
@@ -240,23 +241,6 @@ class Net():
         self.dht_msg_handler = build_dht_msg_handler()
         if self.dht_node is not None:
             self.dht_node.add_message_handler(self.dht_msg_handler)
-
-        # Setup message dispatcher.
-        self.dht_msg_dispatcher_thread_stop = 0
-        if isinstance(self.dht_node, DHT):
-            self.debug_print("Installing DHT hook in Net.")
-            def dht_sim_receive_builder():
-                def dht_sim_receive():
-                    while not self.dht_msg_dispatcher_thread_stop:
-                        if self.dht_node.has_messages():
-                            for received in self.dht_node.get_messages():
-                                for handler in self.dht_node.message_handlers:
-                                    handler(None, received["message"])
-                        time.sleep(0.002)
-
-                return dht_sim_receive
-
-            Thread(target=dht_sim_receive_builder()).start()
 
         # External IP of this node.
         self.wan_ip = wan_ip or get_wan_ip()
@@ -739,8 +723,6 @@ class Net():
 
         for con in self:
             con.close()
-
-        self.dht_msg_dispatcher_thread_stop = 1
 
         if signum is not None:
             raise Exception("Process was interrupted.")

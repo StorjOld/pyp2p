@@ -30,7 +30,7 @@ class DHTProtocol():
         self.messages_received = Queue(maxsize=100)
 
 class DHT():
-    def __init__(self, node_id=None, password=None, debug=0):
+    def __init__(self, node_id=None, password=None, debug=1):
         self.node_id = node_id or self.rand_str(20)
         if sys.version_info >= (3, 0, 0):
             if type(self.node_id) == str:
@@ -96,13 +96,16 @@ class DHT():
 
             # Make API call.
             response = requests.get(call, timeout=5).text
+            self.debug_print(response)
+            return
 
         except Exception as e:
             # Reschedule call.
-            self.put(node_id, msg, no)
-
             print(e)
             pass
+            self.put(node_id, msg, no)
+
+        self.debug_print("PUT FAILED")
 
     def list(self, node_id, password):
         try:
@@ -135,8 +138,8 @@ class DHT():
                 messages = [messages]
 
             # Return a list of responses.
+            ret = []
             if type(messages) == list:
-                ret = []
                 for msg in messages:
                     dht_response = {
                         u"message": msg,
@@ -145,9 +148,23 @@ class DHT():
 
                     ret.append(dht_response)
 
-                return ret
+            # Run handlers on messages.
+            old_handlers = set()
+            for received in ret:
+                for handler in self.message_handlers:
+                    expiry = handler(
+                        received[u"source"],
+                        received[u"message"]
+                    )
 
-            return []
+                    if expiry == -1:
+                        old_handlers.add(handler)
+
+            # Expire old handlers.
+            for handler in old_handlers:
+                self.message_handlers.remove(handler)
+
+            return ret
         except Exception as e:
             print(e)
             return []
