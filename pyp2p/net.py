@@ -122,7 +122,7 @@ class Net():
     def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown",
                  max_outbound=10, max_inbound=10, passive_bind="0.0.0.0",
                  passive_port=50500, interface="default", wan_ip=None, dht_node=None,
-                 error_log_path="error.log", debug=0):
+                 error_log_path="error.log", debug=1):
         # List of outbound connections (from us, to another node.)
         self.outbound = []
 
@@ -219,14 +219,14 @@ class Net():
                     '^REVERSE_CONNECT',
                     '^REVERSE_QUERY',
                     '^REVERSE_ORIGIN',
-                    '{\s*u?"status":\s+u?"SYN"',
-                    '{\s*u?"status":\s+u?"SYN-ACK"',
-                    '{\s*u?"status":\s+u?"ACK"',
-                    '{\s*u?"status":\s+u?"RST"',
+                    """u?("|')status("|')(:|,)\s+u?("|')SYN("|')""",
+                    """u?("|')status("|')(:|,)\s+u?("|')SYN-ACK("|')""",
+                    """u?("|')status("|')(:|,)\s+u?("|')ACK("|')""",
+                    """u?("|')status("|')(:|,)\s+u?("|')RST("|')""",
                 ]
 
                 for needle in valid_needles:
-                    if re.match(needle, msg) is not None:
+                    if re.search(needle, msg) is not None:
                         self.debug_print("DHT msg match in Net")
                         msg = {
                             u"message": msg,
@@ -628,6 +628,10 @@ class Net():
         self.passive.bind((self.passive_bind, self.passive_port))
         self.passive.listen(self.max_inbound)
 
+        # Check bound local port.
+        if not self.passive_port:
+            self.passive_port = self.passive.getsockname()[1]
+
     def start(self):
         """
         This function determines node and NAT type, saves connectivity details,
@@ -650,6 +654,10 @@ class Net():
             rendezvous_con.close()
         except:
             raise Exception("Unable to connect to rendezvous server.")
+
+        # Started no matter what
+        # since LAN connections are always possible.
+        self.start_passive_server()
 
         # Determine NAT type.
         if self.nat_type == "unknown":
@@ -689,10 +697,6 @@ class Net():
                 self.disable_simultaneous()
 
         self.debug_print("Node type = " + self.node_type)
-
-        # Started no matter what
-        # since LAN connections are always possible.
-        self.start_passive_server()
 
         # Close stray cons from determine_node() tests.
         self.close_cons()

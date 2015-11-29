@@ -1,6 +1,7 @@
 import requests
 import sys
 import binascii
+from ast import literal_eval
 
 try:
     from urllib.parse import urlencode
@@ -131,7 +132,7 @@ class DHT():
             # Make API call.
             messages = requests.get(call, timeout=5).text
             messages = json.loads(messages)
-            self.debug_print(messages)
+            self.debug_print("DHT MSG: " + str(messages))
 
             # List.
             if type(messages) == dict:
@@ -141,6 +142,11 @@ class DHT():
             ret = []
             if type(messages) == list:
                 for msg in messages:
+                    """
+                    if type(msg) != dict:
+                        msg = literal_eval(msg)
+                    """
+
                     dht_response = {
                         u"message": msg,
                         u"source": None
@@ -166,6 +172,7 @@ class DHT():
 
             return ret
         except Exception as e:
+            self.debug_print("Exception in dht msg list")
             print(e)
             return []
 
