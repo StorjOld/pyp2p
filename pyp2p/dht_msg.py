@@ -93,7 +93,7 @@ class DHT():
             # Send a message directly to a node in the "DHT"
             call = dht_msg_endpoint + "?call=put&"
             call += urlencode({"node_id": node_id}) + "&"
-            call += urlencode({"msg": msg})
+            call += urlencode({"msg": str(msg)})
 
             # Make API call.
             response = requests.get(call, timeout=5).text
@@ -108,7 +108,11 @@ class DHT():
 
         self.debug_print("PUT FAILED")
 
-    def list(self, node_id, password):
+    def list(self, node_id=None, password=None):
+        node_id = node_id or self.node_id
+        password = password or self.password
+
+        print("In list")
         try:
             # Limit check time to prevent DoSing check server.
             current = time.time()
@@ -142,10 +146,11 @@ class DHT():
             ret = []
             if type(messages) == list:
                 for msg in messages:
-                    """
-                    if type(msg) != dict:
-                        msg = literal_eval(msg)
-                    """
+                    try:
+                        if type(msg) != dict:
+                            msg = literal_eval(msg)
+                    except:
+                        msg = str(msg)
 
                     dht_response = {
                         u"message": msg,
@@ -231,6 +236,14 @@ if __name__ == "__main__":
     #dht_node = DHT(node_id=b"\111" * 20, password="svymQQzF1j7FGmYf8fENs4mvRdAX6f")
 
     dht_node = DHT(node_id=u"T", password="svymQQzF1j7FGmYf8fENs4mvRdAX6f")
+
+    x = [("a", 2), ("b!%--", 2)]
+    dht_node.put(dht_node.node_id, x)
+    print(dht_node.list(dht_node.node_id, dht_node.password))
+
+
+
+    exit()
 
     print(dht_node.node_id)
     print(dht_node.get_id())

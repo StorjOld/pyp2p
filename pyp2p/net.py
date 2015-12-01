@@ -122,7 +122,7 @@ class Net():
     def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown",
                  max_outbound=10, max_inbound=10, passive_bind="0.0.0.0",
                  passive_port=50500, interface="default", wan_ip=None, dht_node=None,
-                 error_log_path="error.log", debug=1):
+                 error_log_path="error.log", debug=0):
         # List of outbound connections (from us, to another node.)
         self.outbound = []
 
@@ -225,8 +225,10 @@ class Net():
                     """u?("|')status("|')(:|,)\s+u?("|')RST("|')""",
                 ]
 
+                print(msg)
+                print(type(msg))
                 for needle in valid_needles:
-                    if re.search(needle, msg) is not None:
+                    if re.search(needle, str(msg)) is not None:
                         self.debug_print("DHT msg match in Net")
                         msg = {
                             u"message": msg,
@@ -917,7 +919,7 @@ class Net():
                 processed = []
                 for dht_response in self.dht_messages:
                     # Found reverse connect request.
-                    msg = dht_response["message"]
+                    msg = str(dht_response["message"])
                     if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+:[a-fA-F0-9]{64}$", msg) is not None:
                         call, their_unl, nonce = msg.split(":")
                         their_unl = UNL(value=their_unl).deconstruct()
