@@ -111,8 +111,6 @@ class DHT():
     def list(self, node_id=None, password=None):
         node_id = node_id or self.node_id
         password = password or self.password
-
-        print("In list")
         try:
             # Limit check time to prevent DoSing check server.
             current = time.time()
