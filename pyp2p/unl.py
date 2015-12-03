@@ -26,6 +26,7 @@ def is_valid_unl(value):
 
 class UNL():
     def __init__(self, net=None, dht_node=None, value=None, wan_ip=None, debug=0):
+        self.unl_threads = []
         self.debug = debug
         self.version = 2
         self.net = net
@@ -120,90 +121,15 @@ class UNL():
 
         return master
 
-    def connect_handler(self, their_unl, events, force_master, hairpin, nonce):
-        # Figure out who should make the connection.
-        our_unl = self.value.encode("ascii")
-        their_unl = their_unl.encode("ascii")
-        master = self.is_master(their_unl)
-
-        """
-        Master defines who connects if either side can. It's used to
-        eliminate having multiple connections with the same host.
-        """
-        if force_master:
-            master = 1
-
-        # Deconstruct binary UNLs into dicts.
-        our_unl = self.deconstruct(our_unl)
-        their_unl = self.deconstruct(their_unl)
-
-        if our_unl is None:
-            raise Exception("Unable to deconstruct our UNL.")
-
-        if their_unl is None:
-            raise Exception("Unable to deconstruct their UNL.")
-
-        # This means the nodes are behind the same router.
-        if our_unl["wan_ip"] == their_unl["wan_ip"]:
-            # Connect to LAN IP.
-            our_unl["wan_ip"] = our_unl["lan_ip"]
-            their_unl["wan_ip"] = their_unl["lan_ip"]
-
-            # Already behind NAT so no forwarding needed.
-            if hairpin:
-                our_unl["node_type"] = "passive"
-                their_unl["node_type"] = "passive"
-
-        # Generate con ID.
-        if nonce != "0" * 64:
-            # Convert nonce to bytes.
-            if sys.version_info >= (3, 0, 0):
-                if type(nonce) == str:
-                    nonce.encode("ascii")
-            else:
-                if type(nonce) == unicode:
-                    nonce = str(nonce)
-
-            # Check nonce length.
-            assert(len(nonce) == 64)
-
-            # Create con ID.
-            con_id = self.net.generate_con_id(
-                nonce,
-                our_unl["wan_ip"],
-                their_unl["wan_ip"]
-            )
-        else:
-            con_id = None
-
-        # Aquire mutex.
-        self.mutex.acquire()
-
-        # Wait for other UNLs to finish.
-        while their_unl in self.pending_unls:
-            # This is an undifferentiated duplicate.
-            if events is None:
-                self.mutex.release()
-                return
-
-            time.sleep(1)
-
-        # Wait for any other hole punches to finish.
-        if (their_unl["node_type"] == "simultaneous" and
-                our_unl["node_type"] != "passive"):
-            self.pending_sim_open.append(their_unl["value"])
-            while len(self.pending_sim_open):
-                if self.pending_sim_open[0] == their_unl["value"]:
-                    break
-
-                time.sleep(1)
-
-        # Set pending UNL.
-        self.pending_unls.append(their_unl)
-
-        # Release mutex.
-        self.mutex.release()
-
+    def get_connection(
+        self,
+        our_unl,
+        their_unl,
+        master,
+        nonce,
+        force_master,
+        con_id
+    ):
         # Attempt to connect.
         for node_type in ["passive", "simultaneous"]:
             # Matches for this node type.
@@ -291,13 +217,130 @@ class UNL():
                     if found_con:
                         break
 
-        # Undo pending connect state.
-        self.pending_unls.remove(their_unl)
+        return con
 
-        # Undo pending sim open.
-        if len(self.pending_sim_open):
-            if self.pending_sim_open[0] == their_unl["value"]:
-                self.pending_sim_open = self.pending_sim_open[1:]
+    def connect_handler(self, their_unl, events, force_master, hairpin, nonce):
+        # Figure out who should make the connection.
+        our_unl = self.value.encode("ascii")
+        their_unl = their_unl.encode("ascii")
+        master = self.is_master(their_unl)
+
+        """
+        Master defines who connects if either side can. It's used to
+        eliminate having multiple connections with the same host.
+        """
+        if force_master:
+            master = 1
+
+        # Deconstruct binary UNLs into dicts.
+        our_unl = self.deconstruct(our_unl)
+        their_unl = self.deconstruct(their_unl)
+
+        if our_unl is None:
+            raise Exception("Unable to deconstruct our UNL.")
+
+        if their_unl is None:
+            raise Exception("Unable to deconstruct their UNL.")
+
+        # This means the nodes are behind the same router.
+        if our_unl["wan_ip"] == their_unl["wan_ip"]:
+            # Connect to LAN IP.
+            our_unl["wan_ip"] = our_unl["lan_ip"]
+            their_unl["wan_ip"] = their_unl["lan_ip"]
+
+            # Already behind NAT so no forwarding needed.
+            if hairpin:
+                our_unl["node_type"] = "passive"
+                their_unl["node_type"] = "passive"
+
+        # Generate con ID.
+        if nonce != "0" * 64:
+            # Convert nonce to bytes.
+            if sys.version_info >= (3, 0, 0):
+                if type(nonce) == str:
+                    nonce.encode("ascii")
+            else:
+                if type(nonce) == unicode:
+                    nonce = str(nonce)
+
+            # Check nonce length.
+            assert(len(nonce) == 64)
+
+            # Create con ID.
+            con_id = self.net.generate_con_id(
+                nonce,
+                our_unl["wan_ip"],
+                their_unl["wan_ip"]
+            )
+        else:
+            con_id = None
+
+        # Acquire mutex.
+        print("ACQUIRING LOCK")
+        self.mutex.acquire()
+        print("Locked 1: " + str(self.mutex.locked()))
+
+        # Wait for other UNLs to finish.
+        end_time = time.time()
+        end_time += len(self.pending_unls) * 60
+        while their_unl in self.pending_unls and time.time() < end_time:
+            # This is an undifferentiated duplicate.
+            if events is None:
+                print("Events is none! releasing lock")
+                self.mutex.release()
+                return
+
+            time.sleep(1)
+
+        print("Locked 2: " + str(self.mutex.locked()))
+        is_exception = 0
+        try:
+            # Wait for any other hole punches to finish.
+            if (their_unl["node_type"] == "simultaneous" and
+                    our_unl["node_type"] != "passive"):
+                self.pending_sim_open.append(their_unl["value"])
+                end_time = time.time()
+                end_time += len(self.pending_unls) * 60
+                while len(self.pending_sim_open) and time.time() < end_time:
+                    if self.pending_sim_open[0] == their_unl["value"]:
+                        break
+
+                    time.sleep(1)
+
+            # Set pending UNL.
+            self.pending_unls.append(their_unl)
+
+            # Release mutex.
+            print("Locked 3: " + str(self.mutex.locked()))
+            self.mutex.release()
+
+            # Get connection.
+            con = self.get_connection(
+                our_unl,
+                their_unl,
+                master,
+                nonce,
+                force_master,
+                con_id
+            )
+        except Exception as e:
+            is_exception = 1
+            print(e)
+            print("EXCEPTION IN UNL.GET_CONNECTION")
+            log_exception("error.log", parse_exception(e))
+        finally:
+            # Release mutex.
+            if self.mutex.locked() and is_exception:
+                self.mutex.release()
+
+            # Undo pending connect state.
+            if their_unl in self.pending_unls:
+                self.pending_unls.remove(their_unl)
+
+            # Undo pending sim open.
+            if len(self.pending_sim_open):
+                if self.pending_sim_open[0] == their_unl["value"]:
+                    self.pending_sim_open = self.pending_sim_open[1:]
 
         # Only execute events if this function was called manually.
         if events is not None:
@@ -321,6 +364,7 @@ class UNL():
         parms = (their_unl, events, force_master, hairpin, nonce)
         t = Thread(target=self.connect_handler, args=parms)
         t.start()
+        self.unl_threads.append(t)
 
     def deconstruct(self, unl=None):
         if unl is None:

@@ -215,6 +215,8 @@ class Net():
         # Todo: move status messages to file transfer client
         def build_dht_msg_handler():
             def dht_msg_handler(node, source, msg):
+                self.debug_print("DHT msg handler in Net")
+                self.debug_print("Type: DHT msg match in Net" + str(type(msg)))
                 valid_needles = [
                     '^REVERSE_CONNECT',
                     '^REVERSE_QUERY',
@@ -724,6 +726,13 @@ class Net():
 
         if self.last_advertise is not None:
             self.rendezvous.leave_fight()
+
+        """
+        Just let the threads timeout by themselves.
+        Otherwise mutex deadlocks could occur.
+        for unl_thread in self.unl.unl_threads:
+            unl_thread.exit()
+        """
 
         for con in self:
             con.close()

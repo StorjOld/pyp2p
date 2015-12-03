@@ -133,7 +133,7 @@ class test_unl(TestCase):
         end_time = time.time() + 15
         while time.time() < end_time:
             for direct in [alice_direct, bob_direct]:
-                direct.dht_node.list()
+                direct.dht_node.get_messages()
                 for con in direct:
                     print(con)
                     for reply in con:

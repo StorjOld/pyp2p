@@ -32,7 +32,7 @@ class DHTProtocol():
         self.messages_received = Queue(maxsize=100)
 
 class DHT():
-    def __init__(self, node_id=None, password=None, debug=1):
+    def __init__(self, node_id=None, password=None, debug=1, networking=1):
         self.node_id = node_id or self.rand_str(20)
         if sys.version_info >= (3, 0, 0):
             if type(self.node_id) == str:
@@ -46,11 +46,18 @@ class DHT():
         self.check_interval = 3 # For slow connections, unfortunately.
         self.last_check = 0
         self.debug = debug
+        self.networking = networking
+        self.relay_links = {}
         self.protocol = DHTProtocol()
 
         # Register a new "account."
-        self.register(self.node_id, self.password)
+        if self.networking:
+            assert(self.register(self.node_id, self.password))
         self.message_handlers = set()
+
+    def add_relay_link(self, dht):
+        node_id = binascii.hexlify(dht.get_id())
+        self.relay_links[node_id.decode("utf-8")] = dht
 
     def debug_print(self, msg):
         if self.debug:
@@ -65,7 +72,7 @@ class DHT():
     def register(self, node_id, password, no=1):
         # Only retry up to 5 times.
         if no >= 5:
-            return
+            return 0
         else:
             no += 1
 
@@ -77,15 +84,39 @@ class DHT():
 
             # Make API call.
             response = requests.get(call, timeout=5)
+            return 1
         except Exception as e:
             print(e)
             self.debug_print("Register timed out in DHT msg")
+            time.sleep(1)
             self.register(node_id, password, no)
 
         self.debug_print("DHT REGISTER FAILED")
+        return 0
+
+    def build_dht_response(self, msg):
+        try:
+            str_types = [type(u""), type(b"")]
+            if type(msg) in str_types:
+                msg = literal_eval(msg)
+        except:
+            msg = str(msg)
+
+        dht_response = {
+            u"message": msg,
+            u"source": None
+        }
+
+        return dht_response
 
     def put(self, node_id, msg, no=1):
         self.debug_print("Sim DHT Put " + str(node_id) + ": " + str(msg))
+        if node_id in self.relay_links:
+            relay_link = self.relay_links[node_id]
+            msg = self.build_dht_response(msg)
+            print("in relay link put")
+            relay_link.protocol.messages_received.put_nowait(msg)
+            return
 
         if no >= 300:
             return
@@ -114,6 +145,9 @@ class DHT():
         self.debug_print("PUT FAILED")
 
     def list(self, node_id=None, password=None):
+        if not self.networking:
+            return []
+
         node_id = node_id or self.node_id
         password = password or self.password
         try:
@@ -149,35 +183,8 @@ class DHT():
             ret = []
             if type(messages) == list:
                 for msg in messages:
-                    try:
-                        if type(msg) != dict:
-                            msg = literal_eval(msg)
-                    except:
-                        msg = str(msg)
-
-                    dht_response = {
-                        u"message": msg,
-                        u"source": None
-                    }
-
+                    dht_response = self.build_dht_response(msg)
                     ret.append(dht_response)
-
-            # Run handlers on messages.
-            old_handlers = set()
-            for received in ret:
-                for handler in self.message_handlers:
-                    expiry = handler(
-                        self,
-                        received[u"source"],
-                        received[u"message"]
-                    )
-
-                    if expiry == -1:
-                        old_handlers.add(handler)
-
-            # Expire old handlers.
-            for handler in old_handlers:
-                self.message_handlers.remove(handler)
 
             return ret
         except Exception as e:
@@ -229,6 +236,25 @@ class DHT():
         if self.has_messages():
             while not self.protocol.messages_received.empty():
                 result.append(self.protocol.messages_received.get())
+
+            # Run handlers on messages.
+            old_handlers = set()
+            for received in result:
+                print("IN GET MESSAGES")
+                print(received)
+                for handler in self.message_handlers:
+                    expiry = handler(
+                        self,
+                        received[u"source"],
+                        received[u"message"]
+                    )
+
+                    if expiry == -1:
+                        old_handlers.add(handler)
+
+            # Expire old handlers.
+            for handler in old_handlers:
+                self.message_handlers.remove(handler)
 
             return result
 
