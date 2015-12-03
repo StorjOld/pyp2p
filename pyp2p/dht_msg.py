@@ -1,4 +1,5 @@
 import requests
+import time
 import sys
 import binascii
 from ast import literal_eval
@@ -81,10 +82,12 @@ class DHT():
             self.debug_print("Register timed out in DHT msg")
             self.register(node_id, password, no)
 
+        self.debug_print("DHT REGISTER FAILED")
+
     def put(self, node_id, msg, no=1):
         self.debug_print("Sim DHT Put " + str(node_id) + ": " + str(msg))
 
-        if no >= 5:
+        if no >= 300:
             return
         else:
             no += 1
@@ -102,8 +105,10 @@ class DHT():
 
         except Exception as e:
             # Reschedule call.
-            print(e)
-            pass
+            self.debug_print("DHT PUT TIMED OUT")
+            self.debug_print(e)
+            time.sleep(1)
+            self.debug_print("Rescheduling DHT PUT")
             self.put(node_id, msg, no)
 
         self.debug_print("PUT FAILED")
