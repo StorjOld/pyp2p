@@ -304,9 +304,7 @@ class RendezvousClient:
 
                 # Atomic operation so mutex not required.
                 # Record hole made.
-                con.blocking = 0
-                con.timeout = 0
-                con.s.settimeout(0)
+                con.set_blocking(blocking=0, timeout=5)
                 self.simultaneous_cons.append(con)
                 return 1
             except Exception as e:
@@ -357,8 +355,12 @@ class RendezvousClient:
         if sleep_time < 0:
             print("We missed the meeting! It happened " + str(-sleep_time) + "seconds ago!")
             return 0
-        else:
-            time.sleep(sleep_time)
+
+        if sleep_time >= 300:
+            print("Future sleep time is too great!")
+            return 0
+
+        time.sleep(sleep_time)
         """
         Time.sleep isn't guaranteed to sleep for the time specified
         which could cause synchronisation to be off between nodes

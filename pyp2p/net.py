@@ -225,8 +225,6 @@ class Net():
                     """u?("|')status("|')(:|,)\s+u?("|')RST("|')""",
                 ]
 
-                print(msg)
-                print(type(msg))
                 for needle in valid_needles:
                     if re.search(needle, str(msg)) is not None:
                         self.debug_print("DHT msg match in Net")
@@ -742,15 +740,15 @@ class Net():
                 con = con["con"]
 
             if con.unl is not None:
-                print("CMP")
-                print(unl)
-                print(con.unl)
+                self.debug_print("CMP")
+                self.debug_print(unl)
+                self.debug_print(con.unl)
                 if unl == con.unl:
                     return con
             else:
-                print("\a")
-                print("Con UNL is None (in con by unl)")
-                print(cons)
+                self.debug_print("\a")
+                self.debug_print("Con UNL is None (in con by unl)")
+                self.debug_print(cons)
 
         return None
 
@@ -897,6 +895,7 @@ class Net():
 
                 # Receive nonce part.
                 if len(node["con"].nonce_buf) < 64:
+                    assert(node["con"].blocking != 1)
                     remaining = 64 - len(node["con"].nonce_buf)
                     nonce_part = node["con"].recv(remaining)
                     if len(nonce_part):

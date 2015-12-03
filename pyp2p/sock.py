@@ -121,10 +121,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         # Adjust timeout if needed.
         if blocking:
             if timeout != None:
-                self.timeout = timeout
                 self.s.settimeout(timeout)
 
         # Update blocking status.
+        self.timeout = timeout
         self.blocking = blocking
 
     def set_sock(self, s):

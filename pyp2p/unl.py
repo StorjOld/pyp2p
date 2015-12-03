@@ -242,12 +242,11 @@ class UNL():
                         if con.connected:
                             # Send nonce.
                             bytes_sent = con.send(nonce, send_all=1)
-                            assert(bytes_sent == 64)
-                            assert(con.connected)
-
-                            # Set UNL for sock.
-                            con.unl = their_unl["value"]
-                            assert(con.unl is not None)
+                            if bytes_sent != 64 or not con.connected:
+                                con = None
+                            else:
+                                # Set UNL for sock.
+                                con.unl = their_unl["value"]
                         else:
                             self.debug_print("Con is not connected!")
                             con = None
@@ -278,7 +277,6 @@ class UNL():
                             if con.connected:
                                 # Set UNL for sock.
                                 con.unl = their_unl["value"]
-                                assert(con.unl is not None)
 
                                 # Con was found. Break.
                                 found_con = 1
