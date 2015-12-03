@@ -10,7 +10,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    version='0.5.6',
+    version='0.5.7',
     name='pyp2p',
     description='Python P2P networking library',
     keywords=('NAT traversal, TCP hole punching, simultaneous open, UPnP,'

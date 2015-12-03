@@ -276,9 +276,7 @@ class UNL():
             con_id = None
 
         # Acquire mutex.
-        print("ACQUIRING LOCK")
         self.mutex.acquire()
-        print("Locked 1: " + str(self.mutex.locked()))
 
         # Wait for other UNLs to finish.
         end_time = time.time()
@@ -286,13 +284,11 @@ class UNL():
         while their_unl in self.pending_unls and time.time() < end_time:
             # This is an undifferentiated duplicate.
             if events is None:
-                print("Events is none! releasing lock")
                 self.mutex.release()
                 return
 
             time.sleep(1)
 
-        print("Locked 2: " + str(self.mutex.locked()))
         is_exception = 0
         try:
             # Wait for any other hole punches to finish.
@@ -311,7 +307,6 @@ class UNL():
             self.pending_unls.append(their_unl)
 
             # Release mutex.
-            print("Locked 3: " + str(self.mutex.locked()))
             self.mutex.release()
 
             # Get connection.

@@ -216,7 +216,6 @@ class Net():
         def build_dht_msg_handler():
             def dht_msg_handler(node, source, msg):
                 self.debug_print("DHT msg handler in Net")
-                self.debug_print("Type: DHT msg match in Net" + str(type(msg)))
                 valid_needles = [
                     '^REVERSE_CONNECT',
                     '^REVERSE_QUERY',

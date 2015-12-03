@@ -240,8 +240,6 @@ class DHT():
             # Run handlers on messages.
             old_handlers = set()
             for received in result:
-                print("IN GET MESSAGES")
-                print(received)
                 for handler in self.message_handlers:
                     expiry = handler(
                         self,
