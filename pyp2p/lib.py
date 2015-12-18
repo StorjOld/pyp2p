@@ -28,8 +28,8 @@ except:
     import simplejson as json
 import traceback
 
-from .args import args
 from decimal import Decimal
+from .ipgetter import *
 
 class Tee(object):
     def __init__(self, name, mode, lock):
@@ -130,9 +130,6 @@ def get_default_gateway(interface="default"):
         return None
 
 def get_lan_ip(interface="default"):
-    if args.lan_ip != None:
-        return args.lan_ip
-
     if sys.version_info < (3,0,0):
         if type(interface) == str:
             interface = unicode(interface)
@@ -270,13 +267,16 @@ def memoize(function):
     return wrapper
 
 @memoize
-def get_wan_ip():
-    if args.wan_ip != None:
-        return args.wan_ip
-
+def get_wan_ip(n=0):
     """
     That IP module sucks. Occasionally it returns an IP address behind cloudflare which probably happens when cloudflare tries to proxy your web request because it thinks you're trying to DoS. It's better if we just run our own infrastructure.
     """
+
+    if n == 5:
+        try:
+            return myip()
+        except:
+            return None
 
     # Fail-safe: use centralized server for IP lookup.
     from .net import forwarding_servers
@@ -286,12 +286,16 @@ def get_wan_ip():
         url += forwarding_server["url"]
         url += "?action=get_wan_ip"
         try:
-            r = urlopen(url, timeout=2)
+            r = urlopen(url, timeout=5)
             response = r.read().decode("utf-8")
             if is_ip_valid(response):
                 return response
         except:
             continue
 
+    time.sleep(1)
+    return get_wan_ip(n + 1)
+
 if __name__ == "__main__":
+    print(get_wan_ip())
     pass

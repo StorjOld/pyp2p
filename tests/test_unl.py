@@ -3,9 +3,154 @@ from pyp2p.lib import *
 from pyp2p.dht_msg import DHT
 from pyp2p.net import *
 from pyp2p.unl import UNL
+from pyp2p.sock import Sock
 
+success_no = 0
+found_con = 0
+test_no_1_success = 1
 
 class test_unl(TestCase):
+    def test_nonce_synchronization(self):
+        # Setup Alice as master.
+        alice_dht = DHT()
+        alice_direct = Net(
+            net_type="direct",
+            node_type="passive",
+            nat_type="preserving",
+            passive_port="34003",
+            dht_node=alice_dht,
+            debug=1
+        ).start()
+
+        assert(alice_direct.node_type == "passive")
+
+        # Setup Bob as slave.
+        bob_dht = DHT()
+        bob_port = 34010
+        bob_direct = Net(
+            net_type="direct",
+            node_type="active",
+            nat_type="preserving",
+            passive_port=str(bob_port),
+            dht_node=bob_dht,
+            debug=1
+        ).start()
+
+        assert(bob_direct.node_type == "active")
+
+        # Setup bogus connection on bob.
+        first_con = bob_direct.add_node(get_lan_ip(), bob_port, "passive")
+        assert(first_con is not None)
+
+        # Accept connections.
+        alice_direct.synchronize()
+
+        # Setup connection handlers.
+        def success_builder(first_con):
+            def success(con):
+                global success_no
+                success_no += 1
+                assert(con != first_con)
+
+            return success
+
+        def failure(con):
+            assert(0)
+
+        events = {
+            "success": success_builder(first_con),
+            "failure": failure
+        }
+
+        # Tell alice to connect but wait on specific connection.
+        nonce = b"something"
+        nonce = hashlib.sha256(nonce).hexdigest()
+        bob_direct.unl.connect(alice_direct.unl.value, events, nonce=nonce, hairpin=0, force_master=0)
+        alice_direct.unl.connect(bob_direct.unl.value, events, nonce=nonce, hairpin=0, force_master=0)
+
+        # Process connections.
+        end_time = time.time() + 5
+        while time.time() < end_time:
+            for direct in [alice_direct, bob_direct]:
+                for con in direct:
+                    print(con)
+                    for reply in con:
+                        print("Reply in con = ")
+                        print(reply)
+
+            time.sleep(0.5)
+
+        assert(success_no == 2)
+
+        # Close networking.
+        for direct in [alice_direct, bob_direct]:
+            direct.stop()
+
+    def test_reverse_connect(self):
+        # Setup Alice as master.
+        alice_dht = DHT()
+        alice_direct = Net(
+            net_type="direct",
+            node_type="passive",
+            nat_type="preserving",
+            passive_port="34005",
+            dht_node=alice_dht,
+            debug=1
+        ).start()
+
+        assert(alice_direct.node_type == "passive")
+
+        # Setup Bob as slave.
+        bob_dht = DHT()
+        bob_direct = Net(
+            net_type="direct",
+            node_type="active",
+            nat_type="preserving",
+            passive_port="34009",
+            dht_node=bob_dht,
+            debug=1
+        ).start()
+
+        assert(bob_direct.node_type == "active")
+
+        # Setup connection handlers.
+        def success_builder():
+            def success(con):
+                print("IN SUCCESS HANDLER \a")
+                global found_con
+                found_con = 1
+
+            return success
+
+        events = {
+            "success": success_builder()
+        }
+
+        # Make Bob connect back to Alice.
+        alice_direct.unl.connect(bob_direct.unl.value, events, hairpin=0)
+
+        # Process connections.
+        end_time = time.time() + 15
+        while time.time() < end_time:
+            for direct in [alice_direct, bob_direct]:
+                direct.dht_node.get_messages()
+                for con in direct:
+                    print(con)
+                    for reply in con:
+                        print("Reply in con = ")
+                        print(reply)
+
+            time.sleep(0.5)
+
+        print("Found con = " + str(found_con))
+        assert(found_con == 1)
+
+        assert(len(alice_direct.pending_reverse_queries) == 0)
+
+        # Close networking.
+        for direct in [alice_direct, bob_direct]:
+            direct.stop()
+
     def test_00001(self):
         """
 force_master: 0, 1
@@ -167,7 +312,15 @@ Overwrite:
             "wan_ip": None
         }
 
+        # Monkey patch for sock.send
+        def patched_send(self, msg, send_all=0, timeout=5):
+            return 64
 
+        # Patch sock.send
+        unpatched_send = Sock.send
+        Sock.send = patched_send
+
+        test_no = 1
         for test in tests:
             # Create net object (no start or anything.)
             net = Net(net_type="direct", node_type="passive")
@@ -186,22 +339,29 @@ Overwrite:
 
             print()
             print()
+            print("Test no: " + str(test_no))
             print(UNL(net).deconstruct(our_unl))
             print(UNL(net).deconstruct(their_unl))
 
             # Simulate our network setup.
+            test_no += 1
             net.unl = UNL(net)
             net.unl.value = our_unl
 
             # Create add_node to simulate connections.
             if test["expected"] == "us":
                 def add_node_hook(node_ip, node_port, node_type, timeout=5):
-                    assert(1)
-                    return 1
+                    s = Sock()
+                    s.connected = 1
+                    return s
             else:
                 def add_node_hook(node_ip, node_port, node_type, timeout=5):
-                    assert(0)
-                    return 1
+                    print("Failure 1")
+                    global test_no_1_success
+                    test_no_1_success = 0
+                    s = Sock()
+                    s.connected = 1
+                    return s
 
             # Install add_node hook.
             net.add_node = add_node_hook
@@ -220,14 +380,31 @@ Overwrite:
             # Create con_by_ip to return 1 (simulating inbound connection.
             if test["expected"] == "us":
                 def inbound_con_by_ip(ip):
-                    assert(0)
-                    return 1
+                    print("Failure 2")
+                    global test_no_1_success
+                    test_no_1_success = 0
+                    s = Sock()
+                    s.connected = 1
+                    return s
             else:
                 def inbound_con_by_ip(ip):
-                    assert(1)
-                    return 1
+                    s = Sock()
+                    s.connected = 1
+                    return s
 
             # Install hook.
             net.con_by_ip = inbound_con_by_ip
+
+            # Stop net.
+            net.stop()
+
+            # Failure.
+            if not test_no_1_success:
+                assert(0)
+                break
+
+        # Unpatch sock.send.
+        Sock.send = unpatched_send
+
 
 

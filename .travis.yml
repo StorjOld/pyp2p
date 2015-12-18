@@ -1,23 +1,21 @@
 language: python
-python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
-#  - "pypy"
+
+matrix:
+  include:
+    - python: "2.7"
+      env: TEST_SUITE=2_7_tests.sh
+    - python: "3.3"
+      env: TEST_SUITE=3_3_tests.sh
+script:
+  - rm -rf test_out
+  - ./$TEST_SUITE &> test_out
+  - cat ./test_out
+  - cat ./test_out | sed '/FAILED/!{s/f/b/;q}; /FAILED/{q1}'
 
 # install dependencies, e.g. pip install -r requirements.txt
 install:
   - pip install -r requirements.txt
-  - pip install -r test_requirements.txt
   - python setup.py install
-
-# run tests, e.g. python setup.py test
-script:
-  - coverage run --source="storjnode" setup.py test
-
-# run coverage
-after_success:
-  - coveralls
 
 # post to slack
 notifications:

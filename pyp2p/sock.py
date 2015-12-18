@@ -25,6 +25,7 @@ Quirks:
 Otherwise, all functions in this class behave how you would expect them to (depending on whether you're using non-blocking mode or blocking mode.) It's assumed that all blocking operations have a timeout by default. This can't be disabled.
 
 Todo: test various functions under connection exit.
+Timeouts are needed for non-blocking too under conditions where you attempt to send all / recv all.
 """
 
 import socket
@@ -39,18 +40,21 @@ error_log_path = "error.log"
 
 class Sock:
     def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=0):
+        self.nonce = None
+        self.nonce_buf = u""
         self.reply_filter = None
         self.buf = u""
         self.max_buf = 1024 * 1024 # 1 MB.
         self.max_chunks = 1024 # Prevents spamming of multiple short messages.
-        self.chunk_size = 1024
+        self.chunk_size = 1024 * 4
         self.replies = []
         self.blocking = blocking
         self.timeout = timeout
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        # self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.use_ssl = use_ssl
         self.alive = time.time()
+        self.unl = None
         if self.use_ssl:
             self.s = ssl.wrap_socket(self.s)
 
@@ -60,17 +64,19 @@ class Sock:
         self.delimiter = u"\r\n"
         self.debug = debug
 
-        # Set a timeout for blocking operations so they don't DoS the program.
-        # Disabled after connect if non-blocking is set.
-        # (Connect is so far always blocking regardless of blocking mode.)
-        self.s.settimeout(5)
-
         # Set keep alive.
-        self.set_keep_alive(self.s)
+        # self.set_keep_alive(self.s)
 
         # Connect socket.
         if addr != None and port != None:
+            # Set a timeout for blocking operations so they don't DoS the program.
+            # Disabled after connect if non-blocking is set.
+            # (Connect is so far always blocking regardless of blocking mode.)
+            self.s.settimeout(5)
+
             self.connect(addr, port)
+        else:
+            self.set_blocking(self.blocking, self.timeout)
 
     def debug_print(self, msg):
         msg = "> " + str(msg)
@@ -102,10 +108,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     def set_blocking(self, blocking, timeout=5):
         self.debug_print(self.s == None)
-        self.debug_print(self.connected == 0)
         self.debug_print("TRYING to set blocking")
 
-        if self.s == None or self.connected == 0:
+        if self.s == None:
             return
 
         self.debug_print("Setting blocking")
@@ -119,6 +124,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 self.s.settimeout(timeout)
 
         # Update blocking status.
+        self.timeout = timeout
         self.blocking = blocking
 
     def set_sock(self, s):
@@ -127,10 +133,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         self.s = s
         self.connected = 1
         self.set_blocking(self.blocking, self.timeout)
-        self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        # self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         # Set keep alive.
-        self.set_keep_alive(self.s)
+        # self.set_keep_alive(self.s)
 
         # Save addr + port.
         try:
@@ -338,6 +344,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     if self.blocking:
                         break
 
+                    # Used to avoid DoS of small packets.
                     chunk_no += 1
 
             # Repeat is already set -- manual skip.
@@ -368,15 +375,16 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         assert(len(msg))
 
         # Update timeout.
-        if self.blocking and timeout != None:
-            self.set_blocking(1, timeout)
+        if timeout != self.timeout and self.blocking:
+            self.set_blocking(self.blocking, timeout)
 
         # Check socket is in correct blocking mode.
-        blocking = self.s.gettimeout()
-        if self.blocking:
-            assert(blocking >= 1 or blocking == None)
-        else:
-            assert(blocking == 0.0)
+        if self.debug:
+            blocking = self.s.gettimeout()
+            if self.blocking:
+                assert(blocking >= 1 or blocking == None)
+            else:
+                assert(blocking == 0.0)
 
         try:
             # Not connected.
@@ -393,6 +401,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
             repeat = 1
             total_sent = 0
+            future = time.time() + (timeout or self.timeout)
             while repeat:
                 repeat = 0
                 while True:
@@ -400,9 +409,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     # This won't work if the network buffer is already full.
                     try:
                         self.debug_print("Attempting to send: ")
-                        self.debug_print(str(len(msg[total_sent:1024])))
+                        self.debug_print(str(len(msg[total_sent:self.chunk_size])))
                         self.debug_print("Blocking mode = " + str(self.s.gettimeout()))
-                        bytes_sent = self.s.send(msg[total_sent:1024])
+                        bytes_sent = self.s.send(msg[total_sent:self.chunk_size])
                     except socket.timeout as e:
                         err = e.args[0]
                         self.debug_print("Con send: " + str(e))
@@ -441,6 +450,14 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     if not send_all:
                         break
 
+                    # Avoid 100% CPU.
+                    time.sleep(0.002)
+
+                # Avoid looping forever.
+                if time.time() >= future:
+                    repeat = 0
+                    break
+
                 # Send the rest if blocking:
                 if total_sent < len(msg) and send_all:
                     repeat = 1
@@ -452,24 +469,23 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             error = parse_exception(e)
             log_exception(error_log_path, error)
             self.close()
-        finally:
-            self.set_blocking(self.blocking, self.timeout)
 
     # Blocking or non-blocking.
-    def recv(self, n, encoding="unicode", timeout=10):
+    def recv(self, n, encoding="unicode", timeout=5):
         # Sanity checking.
         assert(n)
 
         # Update timeout.
-        if self.blocking and timeout != None:
-            self.set_blocking(1, timeout)
+        if timeout != self.timeout and self.blocking:
+            self.set_blocking(self.blocking, timeout)
 
         # Check socket is in correct blocking mode.
-        blocking = self.s.gettimeout()
-        if self.blocking:
-            assert(blocking >= 1 or blocking == None)
-        else:
-            assert(blocking == 0.0)
+        if self.debug:
+            blocking = self.s.gettimeout()
+            if self.blocking:
+                assert(blocking >= 1 or blocking == None)
+            else:
+                assert(blocking == 0.0)
 
         try:
             # Disconnect.
@@ -486,9 +502,17 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             self.buf = u""
 
             # Get data.
+            future = time.time() + (timeout or self.timeout)
             while True:
                 self.get_chunks(n, encoding=encoding)
                 if not (len(self.buf) < n and self.connected and self.blocking):
+                    break
+
+                # Avoid 100% CPU.
+                time.sleep(0.002)
+
+                # Avoid looping forever.
+                if time.time() >= future:
                     break
 
             # Save current buffer.
@@ -527,8 +551,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 return u""
             else:
                 return b""
-        finally:
-            self.set_blocking(self.blocking, self.timeout)
 
     # Sends a new message delimitered by a new line.
     # Blocking: blocks until entire line is sent for simplicity.
@@ -537,15 +559,16 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         assert(len(msg))
 
         # Update timeout.
-        if self.blocking and timeout != None:
-            self.set_blocking(1, timeout)
+        if timeout != self.timeout and self.blocking:
+            self.set_blocking(self.blocking, timeout)
 
         # Check socket is in correct blocking mode.
-        blocking = self.s.gettimeout()
-        if self.blocking:
-            assert(blocking >= 1 or blocking == None)
-        else:
-            assert(blocking == 0.0)
+        if self.debug:
+            blocking = self.s.gettimeout()
+            if self.blocking:
+                assert(blocking >= 1 or blocking == None)
+            else:
+                assert(blocking == 0.0)
 
         try:
             # Not connected.
@@ -578,27 +601,26 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             log_exception(error_log_path, error)
             self.close()
             return 0
-        finally:
-            self.set_blocking(self.blocking, self.timeout)
 
     # Receives a new message delimited by a new line.
     # Blocking or non-blocking.
-    def recv_line(self, timeout=2):
+    def recv_line(self, timeout=5):
         # Update timeout.
-        if self.blocking and timeout != None:
-            self.set_blocking(1, timeout)
+        if timeout != self.timeout and self.blocking:
+            self.set_blocking(self.blocking, timeout)
 
         # Check socket is in correct blocking mode.
-        blocking = self.s.gettimeout()
-        if self.blocking:
-            assert(blocking >= 1 or blocking == None)
-        else:
-            assert(blocking == 0.0)
+        if self.debug:
+            blocking = self.s.gettimeout()
+            if self.blocking:
+                assert(blocking >= 1 or blocking == None)
+            else:
+                assert(blocking == 0.0)
 
         old_buf = self.buf[:]
         self.buf = u""
         try:
-            t = time.time() + timeout
+            future = time.time() + (timeout or self.timeout)
             while True:
                 self.update()
 
@@ -611,20 +633,21 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     break
 
                 # Timeout elapsed.
-                if time.time() >= t and self.blocking:
+                if time.time() >= future and self.blocking:
                     break
 
-            if self.blocking:
-                if len(self.replies):
-                    temp = self.replies[0]
-                    self.replies = self.replies[1:]
-                    return temp
+                # Avoid 100% CPU.
+                time.sleep(0.002)
+
+            if len(self.replies):
+                temp = self.replies[0]
+                self.replies = self.replies[1:]
+                return temp
 
             return u""
         except:
             pass
         finally:
-            self.set_blocking(self.blocking, self.timeout)
             self.buf = old_buf
 
     """
