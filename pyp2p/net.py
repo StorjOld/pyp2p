@@ -214,7 +214,7 @@ class Net():
         # Subscribes to certain messages from DHT.
         # Todo: move status messages to file transfer client
         def build_dht_msg_handler():
-            def dht_msg_handler(node, source, msg):
+            def dht_msg_handler(node, msg):
                 self.debug_print("DHT msg handler in Net")
                 valid_needles = [
                     '^REVERSE_CONNECT',
@@ -231,7 +231,7 @@ class Net():
                         self.debug_print("DHT msg match in Net")
                         msg = {
                             u"message": msg,
-                            u"source": source
+                            u"source": None
                         }
                         self.dht_messages.append(msg)
                         return

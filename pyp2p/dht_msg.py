@@ -243,7 +243,6 @@ class DHT():
                 for handler in self.message_handlers:
                     expiry = handler(
                         self,
-                        received[u"source"],
                         received[u"message"]
                     )
 
