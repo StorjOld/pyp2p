@@ -169,6 +169,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         # Make connection from custom interface.
         if self.interface != "default":
             try:
+                # Todo: fix this to use static ips from Net
                 src_ip = get_lan_ip(self.interface)
                 self.s.bind((src_ip, 0))
             except:

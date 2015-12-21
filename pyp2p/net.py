@@ -719,7 +719,10 @@ class Net():
         self.debug_print("Stopping networking.")
 
         if self.passive is not None:
-            self.passive.shutdown(1)
+            try:
+                self.passive.shutdown(1)
+            except:
+                pass
             self.passive.close()
             self.passive = None
 

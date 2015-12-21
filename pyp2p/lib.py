@@ -30,6 +30,11 @@ import traceback
 
 from decimal import Decimal
 from .ipgetter import *
+from .ip_routes import *
+
+if platform.system() != "Windows":
+    from pyroute2 import IPDB
+    ip = IPDB()
 
 class Tee(object):
     def __init__(self, name, mode, lock):
@@ -120,6 +125,13 @@ def get_default_gateway(interface="default"):
         if type(interface) == bytes:
             interface = interface.decode("utf-8")
 
+    if platform.system() == "Windows":
+        if interface == "default":
+            default_routes = [r for r in get_ipv4_routing_table()
+                          if r[0] == '0.0.0.0']
+            if default_routes:
+                return default_routes[0][2]
+
     try:
         gws = netifaces.gateways()
         if sys.version_info < (3,0,0):
@@ -127,6 +139,7 @@ def get_default_gateway(interface="default"):
         else:
             return gws[interface][netifaces.AF_INET][0]
     except:
+        # This can also mean the machine is directly accessible.
         return None
 
 def get_lan_ip(interface="default"):
@@ -137,18 +150,37 @@ def get_lan_ip(interface="default"):
         if type(interface) == bytes:
             interface = interface.decode("utf-8")
 
-    try:
-        gws = netifaces.gateways()
-        if interface == "default":
-            interface = gws["default"][netifaces.AF_INET][1]
-        addr = netifaces.ifaddresses(interface)[netifaces.AF_INET][0]["addr"]
+    # Get ID of interface that handles WAN stuff.
+    default_gateway = get_default_gateway(interface)
+    gateways = netifaces.gateways()
+    wan_id = None
+    if netifaces.AF_INET in gateways:
+        gw_list = gateways[netifaces.AF_INET]
+        for gw_info in gw_list:
+            if gw_info[0] == default_gateway:
+                wan_id = gw_info[1]
+                break
 
-        if sys.version_info < (3,0,0):
-            return addr.decode("utf-8")
-        else:
-            return addr
-    except:
-        return None
+    # Find LAN IP of interface for WAN stuff.
+    interfaces = netifaces.interfaces()
+    if wan_id in interfaces:
+        families = netifaces.ifaddresses(wan_id)
+        if netifaces.AF_INET in families:
+            if_info_list = families[netifaces.AF_INET]
+            for if_info in if_info_list:
+                if "addr" in if_info:
+                    return if_info["addr"]
+
+    """
+    Execution may reach here if the host is using
+    virtual interfaces on Linux and there are no gateways
+    which suggests the host is a VPS or server. In this
+    case
+    """
+    if platform.system() != "Windows":
+        return ip.routes["8.8.8.8"]["prefsrc"]
+
+    return None
 
 def sequential_bind(n, interface="default"):
     bound = 0
@@ -297,5 +329,10 @@ def get_wan_ip(n=0):
     return get_wan_ip(n + 1)
 
 if __name__ == "__main__":
-    print(get_wan_ip())
-    pass
+    #print(get_wan_ip())
+    #pass
+    print("In lib")
+
+
+
+

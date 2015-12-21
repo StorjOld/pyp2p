@@ -95,7 +95,7 @@ class UPnP():
         # Error: no UPnP replies - try guess gateway.
         if replies == []:
             default_gateway = get_default_gateway(self.interface)
-            if default_gateway == None:
+            if default_gateway == None or default_gateway == {}:
                 return None
             else:
                 # Optimise scanning.

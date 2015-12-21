@@ -123,6 +123,7 @@ class test_sock(TestCase):
                         break
 
                 fp, path = tempfile.mkstemp()
+                os.close(fp)
                 remaining = file_size
                 with open(path, "ab") as fp:
                     while con.connected and remaining:
