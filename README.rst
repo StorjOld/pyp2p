@@ -9,6 +9,7 @@ PyP2P is a simplified networking library for building peer-to-peer networks in P
 * Reverse connect (tell a node to connect to you)
 * Fail-safe proxying (planned feature)
 * Python 2 (tested on 2.7 - experimental) & 3 (tested on 3.3)
+* Linux and Windows - yep
 
 =============
 Code example
@@ -44,7 +45,7 @@ This will create a new listening server on port 44444, bound to listen for conne
 ============
 Bob node
 ============
-This code will make a connection to the Alice node and repeatedly send her the word test. Note how they're both on different interfaces, with completely different IPs. This is necessary as the library doesn't allow the Net class to connect to itself.
+This code will make a connection to the Alice node and repeatedly send her the word test. Note how they're both on different interfaces, with completely different IPs. This is necessary for connecting to nodes on the same computer as the library doesn't allow the Net class to connect to itself itself when running in P2P mode (type="p2p" for the Net class.) If you want to be able to make duplicate connections to nodes on the same interface then specify the type as "direct" which will make testing code easier. Note that type is "p2p" by default.
 
 .. code:: python
 
@@ -62,108 +63,6 @@ This code will make a connection to the Alice node and repeatedly send her the w
             con.send_line("test")
 
         time.sleep(1)
-
-==============================
-Simulating a P2P network
-==============================
-With pyp2p development its helpful to be able to simulate a p2p network on the same computer to help with testing. To do this, we setup a number of virtual interfaces by editing the */etc/network/interfaces* file. Virtual interfaces help with testing the software by simulating connections from the perspective of other nodes on a LAN which gives them separate IP addresses to the hosting server. Without virtual interfaces the software can't be tested on the same host as the networking class prevents connections from itself to stop bootstrapping problems.
-
-**1. Edit /etc/network/interfaces file.**
-
-.. code:: python
-
-    # The primary network interface
-    auto eth0
-    iface eth0 inet static
-        label eth0
-        address 192.168.0.60
-        netmask 255.255.255.0
-        broadcast 192.168.255
-        gateway 192.168.0.1
-        dns-servers 8.8.4.4 8.8.8.8
-        dns-nameservers 8.8.4.4 8.8.8.8
-        up ip addr add 192.168.0.44 brd 192.168.0.255 dev eth0 label eth0:1
-        up ip addr add 192.168.0.45 brd 192.168.0.255 dev eth0 label eth0:2
-
-Note that this file will need to match the subnet mask and gateway for your network. To find out what that information is you can type *ifconfig* to view all the interfaces, their IP addresses, and their subnet masks. Use *route -n* to find your gateway address.
-
-**If you're on wireless read this:**
-
-The above instructions assume you're using ethernet to connect to the Internet. Those virtual interfaces aren't going to work if you're using wireless networking. To fix this, you need to somehow bridge wlan0 to eth0, eth0:1, eth0:2, etc, so their packets reach the Internet.
-
-**First: enable NAT.**
-
-
-.. code:: python
-
-    > sudo echo '1' > /proc/sys/net/ipv4/ip_forward
-    > iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
-
-**Edit /etc/dhcp/dhcpd.conf**
-
-.. code:: python
-
-    subnet 192.168.0.0 netmask 255.255.255.0 {
-        range 192.168.0.100 192.168.0.120;
-        option routers ip-of-eth0;
-        option domain-name-servers the-ip-address-you-have-in-etc-resolv.conf;
-    }
-
-The subnet and netmask must match the details chosen for eth0's static configuration in /etc/network/interfaces. The IP address for the routers should match the LAN /static IP of eth0. For domain-name-servers: cat /etc/resolv.conf and use the IP for that. Choose a range that isn't already used for the range (100+ hosts will do) and make sure you use the same network / subnet as eth0.
-
-**Install dhcpd and restart it.**
-
-.. code:: python
-
-    > sudo apt-get install isc-dhcp-server
-    > sudo service isc-dhcp-server restart
-
-**2. Disable network-manager for eth0**
-
-Edit /etc/NetworkManager/NetworkManager.conf and ensure the contents looks like this:
-
-.. code:: python
-
-    [ifupdown]
-    managed=false
-
-**3. Restart networking.**
-
-.. code:: python
-
-    > sudo su
-    > service network-manager stop
-    > ifconfig lo up
-    > ip addr flush dev eth0
-    > ifdown eth0 && ifup -v eth0
-    > service network-manager start
-
-**4. Host the bootstrapping server**
-
-P2P networks need a way to find other nodes on the network. The way PyP2P does this is with the rendezvous server (you will have to host this server yourself.)
-
-.. code:: python
-
-    > python3.3 -m "pyp2p.rendezvous_server"
-
-Then edit the rendezvous_server variable at the top of net.py to point to your rendezvous server's IP address.
-
-**5. Host the port forwarding and DHT scripts**
-
-You will also need to host some small PHP scripts that nodes use to check whether their servers can be contacted from the Internet and simulate the actions of a DHT. The scripts are server/net.php and server/dht_msg.php, respectively. The file dht_msg.php requires you edit config.php to point to your database. Import dht_msg.sql into that your database and copy the PHP scripts to a public server. Finally: edit the forwarding_servers variable at the top of net.py and the dht_msg_endpoint variable in dht_msg.py to point to your scripts.
-
-**6. Putting it all together**
-
-.. code:: python
-
-    > Start the bootstrapping server.
-    > python3.3 -m "pyp2p.rendezvous_server"
-    >
-    > Start Alice on one of your virtual interfaces.
-    > python3.3 -m "pyp2p.alice"
-    >
-    > Start Bob on one of your virtual interfaces.
-    > python3.3 -m "pyp2p.bob"
 
 =================
 Direct connect
@@ -234,6 +133,7 @@ Dependencies
 * requests
 * nose
 * setuptools
+* pyroute2
 
 Installation: python3.3 setup.py install
 

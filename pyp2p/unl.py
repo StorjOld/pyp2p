@@ -63,6 +63,9 @@ class UNL():
         # Sim opens are queued to occur sequentially.
         self.pending_sim_open = []
 
+        # Waiting for a reply.
+        self.pending_reverse_con = []
+
         # Simple mutex.
         self.mutex = Lock()
 
@@ -185,6 +188,7 @@ class UNL():
                         con_request = "REVERSE_CONNECT:%s:%s" % (self.value, nonce)
                         node_id = their_unl["node_id"]
                         if int(binascii.hexlify(node_id), 16):
+                            self.pending_reverse_con.append(their_unl["value"])
                             self.dht_node.relay_message(node_id,
                                                               con_request)
 

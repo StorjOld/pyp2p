@@ -24,5 +24,4 @@ success_no = 0
 found_con = 0
 test_no_1_success = 1
 
-print(pyp2p.lib.get_lan_ip())
 

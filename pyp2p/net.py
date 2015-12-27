@@ -931,9 +931,40 @@ class Net():
                     # Found reverse connect request.
                     msg = str(dht_response["message"])
                     if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+:[a-fA-F0-9]{64}$", msg) is not None:
+                        # Process message.
                         call, their_unl, nonce = msg.split(":")
                         their_unl = UNL(value=their_unl).deconstruct()
+                        our_unl = UNL(value=self.unl.value).deconstruct()
                         node_id = their_unl["node_id"]
+
+                        # Are we already connected.
+                        is_connected = False
+                        if nonce == "0" * 64:
+                            # Use LAN IPs.
+                            their_ip = their_unl["wan_ip"]
+                            our_ip = our_unl["wan_ip"]
+                            if their_ip == our_ip:
+                                their_ip = their_unl["lan_ip"]
+                                our_ip = our_unl["lan_ip"]
+
+                            # Get con ID.
+                            con_id = self.generate_con_id(
+                                nonce,
+                                their_ip,
+                                our_ip
+                            )
+
+                            # Find con if it exists.
+                            if self.con_by_id(con_id) is not None:
+                                is_connected = True
+                        else:
+                            if self.con_by_unl(their_unl) is not None:
+                                is_connected = True
+
+                        # Skip if already connected.
+                        if is_connected:
+                            processed.append(dht_response)
+                            continue
 
                         # Ask if the source sent it.
                         def success_builder():
@@ -963,10 +994,20 @@ class Net():
 
                     # Found reverse query (did you make this?)
                     elif re.match("^REVERSE_QUERY:[a-zA-Z0-9+/-=_\s]+$", msg) is not None:
+                        # Process message.
                         self.debug_print("Received reverse query")
                         call, their_unl = msg.split(":")
                         their_unl = UNL(value=their_unl).deconstruct()
                         node_id = their_unl["node_id"]
+
+                        # Do we know about this?
+                        if their_unl not in self.unl.pending_reverse_con:
+                            processed.append(dht_response)
+                            continue
+                        else:
+                            self.unl.pending_reverse_con.remove(their_unl)
+
+                        # Send query.
                         query = "REVERSE_ORIGIN:" + self.unl.value
                         self.dht_node.relay_message(node_id, query)
 
