@@ -32,7 +32,7 @@ from decimal import Decimal
 from .ipgetter import *
 from .ip_routes import *
 
-if platform.system() != "Windows":
+if platform.system() == "Linux":
     from pyroute2 import IPDB
     ip = IPDB()
 
@@ -177,7 +177,7 @@ def get_lan_ip(interface="default"):
     which suggests the host is a VPS or server. In this
     case
     """
-    if platform.system() != "Windows":
+    if platform.system() == "Linux":
         return ip.routes["8.8.8.8"]["prefsrc"]
 
     return None

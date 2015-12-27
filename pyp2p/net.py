@@ -8,6 +8,8 @@ import socket
 import select
 import hashlib
 import re
+import zlib
+from ast import literal_eval
 from threading import Thread
 import signal
 
@@ -226,6 +228,16 @@ class Net():
                     """u?("|')status("|')(:|,)\s+u?("|')RST("|')""",
                 ]
 
+                # Convert zlib packed binary to Python object.
+                self.debug_print("In net dht" + str(type(msg)))
+                self.debug_print(msg)
+                if type(msg) == type(b""):
+                    try:
+                        msg = literal_eval(zlib.decompress(msg))
+                    except:
+                        pass
+
+                self.debug_print(msg)
                 for needle in valid_needles:
                     if re.search(needle, str(msg)) is not None:
                         self.debug_print("DHT msg match in Net")
