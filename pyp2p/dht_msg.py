@@ -198,6 +198,9 @@ class DHT():
     def relay_message(self, node_id, msg):
         return self.send_direct_message(node_id, msg)
 
+    def repeat_relay_message(self, node_id, msg):
+        return self.send_direct_message(node_id, msg)
+
     def async_direct_message(self, node_id, msg):
         return self.send_direct_message(node_id, msg)
 

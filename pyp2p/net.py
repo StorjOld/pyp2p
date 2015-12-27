@@ -975,7 +975,7 @@ class Net():
 
                                 # Did you send this?
                                 query = "REVERSE_QUERY:" + self.unl.value
-                                self.dht_node.relay_message(node_id, query)
+                                self.dht_node.repeat_relay_message(node_id, query)
 
                                 # Record pending query state.
                                 query = {
@@ -1009,7 +1009,7 @@ class Net():
 
                         # Send query.
                         query = "REVERSE_ORIGIN:" + self.unl.value
-                        self.dht_node.relay_message(node_id, query)
+                        self.dht_node.repeat_relay_message(node_id, query)
 
                         processed.append(dht_response)
 

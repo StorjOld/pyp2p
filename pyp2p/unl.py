@@ -189,7 +189,7 @@ class UNL():
                         node_id = their_unl["node_id"]
                         if int(binascii.hexlify(node_id), 16):
                             self.pending_reverse_con.append(their_unl["value"])
-                            self.dht_node.relay_message(node_id,
+                            self.dht_node.repeat_relay_message(node_id,
                                                               con_request)
 
                     # They will connect to us.
