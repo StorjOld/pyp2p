@@ -33,8 +33,13 @@ from .ipgetter import *
 from .ip_routes import *
 
 if platform.system() == "Linux":
-    from pyroute2 import IPDB
-    ip = IPDB()
+    try:
+        from pyroute2 import IPDB
+        ip = IPDB()
+    except IOError:
+        ip = None
+else:
+    ip = None
 
 class Tee(object):
     def __init__(self, name, mode, lock):
@@ -178,7 +183,8 @@ def get_lan_ip(interface="default"):
     case
     """
     if platform.system() == "Linux":
-        return ip.routes["8.8.8.8"]["prefsrc"]
+        if ip is not None:
+            return ip.routes["8.8.8.8"]["prefsrc"]
 
     return None
 
