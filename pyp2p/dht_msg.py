@@ -24,8 +24,11 @@ except ImportError:
     from queue import Queue, Full  # py3
 
 import time
+import logging
 
 dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
+logging.basicConfig()
+log = logging.getLogger(__name__)
 
 class DHTProtocol():
     def __init__(self):
@@ -61,7 +64,9 @@ class DHT():
 
     def debug_print(self, msg):
         if self.debug:
-            print(str(msg))
+            log.setLevel(logging.DEBUG)
+
+        logging.debug(str(msg))
 
     def add_message_handler(self, handler):
         self.message_handlers.add(handler)

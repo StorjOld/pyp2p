@@ -462,7 +462,7 @@ class test_net(TestCase):
             node["net"] = None
 
     def test_00000001(self):
-       # Test seen messages
+        # Test seen messages
         from pyp2p.net import rendezvous_servers
         net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct", passive_port=10234)
         net.disable_advertise()
@@ -470,28 +470,37 @@ class test_net(TestCase):
         net.disable_duplicates()
         net.start()
         con = net.add_node(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], "passive")
+        con.set_blocking(1)
 
         # Test source TCP.
-        con.send_line("SOURCE TCP")
-        con.send_line("SOURCE TCP 0")
-        time.sleep(2)
         replies = []
-        for reply in con:
-            replies.append(reply)
+        for i in range(0, max_retransmissions + 1):
+            con.send_line("SOURCE TCP")
+            print("RESULT = ")
+            replies.append(con.recv_line(timeout=5))
+            print("RECV LINE replies = ")
+            print(con.replies)
+            print(con.buf)
+
+        replies = [x for x in replies if x]
 
         print(replies)
-        assert(len(replies) >= 1)
+        print(con.buf)
+        print(con.replies)
+        assert(len(replies) == max_retransmissions)
 
         # Disable duplicates.
         clear_seen_messages()
         net.enable_duplicates = 1
         con.send_line("SOURCE TCP")
-        con.send_line("SOURCE TCP 0")
+        con.send_line("SOURCE TCP")
         time.sleep(2)
         replies = []
-        for reply in con:
-            replies.append(reply)
+        replies.append(con.recv_line(timeout=5))
+        replies.append(con.recv_line(timeout=10))
+        replies = [x for x in replies if x]
 
+        print(replies)
         assert(len(replies) == 2)
 
     def test_00000003(self):

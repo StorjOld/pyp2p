@@ -4,6 +4,7 @@ All networking functions are ultimately done through
 this class.
 """
 
+import logging
 import socket
 import select
 import hashlib
@@ -23,7 +24,7 @@ from .unl import UNL
 from .dht_msg import DHT
 
 # How many times a single message can be retransmitted.
-max_retransmissions = 100
+max_retransmissions = 1
 
 # Minimum time that must pass between retransmissions.
 min_retransmit_interval = 5
@@ -74,10 +75,15 @@ forwarding_servers = [
     }
 ]
 
+# Debug logging.
+logging.basicConfig()
+log = logging.getLogger(__name__)
+
 
 def is_msg_old(msg, record_seen=0):
     if type(msg) == str:
         msg = msg.encode("ascii")
+
     response_hash = hashlib.sha256(msg).hexdigest()
     if response_hash in seen_messages:
         seen = seen_messages[response_hash]
@@ -230,17 +236,30 @@ class Net():
 
                 # Convert zlib packed binary to Python object.
                 self.debug_print("In net dht" + str(type(msg)))
-                self.debug_print(msg)
                 if type(msg) == type(b""):
                     try:
                         msg = literal_eval(zlib.decompress(msg))
                     except:
                         pass
 
-                self.debug_print(msg)
+                    # Encode result to unicode for RE checks.
+                    """
+                    If buffer errors result: enable this.
+
+                    try:
+                        if sys.version_info >= (3, 0, 0):
+                            if type(msg) == bytes:
+                                msg = msg.decode("utf-8")
+                        else:
+                            if type(msg) == str:
+                                msg = unicode(msg)
+                    except:
+                        return
+                    """
+
+                # Check for matches.
                 for needle in valid_needles:
                     if re.search(needle, str(msg)) is not None:
-                        self.debug_print("DHT msg match in Net")
                         msg = {
                             u"message": msg,
                             u"source": None
@@ -281,7 +300,9 @@ class Net():
 
     def debug_print(self, msg):
         if self.debug:
-            print(str(msg))
+            log.setLevel(logging.DEBUG)
+
+        log.debug(str(msg))
 
     def disable_duplicates(self):
         self.enable_duplicates = 0
@@ -359,76 +380,95 @@ class Net():
         self.debug_print(msg)
 
         # Already connected to them.
-        if not self.enable_duplicate_ip_cons:
-            for node in self.outbound + self.inbound:
-                if node_ip == node["ip"]:
-                    self.debug_print("Already connected.")
-                    return node["con"]
-
-        # Avoid connecting to ourself.
-        if not self.validate_node(node_ip, node_port):
-            self.debug_print("Validate node failed.")
-            return None
-
-        # Make a simultaneous open connection.
         con = None
-        if node_type == "simultaneous" and self.enable_simultaneous:
-            # Check they've started net first
-            # If they haven't we won't know the NAT details / node type.
-            if not self.is_net_started:
-                raise Exception("Make sure to start net before you add node.")
+        try:
+            if not self.enable_duplicate_ip_cons:
+                for node in self.outbound + self.inbound:
+                    if node_ip == node["ip"]:
+                        self.debug_print("Already connected.")
+                        con = node["con"]
+                        return con
 
-            if self.nat_type in self.rendezvous.predictable_nats:
-                # Attempt to make active simultaneous connection.
-                old_timeout = self.rendezvous.timeout
+            # Avoid connecting to ourself.
+            if not self.validate_node(node_ip, node_port):
+                self.debug_print("Validate node failed.")
+                return None
+
+            # Make a simultaneous open connection.
+            if node_type == "simultaneous" and self.enable_simultaneous:
+                # Check they've started net first
+                # If they haven't we won't know the NAT details / node type.
+                if not self.is_net_started:
+                    raise Exception("Make sure to start net before you add node.")
+
+                if self.nat_type in self.rendezvous.predictable_nats:
+                    # Attempt to make active simultaneous connection.
+                    old_timeout = self.rendezvous.timeout
+                    try:
+                        self.rendezvous.timeout = timeout
+                        con = self.rendezvous.simultaneous_challenge(
+                            node_ip, node_port, "TCP"
+                        )
+                    except Exception as e:
+                        error = parse_exception(e)
+                        log_exception(self.error_log_path, error)
+                        return None
+                    self.rendezvous.timeout = old_timeout
+
+                    # Record node details and return con.
+                    self.rendezvous.simultaneous_cons = []
+                    if con is not None:
+                        node = {
+                            "con": con,
+                            "type": "simultaneous",
+                            "ip": node_ip,
+                            "port": 0
+                        }
+                        self.outbound.append(node)
+                        self.debug_print("SUCCESS")
+                    else:
+                        self.debug_print("FAILURE")
+
+            # Passive outbound -- easiest to connect to.
+            if node_type == "passive":
                 try:
-                    self.rendezvous.timeout = timeout
-                    con = self.rendezvous.simultaneous_challenge(
-                        node_ip, node_port, "TCP"
-                    )
-                except Exception as e:
-                    error = parse_exception(e)
-                    log_exception(self.error_log_path, error)
-                    return None
-                self.rendezvous.timeout = old_timeout
-
-                # Record node details and return con.
-                self.rendezvous.simultaneous_cons = []
-                if con is not None:
+                    # Try connect to passive server.
+                    con = Sock(node_ip, node_port, blocking=0,
+                               timeout=timeout, interface=self.interface)
                     node = {
                         "con": con,
-                        "type": "simultaneous",
+                        "type": "passive",
                         "ip": node_ip,
-                        "port": 0
+                        "port": node_port
                     }
                     self.outbound.append(node)
                     self.debug_print("SUCCESS")
-                else:
+                except Exception as e:
                     self.debug_print("FAILURE")
+                    error = parse_exception(e)
+                    self.debug_print(error)
+                    log_exception(self.error_log_path, error)
+                    return None
 
-        # Passive outbound -- easiest to connect to.
-        if node_type == "passive":
-            try:
-                # Try connect to passive server.
-                con = Sock(node_ip, node_port, blocking=0,
-                           timeout=timeout, interface=self.interface)
-                node = {
-                    "con": con,
-                    "type": "passive",
-                    "ip": node_ip,
-                    "port": node_port
-                }
-                self.outbound.append(node)
-                self.debug_print("SUCCESS")
-            except Exception as e:
-                self.debug_print("FAILURE")
-                error = parse_exception(e)
-                self.debug_print(error)
-                log_exception(self.error_log_path, error)
-                return None
+            # Return new connection.
+            return con
+        finally:
+            # Remove undesirable messages from replies.
+            # Save message: 0 = no, 1 = yes.
+            def filter_msg_check_builder():
+                def filter_msg_check(msg):
+                    # Allow duplicate replies?
+                    record_seen = not self.enable_duplicates
 
-        # Return new connection.
-        return con
+                    # Check if message is old.
+                    return not is_msg_old(msg, record_seen)
+
+                return filter_msg_check
+
+            # Patch sock object to reject duplicate replies
+            # If it's enabled.
+            if con is not None:
+                con.reply_filter = filter_msg_check_builder()
 
     def bootstrap(self):
         """
@@ -1180,18 +1220,6 @@ class Net():
         # Process connections.
         self.synchronize()
 
-        # Filter(): Remove undesirable messages from replies.
-        # Save message: 0 = no, 1 = yes.
-        def filter_msg_check_builder():
-            def filter_msg_check(msg):
-                # Allow duplicate replies?
-                record_seen = not self.enable_duplicates
-
-                # Check if message is old.
-                return not is_msg_old(msg, record_seen)
-
-            return filter_msg_check
-
         # Copy all connections to single buffer.
         cons = []
         for node in self.inbound + self.outbound:
@@ -1200,12 +1228,6 @@ class Net():
                     continue
 
             cons.append(node["con"])
-
-        # Patch sock object to reject duplicate replies.
-        # (if enabled)
-        for con in cons:
-            if con is not None:
-                con.reply_filter = filter_msg_check_builder()
 
         # Return all cons.
         return iter(cons)

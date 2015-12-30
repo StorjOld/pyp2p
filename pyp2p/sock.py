@@ -39,7 +39,7 @@ from .lib import *
 error_log_path = "error.log"
 
 class Sock:
-    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=0):
+    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=1):
         self.nonce = None
         self.nonce_buf = u""
         self.reply_filter = None
@@ -370,6 +370,17 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         self.get_chunks()
         self.replies = self.parse_buf()
 
+        # Execute callbacks on replies.
+        if self.reply_filter != None:
+            replies = []
+            for reply in self.replies:
+                if not self.reply_filter(reply):
+                    replies.append(u"")
+                else:
+                    replies.append(reply)
+
+            self.replies = replies
+
     # Blocking or non-blocking.
     def send(self, msg, send_all=0, timeout=5):
         # Sanity check.
@@ -618,8 +629,12 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             else:
                 assert(blocking == 0.0)
 
-        old_buf = self.buf[:]
-        self.buf = u""
+        # Return existing reply.
+        if len(self.replies):
+            temp = self.replies[0]
+            self.replies = self.replies[1:]
+            return temp
+
         try:
             future = time.time() + (timeout or self.timeout)
             while True:
@@ -646,10 +661,8 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 return temp
 
             return u""
-        except:
+        except Exception as e:
             pass
-        finally:
-            self.buf = old_buf
 
     """
     These functions here make the class behave like a list. The
@@ -691,20 +704,15 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             return None
 
     def __iter__(self):
-        # Get replies.
-        self.update()
+        try:
+            # Get replies.
+            self.update()
 
-        # Execute callbacks on replies.
-        if self.reply_filter != None:
-            replies = list(filter(self.reply_filter, self.replies))
-        else:
-            replies = self.replies
-
-        # Clear old replies.
-        self.replies = []
-
-        # Return replies.
-        return iter(replies)
+            # Return replies.
+            return iter(self.replies)
+        finally:
+            # Clear old replies.
+            self.replies = []
 
     def __reversed__(self):
         return self.__iter__()

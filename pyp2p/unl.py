@@ -9,8 +9,11 @@ import struct
 import random
 import binascii
 import base64
+import logging
 from threading import Thread, Lock
 
+logging.basicConfig()
+log = logging.getLogger(__name__)
 
 def is_valid_unl(value):
     try:
@@ -71,7 +74,9 @@ class UNL():
 
     def debug_print(self, msg):
         if self.debug:
-            print(str(msg))
+            log.setLevel(logging.DEBUG)
+
+        log.debug(str(msg))
 
     def __eq__(self, other):
         # Compare UNLs. Used to check if a UNL is us.

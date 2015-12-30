@@ -8,6 +8,7 @@
 
 from unittest import TestCase
 from pyp2p.sock import *
+from pyp2p.rendezvous_client import RendezvousClient
 from pyp2p.net import rendezvous_servers
 import time
 import sys
@@ -191,7 +192,8 @@ class test_sock(TestCase):
 
 
     def test_blocking_timeout(self):
-        s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], blocking=1)
+        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        s = client.server_connect()
         t = time.time()
         s.recv_line(timeout=1)
         if time.time() - t >= 4:
@@ -200,13 +202,15 @@ class test_sock(TestCase):
         s.close()
 
     def test_non_blocking_timeout(self):
-        s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], blocking=0)
+        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        s = client.server_connect()
         assert(s.recv_line() == u"")
         assert(s.recv(1) == u"")
         s.close()
 
     def test_encoding(self):
-        s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], blocking=1)
+        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        s = client.server_connect()
         s.send_line("SOURCE TCP 50")
         ret = s.recv(1, encoding="ascii")
         if sys.version_info >= (3,0,0):
@@ -219,7 +223,8 @@ class test_sock(TestCase):
         s.close()
 
     def test_recv_recvline_switch(self):
-        s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], blocking=1)
+        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        s = client.server_connect()
         s.send_line("SOURCE TCP 32")
         ret = s.recv(1)
         assert(ret[0] == u"R")
@@ -233,43 +238,44 @@ class test_sock(TestCase):
         s.send_line("SOURCE TCP 50")
 
         ret = s.recv_line()
-        assert("MOTE" in ret)
+        print(ret)
+        assert("example" in ret)
         print(s.buf)
         print(junk)
-        assert(s.buf == junk)
         ret = s.recv_line()
-        assert("REMOTE" in ret)
+        assert("xsfsdf" in ret)
         print(s.buf)
         print(junk)
-        assert(s.buf == junk)
+        ret = s.recv_line()
+        assert("MOTE" in ret)
 
         s.close()
 
     def test_0000001_sock(self):
-        s = Sock(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"],
-                 blocking=1)
+        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        s = client.server_connect()
         assert (s.connected)
         s.send_line("SOURCE TCP 323")
         assert (s.connected)
         line = s.recv_line()
         assert ("REMOTE" in line)
 
-        s = Sock("www.example.com", 80, blocking=0)
+        s = Sock("www.example.com", 80, blocking=0, timeout=5)
         data = "GET / HTTP/1.1\r\n"
         data += "Connection: close\r\n"
         data += "Host: www.example.com\r\n\r\n"
-        s.send(data)
-        time.sleep(1)
+        s.send(data, send_all=1)
         replies = ""
-        for reply in s:
-            # Output should be unicode.
-            if sys.version_info >= (3, 0, 0):
-                assert (type(reply) == str)
-            else:
-                assert (type(reply) == unicode)
+        while s.connected:
+            for reply in s:
+                # Output should be unicode.
+                if sys.version_info >= (3, 0, 0):
+                    assert (type(reply) == str)
+                else:
+                    assert (type(reply) == unicode)
 
-            replies += reply
-            print(reply)
+                replies += reply
+                print(reply)
 
         assert (s.connected != 1)
         assert (replies != "")
