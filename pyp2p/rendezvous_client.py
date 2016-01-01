@@ -68,7 +68,7 @@ class RendezvousClient:
                 con = Sock(
                     blocking=1,
                     interface=self.interface,
-                    timeout=4
+                    timeout=6
                 )
 
                 # Pre-bound socket.

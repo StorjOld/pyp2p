@@ -9,8 +9,8 @@ import random
 class test_rendezvous_client(TestCase):
     def test_00001(self):
         from pyp2p.net import rendezvous_servers
-        s = Sock(rendezvous_servers[0]["addr"],
-                 rendezvous_servers[0]["port"], blocking=1)
+        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        s = client.server_connect()
 
         # Test boostrap.
         s.send_line("BOOTSTRAP 1")

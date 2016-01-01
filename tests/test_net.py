@@ -469,7 +469,11 @@ class test_net(TestCase):
         net.disable_bootstrap()
         net.disable_duplicates()
         net.start()
-        con = net.add_node(rendezvous_servers[0]["addr"], rendezvous_servers[0]["port"], "passive")
+        for i in range(0, 2):
+            con = net.add_node(rendezvous_servers[i]["addr"], rendezvous_servers[i]["port"], "passive")
+            if con is not None:
+                break
+
         con.set_blocking(1)
 
         # Test source TCP.
