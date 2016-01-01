@@ -1,3 +1,9 @@
+.. image:: https://coveralls.io/repos/Storj/pyp2p/badge.svg?branch=master&service=github
+  :target: https://coveralls.io/github/Storj/pyp2p?branch=master
+
+.. image:: https://travis-ci.org/Storj/pyp2p.svg?branch=master
+    :target: https://travis-ci.org/Storj/pyp2p
+
 ##################
 Welcome to PyP2P
 ##################
