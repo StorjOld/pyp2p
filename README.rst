@@ -1,7 +1,7 @@
-.. image:: https://coveralls.io/repos/Storj/pyp2p/badge.svg?branch=master&service=github
-  :target: https://coveralls.io/github/Storj/pyp2p?branch=master
+.. image:: https://coveralls.io/repos/Storj/pyp2p/badge.svg?branch=develop&service=github
+  :target: https://coveralls.io/github/Storj/pyp2p?branch=develop
 
-.. image:: https://travis-ci.org/Storj/pyp2p.svg?branch=master
+.. image:: https://travis-ci.org/Storj/pyp2p.svg?branch=develop
     :target: https://travis-ci.org/Storj/pyp2p
 
 ##################
