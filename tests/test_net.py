@@ -39,7 +39,7 @@ class test_net(TestCase):
         net.unl.connect("AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc=", events)
 
         looping = 1
-        future = time.time() + 15
+        future = time.time() + 30
         while time.time() < future:
             # Synchronize.
             for con in net:

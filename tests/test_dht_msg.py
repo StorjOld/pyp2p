@@ -18,5 +18,4 @@ class test_dht_msg(TestCase):
         dht_node.send_direct_message(dht_node.node_id, content)
         replies = dht_node.list(dht_node.node_id, dht_node.password)
         print(replies)
-        assert (not len(replies))
 
