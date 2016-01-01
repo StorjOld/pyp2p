@@ -12,7 +12,7 @@ script:
   - cat ./test_out
   - cat ./test_out | sed '/FAILED/!{s/f/b/;q}; /FAILED/{q1}'
 
- after_success:
+after_success:
   - coveralls
 
 # install dependencies, e.g. pip install -r requirements.txt
