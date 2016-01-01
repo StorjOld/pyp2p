@@ -8,9 +8,12 @@ matrix:
       env: TEST_SUITE=3_3_tests.sh
 script:
   - rm -rf test_out
-  - ./$TEST_SUITE &> test_out
+  - coverage run --source="pyp2p" -m nose tests &> test_out
   - cat ./test_out
   - cat ./test_out | sed '/FAILED/!{s/f/b/;q}; /FAILED/{q1}'
+
+ after_success:
+  - coveralls
 
 # install dependencies, e.g. pip install -r requirements.txt
 install:
