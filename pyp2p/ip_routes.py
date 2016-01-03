@@ -11,7 +11,7 @@ if platform.system() == "Windows":
     ERROR_INSUFFICIENT_BUFFER = 122
     ERROR_NO_DATA = 232
 
-    class Win32_MIB_IPFORWARDROW(ctypes.Structure):
+    class Win32MIBIPFORWARDROW(ctypes.Structure):
         _fields_ = [
             ('dwForwardDest', wintypes.DWORD),
             ('dwForwardMask', wintypes.DWORD),
@@ -29,10 +29,10 @@ if platform.system() == "Windows":
             ('dwForwardMetric5', wintypes.DWORD)
         ]
 
-    class Win32_MIB_IPFORWARDTABLE(ctypes.Structure):
+    class Win32MIBIPFORWARDTABLE(ctypes.Structure):
         _fields_ = [
             ('dwNumEntries', wintypes.DWORD),
-            ('table', Win32_MIB_IPFORWARDROW * 1)
+            ('table', Win32MIBIPFORWARDROW * 1)
         ]
 
     kernel32.GetProcessHeap.argtypes = []
@@ -48,7 +48,7 @@ if platform.system() == "Windows":
     kernel32.HeapFree.restype = wintypes.BOOL
 
     iphlpapi.GetIpForwardTable.argtypes = [
-        ctypes.POINTER(Win32_MIB_IPFORWARDTABLE),
+        ctypes.POINTER(Win32MIBIPFORWARDTABLE),
         ctypes.POINTER(wintypes.ULONG),
         wintypes.BOOL]
     iphlpapi.GetIpForwardTable.restype = wintypes.DWORD
@@ -60,13 +60,13 @@ if platform.system() == "Windows":
 
         heap = kernel32.GetProcessHeap()
 
-        size = wintypes.ULONG(ctypes.sizeof(Win32_MIB_IPFORWARDTABLE))
+        size = wintypes.ULONG(ctypes.sizeof(Win32MIBIPFORWARDTABLE))
         p = kernel32.HeapAlloc(heap, 0, size)
         if not p:
             raise Exception('Unable to allocate memory for the IP forward '
                             'table')
         p_forward_table = ctypes.cast(
-            p, ctypes.POINTER(Win32_MIB_IPFORWARDTABLE))
+            p, ctypes.POINTER(Win32MIBIPFORWARDTABLE))
 
         try:
             err = iphlpapi.GetIpForwardTable(p_forward_table,
@@ -78,7 +78,7 @@ if platform.system() == "Windows":
                     raise Exception('Unable to allocate memory for the IP '
                                     'forward table')
                 p_forward_table = ctypes.cast(
-                    p, ctypes.POINTER(Win32_MIB_IPFORWARDTABLE))
+                    p, ctypes.POINTER(Win32MIBIPFORWARDTABLE))
 
             err = iphlpapi.GetIpForwardTable(p_forward_table,
                                              ctypes.byref(size), 0)
@@ -90,7 +90,7 @@ if platform.system() == "Windows":
                 forward_table = p_forward_table.contents
                 table = ctypes.cast(
                     ctypes.addressof(forward_table.table),
-                    ctypes.POINTER(Win32_MIB_IPFORWARDROW *
+                    ctypes.POINTER(Win32MIBIPFORWARDROW *
                                    forward_table.dwNumEntries)).contents
 
                 i = 0

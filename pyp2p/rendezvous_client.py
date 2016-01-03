@@ -43,6 +43,7 @@ from multiprocessing.dummy import Pool
 from .sock import *
 from .lib import *
 
+
 class RendezvousClient:
     def __init__(self, nat_type, rendezvous_servers, interface="default"):
         self.nat_type = nat_type
@@ -61,21 +62,21 @@ class RendezvousClient:
         self.timeout = 5 # Socket timeout.
         self.predictable_nats = ["preserving", "delta"]
 
-    def server_connect(self, sock=None, index=None):
+    def server_connect(self, sock=None, index=None, servers=None):
         # Get server index if appropriate.
-        rendezvous_servers = self.rendezvous_servers[:]
+        servers = servers or self.rendezvous_servers[:]
         if index is not None:
-            rendezvous_servers = [
-                rendezvous_servers[index]
+            servers = [
+                servers[index]
             ]
 
-        for server in rendezvous_servers:
+        for server in servers:
             try:
                 # Blank socket object.
                 con = Sock(
                     blocking=1,
                     interface=self.interface,
-                    timeout=6
+                    timeout=2
                 )
 
                 # Pre-bound socket.
@@ -195,7 +196,7 @@ class RendezvousClient:
         """
 
         # Close socket.
-        if self.server_con != None:
+        if self.server_con is not None:
             self.server_con.s.close()
             self.server_con = None
 
@@ -205,7 +206,7 @@ class RendezvousClient:
         
         # Connect to rendezvous server.
         parts = self.sequential_connect()
-        if parts == None:
+        if parts is None:
             return 0
         con, mappings, predictions = parts
         con.blocking = 0
@@ -277,7 +278,7 @@ class RendezvousClient:
         if len(args) != 3:
             return 0
         sock, node_ip, remote_port = args
-        if sock == None or node_ip == None or remote_port == None:
+        if sock is None or node_ip is None or remote_port is None:
             return 0
 
         # Generous timeout.
@@ -286,11 +287,16 @@ class RendezvousClient:
         local = 0
         if is_ip_private(node_ip):
             """
-            When simulating nodes on the same computer a delay needs to be set for the loop back interface to simulate the delays that occur over a WAN link. This requirement may also be needed for nodes on a LAN.
+            When simulating nodes on the same computer a delay needs to be set for the loop back interface to
+             simulate the delays that occur over a WAN link. This requirement may also be needed for nodes on a LAN.
 
             sudo tc qdisc replace dev lo root handle 1:0 netem delay 0.5sec
 
-            Speculation: The simulation problem may be to do with CPU cores. If the program is run on the same core then the connects will always be out of synch. If that's the case -- tries will need to be set to ~1000 which was what it was before. Perhaps a delay could be simulated by sleeping for random periods if its a local connection? That could help punch through at least once and then just set the tries to >= 1000.
+            Speculation: The simulation problem may be to do with CPU cores. If the program is run on the same
+             core then the connects will always be out of
+              synch. If that's the case -- tries will need to be set to ~1000 which was what it was before.
+             Perhaps a delay could be simulated by sleeping for random periods if its a local connection?
+             That could help punch through at least once and then just set the tries to >= 1000.
             """
             tries = 20 # 20
             local = 1
@@ -343,8 +349,8 @@ class RendezvousClient:
         for more details.
         """
 
-
-        # Get current network time accurate to ~50 ms over WAN (apparently.)
+        # Get current network time accurate to
+        # ~50 ms over WAN (apparently.)
         if passive_sim:
             # We're the one accepting the con + specifying the time.
             our_ntp = their_ntp
@@ -395,7 +401,6 @@ class RendezvousClient:
             predictions.remove(prediction)
 
         return 1
-        
 
     # Attempt to open an outbound connect through simultaneous open.
     def simultaneous_challenge(self, node_ip, node_port, proto):
@@ -409,7 +414,7 @@ class RendezvousClient:
         """
 
         parts = self.sequential_connect()
-        if parts == None:
+        if parts is None:
             return None
         con, mappings, predictions = parts
 
@@ -424,7 +429,9 @@ class RendezvousClient:
         # FIGHT 192.168.0.1 4552 345 34235 TCP 123123123.1\
         reply = con.recv_line(timeout=10)
         con.s.close()
-        parts = re.findall("^FIGHT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+) (TCP|UDP) ([0-9]+(?:[.][0-9]+)?)$", reply)
+        p = "^FIGHT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+)"
+        p += " (TCP|UDP) ([0-9]+(?:[.][0-9]+)?)$"
+        parts = re.findall(p, reply)
         if not len(parts):
             print("Invalid parts length.")
             return None
@@ -556,7 +563,9 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
 
         # Check collision ration.
         if self.port_collisions * 5 > self.nat_tests:
-            raise Exception("Port collision number is too high compared to nat tests. Collisions must be in ratio 1 : 5 to avoid ambiguity in test results.")
+            msg = "Port collision number is too high compared to nat tests."
+            msg += " Collisions must be in ratio 1 : 5 to avoid ambiguity in test results."
+            raise Exception(msg)
 
         # Load mappings for reuse test.
         """
@@ -565,29 +574,37 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
         ports to each other because there are NAT types which
         allocate new mappings based on changes to these variables.
         """
-        def custom_server_con(port=None, index=None):
+        def custom_server_con(port=None, index=None, servers=None):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             port = port or get_unused_port(None)
             sock.bind(('', port))
-            con = Sock(blocking=1, interface=self.interface)
-            con.close()
-            con.s = sock
-            source_port = con.s.getsockname()[1]
-            con = self.server_connect(sock, index)
+            source_port = sock.getsockname()[1]
+            con = None
+            while con is None:
+                try:
+                    con = self.server_connect(sock, index, servers)
+                except:
+                    time.sleep(1)
+            server = list(con.s.getpeername())[:]
+            server = {
+                "addr": server[0],
+                "port": server[1]
+            }
+
             con.send_line("SOURCE TCP " + str(source_port))
             remote_port = self.parse_remote_port(con.recv_line(timeout=2))
             con.send_line("QUIT")
 
-            return (source_port, remote_port)
-
+            return (source_port, remote_port, server)
 
         mappings = []
         for i in range(0, self.nat_tests):
-            src, remote = custom_server_con(index=0)
+            src, remote, server = custom_server_con(index=0)
             mappings.append({
                 "source": src,
-                "remote": int(remote)
+                "remote": int(remote),
+                "server": server
             })
 
         # Preserving test.
@@ -604,9 +621,13 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
         reuse = 0
         for mapping in mappings:
             addr = ("www.example.com", 80)
-            src, remote = custom_server_con(
+            servers = self.rendezvous_servers[:]
+            servers.remove(mapping["server"])
+
+            src, remote, junk = custom_server_con(
                 mapping["source"],
-                index=1
+                1,
+                servers
             )
             if remote == mapping["remote"]:
                 reuse += 1

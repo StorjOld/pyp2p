@@ -105,12 +105,14 @@ class NATPMPRequest(object):
         """Converts the request object to a byte string."""
         return struct.pack('!BB', self.version, self.opcode)
 
+
 class PublicAddressRequest(NATPMPRequest):
     """Represents a NAT-PMP request to the local gateway for a public address.
        As per the specification, this is a generic request with the opcode = 0.
     """
     def __init__(self, version=0):
         NATPMPRequest.__init__(self, version, 0)
+
 
 class PortMapRequest(NATPMPRequest):
     """Represents a NAT-PMP request to the local gateway for a port mapping.
@@ -128,6 +130,7 @@ class PortMapRequest(NATPMPRequest):
         s= NATPMPRequest.toBytes(self) + struct.pack('!HHHI', NATPMP_RESERVED_VAL, self.private_port, self.public_port, self.lifetime)  
         return s
 
+
 class NATPMPResponse(object):
     """Represents a generic NAT-PMP response from the local gateway.  The
        generic response has fields for version, opcode, result, and secs
@@ -143,6 +146,7 @@ class NATPMPResponse(object):
         
     def __str__(self):
         return "NATPMPResponse(%d, %d, %d, $d)" % (self.version, self.opcode, self.result, self.sec_since_epoch)
+
 
 class PublicAddressResponse(NATPMPResponse):
     """Represents a NAT-PMP response from the local gateway to a
@@ -163,6 +167,7 @@ class PublicAddressResponse(NATPMPResponse):
     def __str__(self):
         return "PublicAddressResponse: version %d, opcode %d (%d), result %d, ssec %d, ip %s" % (self.version, self.opcode, self.result, self.sec_since_epoch, self.ip)
 
+
 class PortMapResponse(NATPMPResponse):
     """Represents a NAT-PMP response from the local gateway to a
        public-address request.  The response contains the private port,
@@ -178,20 +183,28 @@ class PortMapResponse(NATPMPResponse):
         NATPMPResponse.__init__(self, version, opcode, result, sec_since_epoch)
     
     def __str__(self):
-        return "PortMapResponse: version %d, opcode %d (%d), result %d, ssec %d, private_port %d, public port %d, lifetime %d" % (self.version, self.opcode, self.opcode, self.result, self.sec_since_epoch, self.private_port, self.public_port, self.lifetime)
+        msg = "PortMapResponse: version %d, opcode %d (%d),"
+        msg += " result %d, ssec %d, private_port %d, public port %d,"
+        msg += " lifetime %d"
+
+        return msg % (self.version, self.opcode, self.opcode, self.result, self.sec_since_epoch, self.private_port, self.public_port, self.lifetime)
+
 
 class NATPMPError(Exception):
     """Generic exception state.  May be used to represent unknown errors."""
     pass
 
+
 class NATPMPResultError(NATPMPError):
     """Used when a NAT gateway responds with an error-state response."""
     pass
+
 
 class NATPMPNetworkError(NATPMPError):
     """Used when a network error occurred while communicating
        with the NAT gateway."""
     pass
+
 
 class NATPMPUnsupportedError(NATPMPError):
     """Used when a NAT gateway does not support NAT-PMP."""
@@ -201,6 +214,7 @@ class NATPMPUnsupportedError(NATPMPError):
 def get_gateway_addr():
     return netifaces.gateways()["default"][netifaces.AF_INET][0]
 
+
 def error_str(result_code):
     """Takes a numerical error code and returns a human-readable
        error string.
@@ -209,6 +223,7 @@ def error_str(result_code):
     if not result:
         result = "Unknown fatal error."
     return result
+
 
 def get_gateway_socket(gateway):
     """Takes a gateway address string and returns a non-blocking UDP
@@ -224,6 +239,7 @@ def get_gateway_socket(gateway):
     response_socket.connect((gateway, NATPMP_PORT))
     return response_socket
 
+
 def get_public_address(gateway_ip=None, retry=9):
     """A high-level function that returns the public interface IP of
        the current host by querying the NAT-PMP gateway.  IP is
@@ -236,17 +252,18 @@ def get_public_address(gateway_ip=None, retry=9):
             retry - the number of times to retry the request if unsuccessful.
                     Defaults to 9 as per specification.
     """
-    if gateway_ip == None:
+    if gateway_ip is None:
         gateway_ip = get_gateway_addr()
     addr = None
     addr_request = PublicAddressRequest()
     addr_response = send_request_with_retry(gateway_ip, addr_request, response_data_class=PublicAddressResponse, retry=retry, response_size=12)
     if addr_response.result != 0:
-        #sys.stderr.write("NAT-PMP error %d: %s\n" % (addr_response.result, error_str(addr_response.result)))
-        #sys.stderr.flush()
+        # sys.stderr.write("NAT-PMP error %d: %s\n" % (addr_response.result, error_str(addr_response.result)))
+        # sys.stderr.flush()
         raise NATPMPResultError(addr_response.result, error_str(addr_response.result), addr_response)
     addr = addr_response.ip
     return addr
+
 
 def map_tcp_port(public_port, private_port, lifetime=3600, gateway_ip=None, retry=9, use_exception=True):
     """A high-level wrapper to map_port() that requests a mapping
@@ -267,6 +284,7 @@ def map_tcp_port(public_port, private_port, lifetime=3600, gateway_ip=None, retr
     """
     return map_port(NATPMP_PROTOCOL_TCP, public_port, private_port, lifetime, gateway_ip=gateway_ip, retry=retry, use_exception=use_exception)
 
+
 def map_udp_port(public_port, private_port, lifetime=3600, gateway_ip=None, retry=9, use_exception=True):
     """A high-level wrapper to map_port() that requests a mapping for
        a public UDP port on the NAT to a private UDP port on this host.
@@ -285,6 +303,7 @@ def map_udp_port(public_port, private_port, lifetime=3600, gateway_ip=None, retr
                             received from the gateway.  Defaults to True.
     """
     return map_port(NATPMP_PROTOCOL_UDP, public_port, private_port, lifetime, gateway_ip=gateway_ip, retry=retry, use_exception=use_exception)
+
 
 def map_port(protocol, public_port, private_port, lifetime=3600, gateway_ip=None, retry=9, use_exception=True):
     """A function to map public_port to private_port of protocol.
@@ -318,6 +337,7 @@ def map_port(protocol, public_port, private_port, lifetime=3600, gateway_ip=None
 def send_request(gateway_socket, request):
     gateway_socket.sendall(request.toBytes())
 
+
 def read_response(gateway_socket, timeout, responseSize=16):
     data = ""
     source_addr = ("", "")
@@ -329,6 +349,7 @@ def read_response(gateway_socket, timeout, responseSize=16):
         except Exception:
             return None, None
     return data,source_addr
+
 
 def send_request_with_retry(gateway_ip, request, response_data_class=None, retry=9, response_size=16):
     gateway_socket = get_gateway_socket(gateway_ip)
@@ -346,6 +367,7 @@ def send_request_with_retry(gateway_ip, request, response_data_class=None, retry
         data = response_data_class(data)
     return data
 
+
 class NatPMP:
     def __init__(self, interface="default"):
         self.interface = interface
@@ -360,7 +382,7 @@ class NatPMP:
         if src_port not in valid_ports:
             raise Exception("Invalid port for forwarding.")
 
-        #Source port is forwarded to same destination port number.
+        # Source port is forwarded to same destination port number.
         if dest_port == None:
             dest_port = src_port
 
@@ -371,6 +393,7 @@ class NatPMP:
         return map_port(proto, src_port, dest_port)
 
 if __name__ == "__main__":
+    """
     #
     addr = get_public_address()
     map_resp = map_tcp_port(62001, 62001)
@@ -380,3 +403,4 @@ if __name__ == "__main__":
     #xxxxxx = NatPMP()
     #print(xxxxxx.forward_port("TCP", 12156, "192.168.0.4"))
     #print(n.is_port_forwarded(12156, "tcp"))
+    """

@@ -31,6 +31,7 @@ from .lib import *
 error_log_path = "error.log"
 debug = 1
 
+
 class RendezvousProtocol(LineReceiver):
     def __init__(self, factory):
         self.factory = factory
@@ -77,7 +78,6 @@ class RendezvousProtocol(LineReceiver):
             print(self.log_entry(msg, "send"))
 
         self.sendLine(msg)
-        
 
     def send_remote_port(self):
         """
@@ -372,9 +372,6 @@ class RendezvousProtocol(LineReceiver):
                     if node_ip not in self.factory.nodes["simultaneous"]:
                         print("Candidate: node ip not in factory nodes sim.")
                         break
-                    if node_ip == client_ip:
-                        print("Candidate node ip == clietn ip")
-                        break
 
                     # Valid port.
                     valid_ports = 1
@@ -428,7 +425,9 @@ class RendezvousProtocol(LineReceiver):
             # Node wishes to respond to a simultaneous open challenge from a client.
             if re.match("^ACCEPT", line) is not None:
                 # ACCEPT 192.168.0.1 4552 345 TCP 1412137849.288068
-                parts = re.findall("^ACCEPT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+) (TCP|UDP) ([0-9]+(?:[.][0-9]+)?)$", line)
+                p = "^ACCEPT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+)"
+                p += " ((?:[0-9]+\s?)+) (TCP|UDP) ([0-9]+(?:[.][0-9]+)?)$"
+                parts = re.findall(p, line)
                 while 1:
                     # Invalid reply.
                     if not len(parts):
@@ -464,7 +463,9 @@ class RendezvousProtocol(LineReceiver):
                             candidate["con"].send_line(msg)
 
                             """
-                            Signal to propogate_candidates() not to relay this candidate again. Note that this occurs after a valid accept which thus counts as acknowledging receiving the challenge.
+                            Signal to propogate_candidates() not to relay this candidate again.
+                             Note that this occurs after a valid accept which
+                             thus counts as acknowledging receiving the challenge.
                             """
                             candidate["propogated"] = 1
                             break

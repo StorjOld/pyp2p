@@ -13,7 +13,7 @@ class TestRendezvousClient(TestCase):
         rendezvous_servers[0]["port"] += 10
         client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
         con = client.server_connect()
-        assert(con != None)
+        assert(con is not None)
         con.close()
 
     def test_00001(self):
@@ -23,7 +23,7 @@ class TestRendezvousClient(TestCase):
         # attend_fight (Not tested)
 
         ret = client.sequential_connect()
-        assert(ret != None)
+        assert(ret is not None)
         ret[0].close()
 
         assert(client.simultaneous_listen())
@@ -97,7 +97,6 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == 0)
         assert(ret["nat_type"] == "random")
 
-
         mappings = [\
             {
                 "remote": 1
@@ -123,7 +122,6 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == 1)
         assert(ret["nat_type"] == "delta")
 
-
         mappings = [\
             {
                 "remote": 1
@@ -148,7 +146,6 @@ class TestRendezvousClient(TestCase):
         ret = client.delta_test(mappings)
         assert(ret["delta"] == 1)
         assert(ret["nat_type"] == "delta")
-
 
         mappings = [\
             {
@@ -174,7 +171,6 @@ class TestRendezvousClient(TestCase):
         ret = client.delta_test(mappings)
         assert(ret["delta"] == -1)
         assert(ret["nat_type"] == "delta")
-
 
         mappings = [\
             {

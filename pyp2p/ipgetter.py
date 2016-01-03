@@ -52,12 +52,12 @@ def myip():
 
 class IPgetter(object):
 
-    '''
+    """
     This class is designed to fetch your external IP address from the internet.
     It is used mostly when behind a NAT.
     It picks your IP randomly from a serverlist to minimize request overhead
     on a single server
-    '''
+    """
 
     def __init__(self):
         self.server_list = ['http://ip.dnsexit.com',
@@ -125,7 +125,7 @@ class IPgetter(object):
         return ''
 
     def handle_timeout(self, url):
-        if self.url != None:
+        if self.url is not None:
             self.url.close()
             self.url = None
 
@@ -140,20 +140,20 @@ class IPgetter(object):
                               "Mozilla/5.0 (X11; Linux x86_64; rv:24.0) Gecko/20100101 Firefox/24.0")]
 
         try:
-            #Close url resource if fetching not finished within timeout.
+            # Close url resource if fetching not finished within timeout.
             t = Timer(self.timeout, self.handle_timeout, [self.url])
             t.start()
 
-            #Open URL.
+            # Open URL.
             if version_info[0:2] == (2, 5):
-                #Support for Python 2.5.* using socket hack
-                #(Changes global socket timeout.)
+                # Support for Python 2.5.* using socket hack
+                # (Changes global socket timeout.)
                 socket.setdefaulttimeout(self.timeout)
                 self.url = opener.open(server)
             else:
                 self.url = opener.open(server, timeout=self.timeout)
     
-            #Read response.
+            # Read response.
             content = self.url.read()
 
             # Didn't want to import chardet. Prefered to stick to stdlib
@@ -163,8 +163,11 @@ class IPgetter(object):
                 except UnicodeDecodeError:
                     content = content.decode('ISO-8859-1')
 
+            p  = '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.('
+            p += '25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|['
+            p += '01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
             m = re.search(
-                '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)',
+                p,
                 content)
             myip = m.group(0)
             if len(myip) > 0:
@@ -175,22 +178,22 @@ class IPgetter(object):
             print(e)
             return ''
         finally:
-            if self.url != None:
+            if self.url is not None:
                 self.url.close()
                 self.url = None
-            if t != None:
+            if t is not None:
                 t.cancel()
 
-            #Reset default socket timeout.
+            # Reset default socket timeout.
             if socket.getdefaulttimeout() != socket_default_timeout:
                 socket.setdefaulttimeout(socket_default_timeout)
 
     def test(self):
-        '''
+        """
         This functions tests the consistency of the servers
         on the list when retrieving your IP.
         All results should be the same.
-        '''
+        """
 
         resultdict = {}
         for server in self.server_list:

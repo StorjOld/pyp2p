@@ -5,8 +5,10 @@ from pyp2p.net import *
 import random
 from threading import Thread
 import time
+import unittest
 
-class test_net(TestCase):
+
+class TestNet(TestCase):
     def test_nat_tcp_hole_punch(self):
         """
         If the test fails the node may actually be down.
@@ -36,7 +38,8 @@ class test_net(TestCase):
         }
 
         # This is the NATed test node.
-        net.unl.connect("AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc=", events)
+        unl_value = "AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc="
+        net.unl.connect(unl_value, events)
 
         looping = 1
         future = time.time() + 30
@@ -57,7 +60,8 @@ class test_net(TestCase):
 
     def test_net_config(self):
         """
-        Tests whether the Net class behaviours as expected relative to manually setting networking info and interacting with key functions.
+        Tests whether the Net class behaviours as expected relative to manually setting networking info
+         and interacting with key functions.
 
         "enable_bootstrap": "default",
         "enable_advertise": "default",
@@ -325,7 +329,6 @@ class test_net(TestCase):
             assert(net != None)
             assert(net.is_net_started == 1)
 
-
             # Check duplicate connections state.
             assert(net.enable_duplicate_ip_cons == test["expected"]["duplicate_cons"])
 
@@ -336,7 +339,6 @@ class test_net(TestCase):
                 print(str(test_no) + " Checking config " + str(key))
                 print(str(test_no) + " Conf in = " + str(conf_in))
                 print(str(test_no) + " Conf out = " + str(conf_out))
-
 
                 # Check that the net settings changed.
                 if conf_out == "!input":
@@ -377,8 +379,6 @@ class test_net(TestCase):
             # Increment test no.
             test_no += 1
 
-
-
     def test_00000004(self):
         # Test broadcast.
         nodes = [
@@ -400,7 +400,7 @@ class test_net(TestCase):
         ]
 
         def accept_cons(node):
-            while node["net"] != None:
+            while node["net"] is not None:
                 for con in node["net"]:
                     x = 1
 
@@ -547,6 +547,7 @@ class test_net(TestCase):
             t.start()
 
         cons = []
+
         def success_wrapper(cons):
             def success(con):
                 print("Punching succeeded for add_node")
@@ -614,3 +615,45 @@ class test_net(TestCase):
         assert(len(net.unl.pending_sim_open) == 2)
         net.stop()
 
+    @unittest.skip("broken")
+    def test_add_duplicate_nodes(self):
+        node_1 = Net(
+            node_type="simultaneous",
+            nat_type="preserving",
+            passive_port=0,
+            wan_ip="8.8.8.8",
+            debug=1
+        )
+
+        node_2 = Net(
+            node_type="simultaneous",
+            nat_type="preserving",
+            passive_port=0,
+            wan_ip="8.8.8.8",
+            debug=1
+        )
+
+        net = Net(
+            net_type="direct",
+            node_type="simultaneous",
+            nat_type="preserving",
+            passive_port=0,
+            wan_ip="8.8.8.8",
+            debug=1
+        )
+
+        con = net.add_node(
+            get_lan_ip(),
+            node_1.passive_port,
+            "passive"
+        )
+        assert(con is not None)
+
+        print(net.validate_node(
+            get_lan_ip(),
+            node_1.passive_port
+        ))
+
+        node_1.stop()
+        node_2.stop()
+        net.stop()

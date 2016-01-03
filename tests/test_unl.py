@@ -32,7 +32,7 @@ class TestUNL(TestCase):
             net_type="direct",
             node_type="passive",
             nat_type="preserving",
-            passive_port="34003",
+            passive_port=0,
             dht_node=alice_dht,
             debug=1
         ).start()
@@ -41,15 +41,16 @@ class TestUNL(TestCase):
 
         # Setup Bob as slave.
         bob_dht = DHT()
-        bob_port = 34010
         bob_direct = Net(
             net_type="direct",
             node_type="active",
             nat_type="preserving",
-            passive_port=str(bob_port),
+            passive_port=0,
             dht_node=bob_dht,
             debug=1
         ).start()
+        bob_port = bob_direct.passive_port
+        assert(bob_port)
 
         assert(bob_direct.node_type == "active")
 

@@ -18,5 +18,3 @@ class TestHybridReply(TestCase):
             "x"
         )
         reply.copy()
-
-

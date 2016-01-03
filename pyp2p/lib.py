@@ -41,6 +41,7 @@ if platform.system() == "Linux":
 else:
     ip = None
 
+
 def get_unused_port(port):
     """Checks if port is already in use."""
     if port is None or port < 1024 or port > 49151:
@@ -51,15 +52,17 @@ def get_unused_port(port):
             s.bind(('', port))  # Try to open port
         except socket.error as e:
             if e.errno is 98:  # Errorno 98 means address already bound
-                return get_unused_port()
+                return get_unused_port(None)
             raise e
         s.close()
         return port
+
 
 def log_exception(file_path, msg):
     msg = "\r\n" + msg
     with open(file_path, "a") as error_log:
         error_log.write(msg)
+
 
 def parse_exception(e, output=0):
     tb = traceback.format_exc()
@@ -72,15 +75,19 @@ def parse_exception(e, output=0):
 
     return str(error)
 
+
 def ip2int(addr):                                                               
     return struct.unpack("!I", socket.inet_aton(addr))[0]                       
 
-def int2ip(addr):                                                               
+
+def int2ip(addr):
     return socket.inet_ntoa(struct.pack("!I", addr))    
 
 # Patches for urllib2 and requests to bind on specific interface.
 # http://rossbates.com/2009/10/26/urllib2-with-multiple-network-interfaces/
 true_socket = socket.socket
+
+
 def build_bound_socket(source_ip):
     def bound_socket(*a, **k):
         if source_ip == "127.0.0.1":
@@ -91,6 +98,7 @@ def build_bound_socket(source_ip):
         return sock
     
     return bound_socket
+
 
 def get_ntp(local_time=0):
     """
@@ -113,6 +121,7 @@ def get_ntp(local_time=0):
         except Exception as e:
             continue
     return None
+
 
 def get_default_gateway(interface="default"):
     if sys.version_info < (3,0,0):
@@ -138,6 +147,7 @@ def get_default_gateway(interface="default"):
     except:
         # This can also mean the machine is directly accessible.
         return None
+
 
 def get_lan_ip(interface="default"):
     if sys.version_info < (3,0,0):
@@ -180,6 +190,7 @@ def get_lan_ip(interface="default"):
 
     return None
 
+
 def sequential_bind(n, interface="default"):
     bound = 0
     mappings = []
@@ -208,6 +219,7 @@ def sequential_bind(n, interface="default"):
                     
     return mappings
 
+
 def is_port_forwarded(source_ip, port, proto, forwarding_servers):
     global true_socket
     if source_ip != None:
@@ -233,6 +245,7 @@ def is_port_forwarded(source_ip, port, proto, forwarding_servers):
     socket.socket = true_socket
     return ret
 
+
 def is_ip_private(ip_addr):
     if sys.version_info < (3,0,0):
         if type(ip_addr) == str:
@@ -245,6 +258,7 @@ def is_ip_private(ip_addr):
         return 1
     else:
         return 0
+
 
 def is_ip_public(ip_addr):
     if sys.version_info < (3,0,0):
@@ -261,6 +275,7 @@ def is_ip_public(ip_addr):
     else:
         return 1
 
+
 def is_ip_valid(ip_addr):
     if sys.version_info < (3,0,0):
         if type(ip_addr) == str:
@@ -275,6 +290,7 @@ def is_ip_valid(ip_addr):
     except:
         return 0
 
+
 def is_valid_port(port):
     try:
         port = int(port)
@@ -285,8 +301,10 @@ def is_valid_port(port):
     else:
         return 1
 
+
 def memoize(function):
     memo = {}
+
     def wrapper(*args):
         if args in memo:
             return memo[args]
@@ -299,7 +317,9 @@ def memoize(function):
 @memoize
 def get_wan_ip(n=0):
     """
-    That IP module sucks. Occasionally it returns an IP address behind cloudflare which probably happens when cloudflare tries to proxy your web request because it thinks you're trying to DoS. It's better if we just run our own infrastructure.
+    That IP module sucks. Occasionally it returns an IP address behind cloudflare which probably happens
+    when cloudflare tries to proxy your web request because it thinks you're trying to DoS.
+    It's better if we just run our own infrastructure.
     """
 
     if n == 5:
@@ -327,8 +347,8 @@ def get_wan_ip(n=0):
     return get_wan_ip(n + 1)
 
 if __name__ == "__main__":
-    #print(get_wan_ip())
-    #pass
+    # print(get_wan_ip())
+    # pass
     print("In lib")
 
 

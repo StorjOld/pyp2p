@@ -15,6 +15,7 @@ from threading import Thread, Lock
 logging.basicConfig()
 log = logging.getLogger(__name__)
 
+
 def is_valid_unl(value):
     try:
         unl = UNL(value=value)
@@ -26,6 +27,7 @@ def is_valid_unl(value):
         return 0
     else:
         return 1
+
 
 class UNL():
     def __init__(self, net=None, dht_node=None, value=None, wan_ip=None, debug=0):

@@ -30,9 +30,11 @@ dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
 logging.basicConfig()
 log = logging.getLogger(__name__)
 
+
 class DHTProtocol():
     def __init__(self):
         self.messages_received = Queue(maxsize=100)
+
 
 class DHT():
     def __init__(self, node_id=None, password=None, debug=1, networking=1):

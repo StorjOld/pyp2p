@@ -1,7 +1,9 @@
 """
-* Test whether multiple recvs on the same connection (non-blocking) will eventually have the connection closed (use another net instance.)
+* Test whether multiple recvs on the same connection (non-blocking) will eventually have the connection
+ closed (use another net instance.)
 
-* Test whether multiple sends on the same connection (non-blocking) will eventually lead to the connection being closed (use a net instance with no recvs! and loop over the cons)
+* Test whether multiple sends on the same connection (non-blocking) will eventually lead to the connection
+ being closed (use a net instance with no recvs! and loop over the cons)
 
 (Not implemented for now since these will greatly slow the build.)
 """
@@ -28,11 +30,13 @@ else:
     from urlparse import urlparse
 from threading import Thread
 
+
 class ThreadingSimpleServer(
     SocketServer.ThreadingMixIn,
     BaseHTTPServer.HTTPServer
 ):
     pass
+
 
 def md5sum(fname):
     hash = hashlib.md5()
@@ -179,13 +183,12 @@ class TestSock(TestCase):
             1000000
         )
 
-
     def test_blocking_mode(self):
         x = Sock()
         blocking = x.s.gettimeout()
 
         if x.blocking:
-            assert(blocking >= 1 or blocking == None)
+            assert(blocking >= 1 or blocking is None)
         else:
             assert(blocking == 0.0)
 
@@ -194,7 +197,7 @@ class TestSock(TestCase):
 
         blocking = x.s.gettimeout()
         if x.blocking:
-            assert(blocking >= 1 or blocking == None)
+            assert(blocking >= 1 or blocking is None)
         else:
             assert(blocking == 0.0)
 
@@ -203,7 +206,7 @@ class TestSock(TestCase):
 
         blocking = x.s.gettimeout()
         if x.blocking:
-            assert(blocking >= 1 or blocking == None)
+            assert(blocking >= 1 or blocking is None)
         else:
             assert(blocking == 0.0)
 
@@ -212,12 +215,11 @@ class TestSock(TestCase):
 
         blocking = x.s.gettimeout()
         if x.blocking:
-            assert(blocking >= 1 or blocking == None)
+            assert(blocking >= 1 or blocking is None)
         else:
             assert(blocking == 0.0)
 
         x.close()
-
 
     def test_blocking_timeout(self):
         client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
@@ -381,8 +383,10 @@ class TestSock(TestCase):
             try:
                 sock.set_keep_alive(sock.s)
             except socket.error as e:
-                if e.errno != 10042:
+                valid_errors = (10042, 22)
+                if e.errno not in valid_errors:
                     raise e
+
             except AttributeError:
                 pass
 

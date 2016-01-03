@@ -28,4 +28,3 @@ class TestDHTMsg(TestCase):
         bob.send_direct_message(alice.get_id(), msg)
         assert(alice.has_messages())
         assert(alice.get_messages()[0][u"message"] == msg)
-

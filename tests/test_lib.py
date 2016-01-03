@@ -3,7 +3,7 @@ from pyp2p.lib import *
 import random
 
 
-class test_lib(TestCase):
+class TestLib(TestCase):
     def test_log_exception(self):
         file_path = "error.log"
         content = "test_log_exception" + str(
@@ -31,7 +31,7 @@ class test_lib(TestCase):
 
     def test_get_default_gateway(self):
         gw = get_default_gateway()
-        assert (gw != None)
+        assert (gw is not None)
         assert (ip2int(gw))
         assert (ip2int(get_default_gateway(u"default")))
         assert (ip2int(get_default_gateway("default")))
@@ -39,7 +39,7 @@ class test_lib(TestCase):
 
     def test_get_lan_ip(self):
         lan_ip = get_lan_ip()
-        assert (lan_ip != None)
+        assert (lan_ip is not None)
         assert (ip2int(lan_ip))
         assert (ip2int(get_lan_ip("default")))
         assert (ip2int(get_lan_ip(u"default")))
@@ -47,7 +47,7 @@ class test_lib(TestCase):
 
     def test_sequential_bind(self):
         mappings = sequential_bind(5)
-        assert (mappings != None)
+        assert (mappings is not None)
         assert (len(mappings) == 5)
 
         src_start = mappings[0]["sock"].getsockname()[1]
@@ -150,6 +150,7 @@ class test_lib(TestCase):
 
     def test_get_wan_ip(self):
         assert (is_ip_valid(get_wan_ip()))
+
 
 class TestGetUnusedPort(TestCase):
 

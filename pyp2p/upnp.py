@@ -27,6 +27,7 @@ Credits to "Anarchy Angel", "Ngharo", and www.dc414.org
 for the code.
 """
 
+
 class UPnP():
     def __init__(self, interface=u"default"):
         """
@@ -62,7 +63,7 @@ class UPnP():
 
         # Create socket for UDP broadcasts.
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('', self.upnp_port)) #All addresses.
+        s.bind(('', self.upnp_port)) # All addresses.
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         s.setblocking(0)
 
@@ -88,14 +89,14 @@ class UPnP():
                 replies.append([addr[0], string])
 
         # Cleanup socket.
-        if s != None:
+        if s is not None:
             s.close()
             s = None
 
         # Error: no UPnP replies - try guess gateway.
         if replies == []:
             default_gateway = get_default_gateway(self.interface)
-            if default_gateway == None or default_gateway == {}:
+            if default_gateway is None or default_gateway == {}:
                 return None
             else:
                 # Optimise scanning.
@@ -181,7 +182,7 @@ class UPnP():
             raise Exception("Invalid port for forwarding.")
 
         # Source port is forwarded to same destination port number.
-        if dest_port == None:
+        if dest_port is None:
             dest_port = src_port
 
         # Use UPnP binary for forwarding on Windows.
@@ -192,7 +193,7 @@ class UPnP():
 
         # Find gateway address.
         gateway_addr = self.find_gateway()
-        if gateway_addr == None:
+        if gateway_addr is None:
             raise Exception("Unable to find UPnP compatible gateway.")
 
         # Get control URL.
@@ -233,7 +234,7 @@ class UPnP():
 if __name__ == "__main__":
     """
     if sys.version_info < (3,0,0):
-    """
+
 
     port = 51020
     addr = "192.168.0.60"
@@ -242,5 +243,6 @@ if __name__ == "__main__":
 
     print(UPnP().forward_port("TCP", port, addr))
     print(is_port_forwarded(get_lan_ip(), str(port), "TCP", forwarding_servers))
+    """
 
 

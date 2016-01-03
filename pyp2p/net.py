@@ -57,6 +57,14 @@ rendezvous_servers = [
     {
         "addr": "185.86.149.128",
         "port": 8000
+    },
+    {
+        "addr": "185.61.148.22",
+        "port": 8000
+    },
+    {
+        "addr": "192.187.97.131",
+        "port": 4705
     }
 ]
 
@@ -125,6 +133,7 @@ def record_msg_hash(msg):
 def clear_seen_messages():
     global seen_messages
     seen_messages = {}
+
 
 class Net():
     def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown",
@@ -530,6 +539,7 @@ class Net():
                         break
 
                     # Add to list of passive nodes.
+                    node_type, node_ip, node_port = node
                     if node_type == "p":
                         passive_nodes.append(node)
 
@@ -591,7 +601,8 @@ class Net():
                 self.rendezvous.passive_listen(self.passive_port, self.max_inbound)
 
             """
-            Simultaneous open is only used as a fail-safe for connections to nodes on the direct_net and only direct_net can list itself as simultaneous so its safe to leave this enabled.
+            Simultaneous open is only used as a fail-safe for connections to nodes on the direct_net
+             and only direct_net can list itself as simultaneous so its safe to leave this enabled.
             """
             if self.node_type == "simultaneous":
                 self.rendezvous.simultaneous_listen()
@@ -739,11 +750,13 @@ class Net():
             if self.node_type == "unknown":
                 self.node_type = self.determine_node()
 
-
         # Prevent P2P nodes from running as simultaneous.
         if self.net_type == "p2p":
             """
-            TCP hole punching is reserved specifically for direct networks (a net object reserved for receiving direct connections -- p2p is for connecting to the main network. The reason for this is you can't do multiple TCP hole punches at the same time so its reserved for direct network where it's most needed.
+            TCP hole punching is reserved specifically for direct networks
+            (a net object reserved for receiving direct connections -- p2p is for connecting
+             to the main network. The reason for this is you can't do multiple TCP hole punches at the same time
+              so its reserved for direct network where it's most needed.
             """
             if self.node_type == "simultaneous":
                 self.debug_print("Simultaneous is not allowed for P2P")
@@ -1234,7 +1247,6 @@ class Net():
         return iter(cons)
 
 if __name__ == "__main__":
-
     """
     net = Net(debug=1)
     net.disable_bootstrap()
