@@ -479,6 +479,10 @@ class RendezvousProtocol(LineReceiver):
                 if ip_addr in self.factory.nodes["simultaneous"]:
                     del self.factory.nodes["simultaneous"][ip_addr]
 
+            # Disconnect.
+            if re.match("^QUIT", line) is not None:
+                self.transport.loseConnection()
+
         except Exception as e:
             error = parse_exception(e)
             log_exception(error_log_path, error)

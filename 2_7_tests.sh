@@ -9,3 +9,4 @@ python2.7 -m "nose" -v test_rendezvous_server.py
 python2.7 -m "nose" -v test_sock.py
 python2.7 -m "nose" -v test_unl.py
 python2.7 -m "nose" -v test_upnp.py
+python2.7 -m "nose" -v test_hybrid_reply.py

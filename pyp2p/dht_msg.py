@@ -267,6 +267,7 @@ class DHT():
 
 
 if __name__ == "__main__":
+    """
     #dht_node = DHT(node_id=b"\111" * 20, password="svymQQzF1j7FGmYf8fENs4mvRdAX6f")
 
     dht_node = DHT(node_id=u"T", password="svymQQzF1j7FGmYf8fENs4mvRdAX6f")
@@ -293,3 +294,4 @@ if __name__ == "__main__":
     print(dht_node.node_id)
     print(dht_node.password)
     print(dht_node.list(dht_node.node_id, dht_node.password))
+    """

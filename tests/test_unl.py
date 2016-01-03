@@ -2,14 +2,29 @@ from unittest import TestCase
 from pyp2p.lib import *
 from pyp2p.dht_msg import DHT
 from pyp2p.net import *
-from pyp2p.unl import UNL
+from pyp2p.unl import UNL, is_valid_unl
 from pyp2p.sock import Sock
 
 success_no = 0
 found_con = 0
 test_no_1_success = 1
 
-class test_unl(TestCase):
+
+class TestUNL(TestCase):
+    def test_is_valid_unl(self):
+        alice_direct = Net(
+            net_type="direct",
+            node_type="passive",
+            nat_type="preserving",
+            passive_port="34003",
+            wan_ip="8.8.8.8",
+            debug=1
+        ).start()
+        unl = UNL(net=alice_direct)
+        assert(is_valid_unl(unl.value))
+        assert(unl == unl)
+        self.assertFalse(unl != unl)
+
     def test_nonce_synchronization(self):
         # Setup Alice as master.
         alice_dht = DHT()

@@ -1246,7 +1246,6 @@ if __name__ == "__main__":
 
     while 1:
         time.sleep(0.5)
-    """
 
     # Test simultaneous open.
     p2p_net = Net(debug=1, nat_type="preserving", node_type="simultaneous")
@@ -1280,9 +1279,9 @@ if __name__ == "__main__":
             for reply in con:
                 print(reply)
 
-            """
+
             Excluses con from broadcast since we got this message from them
-            """
+
             p2p_net.broadcast("Something.", con)
 
         time.sleep(0.5)
@@ -1299,3 +1298,4 @@ if __name__ == "__main__":
     #Note: this isn't a valid UNL.
     #To get your UNL do: direct_net.unl.value.
     direct_net.unl.connect("Some guys UNL...", {"success": success})
+    """

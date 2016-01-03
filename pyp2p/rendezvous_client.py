@@ -61,8 +61,15 @@ class RendezvousClient:
         self.timeout = 5 # Socket timeout.
         self.predictable_nats = ["preserving", "delta"]
 
-    def server_connect(self, sock=None):
-        for server in self.rendezvous_servers:
+    def server_connect(self, sock=None, index=None):
+        # Get server index if appropriate.
+        rendezvous_servers = self.rendezvous_servers[:]
+        if index is not None:
+            rendezvous_servers = [
+                rendezvous_servers[index]
+            ]
+
+        for server in rendezvous_servers:
             try:
                 # Blank socket object.
                 con = Sock(
@@ -80,7 +87,8 @@ class RendezvousClient:
 
                 # Return Sock object.
                 return con
-            except:
+            except socket.error as e:
+                print(e)
                 continue
 
         raise Exception("All rendezvous servers are down.")
@@ -516,7 +524,7 @@ class RendezvousClient:
 
         return ret
 
-    def determine_nat(self):
+    def determine_nat(self, return_instantly=1):
         """
         This function can predict 4 types of NATS.
         (Not adequately tested yet.)
@@ -550,14 +558,37 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
         if self.port_collisions * 5 > self.nat_tests:
             raise Exception("Port collision number is too high compared to nat tests. Collisions must be in ratio 1 : 5 to avoid ambiguity in test results.")
 
-        # Load mappings for preserving and delta tests.
-        mappings = sequential_bind(self.nat_tests, self.interface)
-        for i in range(0, self.nat_tests):
-            con = self.server_connect(mappings[i]["sock"])
-            con.send_line("SOURCE TCP " + str(mappings[i]["source"]))
+        # Load mappings for reuse test.
+        """
+        Notes: This reuse test needs to ideally be performed against
+        bootstrapping nodes on at least two different addresses and
+        ports to each other because there are NAT types which
+        allocate new mappings based on changes to these variables.
+        """
+        def custom_server_con(port=None, index=None):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            port = port or get_unused_port(None)
+            sock.bind(('', port))
+            con = Sock(blocking=1, interface=self.interface)
+            con.close()
+            con.s = sock
+            source_port = con.s.getsockname()[1]
+            con = self.server_connect(sock, index)
+            con.send_line("SOURCE TCP " + str(source_port))
             remote_port = self.parse_remote_port(con.recv_line(timeout=2))
-            mappings[i]["remote"] = int(remote_port)
-            con.s.close()
+            con.send_line("QUIT")
+
+            return (source_port, remote_port)
+
+
+        mappings = []
+        for i in range(0, self.nat_tests):
+            src, remote = custom_server_con(index=0)
+            mappings.append({
+                "source": src,
+                "remote": int(remote)
+            })
 
         # Preserving test.
         preserving = 0
@@ -566,48 +597,43 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
                 preserving += 1
         if preserving >= (self.nat_tests - self.port_collisions):
             nat_type = "preserving"
-            return nat_type
+            if return_instantly:
+                return nat_type
+
+        # Test reuse.
+        reuse = 0
+        for mapping in mappings:
+            addr = ("www.example.com", 80)
+            src, remote = custom_server_con(
+                mapping["source"],
+                index=1
+            )
+            if remote == mapping["remote"]:
+                reuse += 1
+
+        # Check reuse results.
+        if reuse >= (self.nat_tests - self.port_collisions):
+            nat_type = "reuse"
+            if return_instantly:
+                return nat_type
+
+            # Load mappings for delta tests.
+            mappings = sequential_bind(self.nat_tests, self.interface)
+            for i in range(0, self.nat_tests):
+                con = self.server_connect(mappings[i]["sock"])
+                con.send_line("SOURCE TCP " + str(mappings[i]["source"]))
+                remote_port = self.parse_remote_port(con.recv_line(timeout=2))
+                mappings[i]["remote"] = int(remote_port)
+                con.s.close()
 
         # Delta test.
         delta_ret = self.delta_test(mappings)
         if delta_ret["nat_type"] != "random":
             # Save delta value.
             self.delta = delta_ret["delta"]
-
-            return nat_type
-
-        # Load mappings for reuse test.
-        """
-        Notes: This reuse test needs to ideally be performed against
-        bootstrapping nodes on at least two different addresses and
-        ports to each other because there are NAT types which
-        allocate new mappings based on changes to these variables.
-        """
-        mappings = []
-        for i in range(0, self.nat_tests):
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(('', 0))
-            con = Sock(blocking=1, interface=self.interface)
-            con.s = sock
-            source_port = con.s.getsockname()[1]
-            con = self.server_connect(sock)
-            con.send_line("SOURCE TCP " + str(source_port))
-            remote_port = self.parse_remote_port(con.recv_line(timeout=2))
-            mappings.append({
-                "source": source_port,
-                "remote": int(remote_port)
-            })
-        if len(mappings) < self.nat_tests:
-            return nat_type
-
-        # Test reuse.
-        reuse = 0
-        for mapping in mappings:
-            if mapping["source"] == mapping["remote"]:
-                reuse += 1
-        if reuse >= (self.nat_tests - self.port_collisions):
-            nat_type = "reuse"
+            nat_type = "delta"
+            if return_instantly:
+                return nat_type
 
         return nat_type
 

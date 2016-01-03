@@ -2,11 +2,12 @@ from unittest import TestCase
 from pyp2p.lib import *
 from pyp2p.rendezvous_client import *
 import random
+import socket
 
 # if sys.version_info >= (3,0,0):
 
 
-class test_rendezvous_client(TestCase):
+class TestRendezvousClient(TestCase):
     def test_connect_fail_over(self):
         from pyp2p.net import rendezvous_servers
         rendezvous_servers[0]["port"] += 10
@@ -262,3 +263,29 @@ class test_rendezvous_client(TestCase):
         assert(ret["nat_type"] == "delta")
 
         assert(client.determine_nat() != "unknown")
+
+    def test_delta_mappings(self):
+        from pyp2p.net import rendezvous_servers
+        client = RendezvousClient(nat_type="delta", rendezvous_servers=rendezvous_servers)
+        client.delta = 5
+        mappings = []
+        for i in range(0, 5):
+            mapping = {}
+            mapping["source"] = i
+            mapping["sock"] = socket.socket(
+                socket.AF_INET,
+                socket.SOCK_STREAM
+            )
+            mapping["sock"].bind(('', 0))
+            mappings.append(mapping)
+
+        client.predict_mappings(mappings)
+
+    def test_determine_nat(self):
+        from pyp2p.net import rendezvous_servers
+        client = RendezvousClient(
+            nat_type="unknown",
+            rendezvous_servers=rendezvous_servers
+        )
+
+        client.determine_nat(return_instantly=0)

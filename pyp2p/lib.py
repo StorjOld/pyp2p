@@ -41,28 +41,20 @@ if platform.system() == "Linux":
 else:
     ip = None
 
-class Tee(object):
-    def __init__(self, name, mode, lock):
-        self.lock = lock
-        self.name = name
-        self.mode = mode
-        self.stdout = sys.stdout
-        sys.stdout = self
-    def __del__(self):
-        sys.stdout = self.stdout
-        self.file.close()
-    def write(self, data):
-        self.lock.acquire()
+def get_unused_port(port):
+    """Checks if port is already in use."""
+    if port is None or port < 1024 or port > 49151:
+        port = random.randint(1024, 49151)
+    while True:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            self.file = open(self.name, self.mode)
-            self.file.write(data)
-            self.stdout.write(data)
-            self.stdout.flush()
-            self.file.close()
-        except:
-            pass
-        finally:
-            self.lock.release()
+            s.bind(('', port))  # Try to open port
+        except socket.error as e:
+            if e.errno is 98:  # Errorno 98 means address already bound
+                return get_unused_port()
+            raise e
+        s.close()
+        return port
 
 def log_exception(file_path, msg):
     msg = "\r\n" + msg

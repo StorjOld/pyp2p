@@ -34,7 +34,8 @@ import ssl
 import select
 import errno
 import platform
-from .lib import *
+import sys
+from pyp2p.lib import get_lan_ip, parse_exception, log_exception
 
 error_log_path = "error.log"
 
@@ -172,11 +173,13 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 # Todo: fix this to use static ips from Net
                 src_ip = get_lan_ip(self.interface)
                 self.s.bind((src_ip, 0))
-            except:
-                # Already bound.
-                pass
+            except socket.error as e:
+                if e.errno != 98:
+                    raise e
 
         try:
+            self.debug_print(addr)
+            self.debug_print(port)
             self.s.connect((addr, int(port)))
             self.connected = 1
             self.set_blocking(self.blocking, self.timeout)
@@ -184,6 +187,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             self.debug_print("Connect failed")
             self.close()
             error = parse_exception(e)
+            self.debug_print(error)
             log_exception(error_log_path, error)
             raise socket.error("Socket connect failed.")
 
@@ -305,6 +309,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 except ssl.SSLError as e:
                     # Will block on non-blocking SSL sockets.
                     if e.errno == ssl.SSL_ERROR_WANT_READ:
+                        self.debug_print("SSL_ERROR_WANT_READ")
                         break
                     else:
                         self.debug_print("Get chunks ssl error")
@@ -368,7 +373,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     # Called to check for replies and update buffers.
     def update(self):
         self.get_chunks()
-        self.replies = self.parse_buf()
+        self.replies += self.parse_buf()
 
         # Execute callbacks on replies.
         if self.reply_filter != None:
@@ -385,6 +390,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     def send(self, msg, send_all=0, timeout=5):
         # Sanity check.
         assert(len(msg))
+        # Not connected.
+        if not self.connected:
+            return 0
 
         # Update timeout.
         if timeout != self.timeout and self.blocking:
@@ -399,10 +407,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 assert(blocking == 0.0)
 
         try:
-            # Not connected.
-            if not self.connected:
-                return 0
-
             # Convert to bytes Python 2 & 3
             if sys.version_info >= (3,0,0):
                 if type(msg) == str:
@@ -427,6 +431,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     except socket.timeout as e:
                         err = e.args[0]
                         self.debug_print("Con send: " + str(e))
+                        self.debug_print(err)
                         if err == "timed out":
                             return 0
                     except socket.error as e:
@@ -487,6 +492,13 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         # Sanity checking.
         assert(n)
 
+        # Disconnect.
+        if not self.connected:
+            if encoding == "unicode":
+                return u""
+            else:
+                return b""
+
         # Update timeout.
         if timeout != self.timeout and self.blocking:
             self.set_blocking(self.blocking, timeout)
@@ -500,13 +512,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 assert(blocking == 0.0)
 
         try:
-            # Disconnect.
-            if not self.connected:
-                if encoding == "unicode":
-                    return u""
-                else:
-                    return b""
-
             # Save current buffer state.
             temp_buf = self.buf[:]
 
@@ -570,6 +575,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         # Sanity checking.
         assert(len(msg))
 
+        # Not connected.
+        if not self.connected:
+            return 0
+
         # Update timeout.
         if timeout != self.timeout and self.blocking:
             self.set_blocking(self.blocking, timeout)
@@ -583,10 +592,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 assert(blocking == 0.0)
 
         try:
-            # Not connected.
-            if not self.connected:
-                return 0
-
             # Convert to bytes Python 2 & 3
             if sys.version_info >= (3,0,0):
                 if type(msg) == str:
@@ -617,6 +622,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     # Receives a new message delimited by a new line.
     # Blocking or non-blocking.
     def recv_line(self, timeout=5):
+        # Socket is disconnected.
+        if not self.connected:
+            return u""
+
         # Update timeout.
         if timeout != self.timeout and self.blocking:
             self.set_blocking(self.blocking, timeout)
@@ -718,6 +727,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         return self.__iter__()
 
 if __name__ == "__main__":
+    """
     s = Sock("158.69.201.105", 8540)
 
     exit()
@@ -733,6 +743,7 @@ if __name__ == "__main__":
 
     # print(s.recv_line())
     # print("yes")
+    """
 
 
 

@@ -2,12 +2,13 @@ from unittest import TestCase
 from pyp2p.lib import *
 from pyp2p.sock import *
 from pyp2p.rendezvous_client import RendezvousClient
+from pyp2p.rendezvous_server import RendezvousFactory, RendezvousProtocol, LineReceiver
 import random
 
 # if sys.version_info >= (3,0,0):
 
 
-class test_rendezvous_client(TestCase):
+class TestRendezvousServer(TestCase):
     def test_00001(self):
         from pyp2p.net import rendezvous_servers
         client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
@@ -28,4 +29,11 @@ class test_rendezvous_client(TestCase):
         # but that is tested in the net tests
 
         s.close()
+
+    """
+    def test_protocol_messages(self):
+        factory = RendezvousFactory()
+        protocol = factory.buildProtocol(factory)
+        print(protocol.log_entry("x"))
+    """
 
