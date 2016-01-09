@@ -188,7 +188,10 @@ class UPnP():
         # Use UPnP binary for forwarding on Windows.
         if platform.system() == "Windows":
             cmd = "upnpc-static.exe -a %s %s %s %s" % (get_lan_ip(), str(src_port), str(dest_port), proto)
-            subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout.read()
+            out, err = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+            if "is not recognized" in err:
+                raise Exception("Missing upnpc-static.exe")
+            
             return
 
         # Find gateway address.

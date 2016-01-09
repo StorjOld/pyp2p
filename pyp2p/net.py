@@ -51,20 +51,12 @@ sim_open_interval = 2
 # Bootstrapping + TCP hole punching server.
 rendezvous_servers = [
     {
-        "addr": "158.69.201.105",
+        "addr": "185.61.148.22",
         "port": 8000
     },
     {
         "addr": "185.86.149.128",
         "port": 8000
-    },
-    {
-        "addr": "185.61.148.22",
-        "port": 8000
-    },
-    {
-        "addr": "192.187.97.131",
-        "port": 4705
     }
 ]
 
@@ -416,10 +408,12 @@ class Net():
                     old_timeout = self.rendezvous.timeout
                     try:
                         self.rendezvous.timeout = timeout
+                        self.debug_print("Attempting simultaneous challenge")
                         con = self.rendezvous.simultaneous_challenge(
                             node_ip, node_port, "TCP"
                         )
                     except Exception as e:
+                        self.debug_print("sim challenge failed")
                         error = parse_exception(e)
                         log_exception(self.error_log_path, error)
                         return None
@@ -1122,6 +1116,7 @@ class Net():
                             self.inbound.append(node)
                             self.debug_print("Accepted new passive connection: " + str(node))
                         else:
+                            self.debug_print("Validation failure")
                             con.close()
 
             # Accept new passive simultaneous connections.
@@ -1155,9 +1150,12 @@ class Net():
                         if not len(parts):
                             continue
                         (candidate_ip, candidate_predictions, candidate_proto) = parts[0]
+                        self.debug_print("Found challenge")
+                        self.debug_print(parts[0])
 
                         # Already connected.
                         if not self.validate_node(candidate_ip):
+                            self.debug_print("validation failed")
                             continue
 
                         # Last meeting was too recent.

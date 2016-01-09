@@ -38,10 +38,16 @@ import sys
 import ntplib
 import datetime
 import random
+import logging
 from multiprocessing.dummy import Pool
 
 from .sock import *
 from .lib import *
+
+# Debug logging.
+logging.basicConfig()
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 
 class RendezvousClient:
@@ -71,6 +77,8 @@ class RendezvousClient:
             ]
 
         for server in servers:
+            log.debug("Trying server:" + str(server))
+
             try:
                 # Blank socket object.
                 con = Sock(
@@ -89,7 +97,7 @@ class RendezvousClient:
                 # Return Sock object.
                 return con
             except socket.error as e:
-                print(e)
+                log.debug("Error in server_connect: " + str(e))
                 continue
 
         raise Exception("All rendezvous servers are down.")
@@ -113,7 +121,7 @@ class RendezvousClient:
         self.simultaneous_cons = []
         predictions = predictions.split(" ")
         self.simultaneous_fight(mappings, node_ip, predictions, ntp, passive_sim)
-        
+
         # Return hole made in opponent.
         if len(self.simultaneous_cons):
             """
@@ -161,8 +169,8 @@ class RendezvousClient:
             mappings = sequential_bind(self.mapping_no + 1, self.interface)
             con = self.server_connect(mappings[0]["sock"])
         except Exception as e:
-            print(e)
-            print("this err")
+            log.debug(e)
+            log.debug("this err")
             return None
 
         # First mapping is used to talk to server.
@@ -203,7 +211,7 @@ class RendezvousClient:
         # Reset predictions + mappings.
         self.mappings = None
         self.predictions = None
-        
+
         # Connect to rendezvous server.
         parts = self.sequential_connect()
         if parts is None:
@@ -248,7 +256,7 @@ class RendezvousClient:
 
             if self.nat_type == "preserving":
                 mapping["remote"] = mapping["source"]
-            
+
             if self.nat_type == "delta":
                 max_port = 65535
                 mapping["remote"] = int(mapping["source"]) + self.delta
@@ -305,6 +313,7 @@ class RendezvousClient:
 
         source_port = sock.getsockname()[1]
         error = 0
+        log.debug("Throwing punch")
         for i in range(0, tries):
             """
             if local:
@@ -313,6 +322,7 @@ class RendezvousClient:
             try:
                 # Attempt to connect.
                 con.connect(node_ip, remote_port)
+                log.debug("Sim open success!")
 
                 # FATALITY.
 
@@ -323,6 +333,7 @@ class RendezvousClient:
                 return 1
             except Exception as e:
                 # Punch was blocked, opponent is strong.
+                log.debug(e)
                 error = 1
                 continue
 
@@ -366,20 +377,22 @@ class RendezvousClient:
         sleep_time = future - current
 
         # Check sleep time:
+        log.debug("Waiting for fight")
         if sleep_time < 0:
-            print("We missed the meeting! It happened " + str(-sleep_time) + "seconds ago!")
+            log.debug("We missed the meeting! It happened " + str(-sleep_time) + "seconds ago!")
             return 0
 
         if sleep_time >= 300:
-            print("Future sleep time is too great!")
+            log.debug("Future sleep time is too great!")
             return 0
 
         time.sleep(sleep_time)
+        log.debug("At fight")
         """
         Time.sleep isn't guaranteed to sleep for the time specified
         which could cause synchronisation to be off between nodes
         and different OS' as per the discretion of the task scheduler.
-        Think of a better way to do the sleep. Maybe a loop? 
+        Think of a better way to do the sleep. Maybe a loop?
         """
 
         # Can you dodge my special?
@@ -415,6 +428,7 @@ class RendezvousClient:
 
         parts = self.sequential_connect()
         if parts is None:
+            log.debug("Sequential connect failed")
             return None
         con, mappings, predictions = parts
 
@@ -422,20 +436,27 @@ class RendezvousClient:
         msg = "CANDIDATE %s %s %s" % (node_ip, str(proto), predictions)
         con.send_line(msg)
         reply = con.recv_line(timeout=10)
+        log.debug(reply)
         if "PREDICTION SET" not in reply:
+            log.debug("Prediction set failed")
             return None
 
         # Wait for node to accept and give us fight time.
         # FIGHT 192.168.0.1 4552 345 34235 TCP 123123123.1\
         reply = con.recv_line(timeout=10)
+        log.debug(reply)
         con.s.close()
         p = "^FIGHT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+)"
         p += " (TCP|UDP) ([0-9]+(?:[.][0-9]+)?)$"
         parts = re.findall(p, reply)
         if not len(parts):
-            print("Invalid parts length.")
+            log.debug("Invalid parts length")
             return None
         node_ip, predictions, proto, ntp = parts[0]
+
+        log.debug("Received fight details")
+        log.debug(str(parts[0]))
+        log.debug("Attending fight now")
         return self.attend_fight(mappings, node_ip, predictions, ntp)
 
     def parse_remote_port(self, reply):
@@ -500,7 +521,7 @@ class RendezvousClient:
                     # Pattern was predicted for relative comparison so increment matches.
                     if test_val == mappings[j]["remote"]:
                         matches += 1
-                
+
                 # Matches parses the minimum threshold so these don't count as collisions.
                 if matches + 1 > self.port_collisions:
                     masked.append(mappings[i]["remote"])
@@ -574,38 +595,55 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
         ports to each other because there are NAT types which
         allocate new mappings based on changes to these variables.
         """
-        def custom_server_con(port=None, index=None, servers=None):
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            port = port or get_unused_port(None)
-            sock.bind(('', port))
-            source_port = sock.getsockname()[1]
+        def custom_server_con(port=None, servers=None):
+            # Get connection to rendezvous server with random
+            # source port specified
+            servers = servers or self.rendezvous_servers
             con = None
             while con is None:
                 try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    port = port or get_unused_port(None)
+                    sock.bind(('', port))
+                    source_port = sock.getsockname()[1]
+                    index = random.randrange(0, len(servers))
+                    log.debug("Trying index: " + str(index))
                     con = self.server_connect(sock, index, servers)
                 except:
                     time.sleep(1)
+                    sock.close()
+
+            # Record which server we're connected to.
             server = list(con.s.getpeername())[:]
             server = {
                 "addr": server[0],
                 "port": server[1]
             }
 
+            # Get the port mappings and instruct remote host to disconnect
+            # This gives them the timewait state (we also connect to another
+            # server anyway so as to avoid using the exact same con tuple.)
             con.send_line("SOURCE TCP " + str(source_port))
             remote_port = self.parse_remote_port(con.recv_line(timeout=2))
             con.send_line("QUIT")
 
             return (source_port, remote_port, server)
 
+        log.debug("Starting initial mappings for preserving + reuse tests")
         mappings = []
         for i in range(0, self.nat_tests):
-            src, remote, server = custom_server_con(index=0)
+            src, remote, server = custom_server_con()
             mappings.append({
                 "source": src,
                 "remote": int(remote),
                 "server": server
             })
+        log.debug(mappings)
+        log.debug(len(mappings))
+        log.debug(self.nat_tests)
+        log.debug("Finished mappings")
+
 
         # Preserving test.
         preserving = 0
@@ -618,17 +656,14 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
                 return nat_type
 
         # Test reuse.
+        log.debug("Testing reuse")
         reuse = 0
         for mapping in mappings:
             addr = ("www.example.com", 80)
             servers = self.rendezvous_servers[:]
             servers.remove(mapping["server"])
-
-            src, remote, junk = custom_server_con(
-                mapping["source"],
-                1,
-                servers
-            )
+            log.debug("servers = " + servers)
+            src, remote, junk = custom_server_con(mapping["source"], servers)
             if remote == mapping["remote"]:
                 reuse += 1
 

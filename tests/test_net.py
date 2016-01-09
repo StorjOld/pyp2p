@@ -615,23 +615,14 @@ class TestNet(TestCase):
         assert(len(net.unl.pending_sim_open) == 2)
         net.stop()
 
-    @unittest.skip("broken")
     def test_add_duplicate_nodes(self):
         node_1 = Net(
-            node_type="simultaneous",
+            node_type="passive",
             nat_type="preserving",
             passive_port=0,
             wan_ip="8.8.8.8",
             debug=1
-        )
-
-        node_2 = Net(
-            node_type="simultaneous",
-            nat_type="preserving",
-            passive_port=0,
-            wan_ip="8.8.8.8",
-            debug=1
-        )
+        ).start()
 
         net = Net(
             net_type="direct",
@@ -640,7 +631,7 @@ class TestNet(TestCase):
             passive_port=0,
             wan_ip="8.8.8.8",
             debug=1
-        )
+        ).start()
 
         con = net.add_node(
             get_lan_ip(),
@@ -655,5 +646,4 @@ class TestNet(TestCase):
         ))
 
         node_1.stop()
-        node_2.stop()
         net.stop()

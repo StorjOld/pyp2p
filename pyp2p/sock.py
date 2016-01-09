@@ -135,7 +135,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         self.debug_print("Setting sock")
         self.close() # Close old socket.
         self.s = s
-        self.connected = 1
         self.set_blocking(self.blocking, self.timeout)
         # self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
@@ -147,6 +146,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             addr, port = self.s.getpeername()
             self.addr = addr
             self.port = port
+            self.connected = 1
         except:
             self.connected = 0
 
@@ -188,7 +188,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             self.set_blocking(self.blocking, self.timeout)
         except Exception as e:
             self.debug_print("Connect failed")
-            self.close()
             error = parse_exception(e)
             self.debug_print(error)
             log_exception(error_log_path, error)
@@ -196,7 +195,6 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     def close(self):
         self.connected = 0
-
         self.debug_print("Closing con!!!")
 
         # Attempt graceful shutdown.
@@ -754,4 +752,3 @@ if __name__ == "__main__":
 
 
     # def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0):
-
