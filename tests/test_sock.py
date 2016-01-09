@@ -20,14 +20,15 @@ import os
 import tempfile
 import hashlib
 import platform
-import SocketServer
 import BaseHTTPServer
 import SimpleHTTPServer
 import socket
 if sys.version_info >= (3, 0, 0):
     from urllib.parse import urlparse
+    import socketserver as SocketServer
 else:
     from urlparse import urlparse
+    import SocketServer
 from threading import Thread
 
 
@@ -202,7 +203,7 @@ class TestSock(TestCase):
             assert(blocking == 0.0)
 
         x.close()
-        x = Sock("www.example.com", 80)
+        x = Sock("www.example.com", 80, timeout=10)
 
         blocking = x.s.gettimeout()
         if x.blocking:
@@ -211,7 +212,7 @@ class TestSock(TestCase):
             assert(blocking == 0.0)
 
         x.close()
-        x = Sock("www.example.com", 80, blocking=1)
+        x = Sock("www.example.com", 80, blocking=1, timeout=10)
 
         blocking = x.s.gettimeout()
         if x.blocking:
@@ -290,7 +291,7 @@ class TestSock(TestCase):
         line = s.recv_line()
         assert ("REMOTE" in line)
 
-        s = Sock("www.example.com", 80, blocking=0, timeout=5)
+        s = Sock("www.example.com", 80, blocking=0, timeout=10)
         data = "GET / HTTP/1.1\r\n"
         data += "Connection: close\r\n"
         data += "Host: www.example.com\r\n\r\n"
@@ -314,7 +315,7 @@ class TestSock(TestCase):
         s.reconnect()
         s.close()
 
-        s = Sock("www.example.com", 80, blocking=1, timeout=5)
+        s = Sock("www.example.com", 80, blocking=1, timeout=10)
         s.send_line("GET / HTTP/1.1")
         s.send_line("Host: www.example.com\r\n")
         line = s.recv_line()
@@ -398,8 +399,8 @@ class TestSock(TestCase):
     def test_non_default_iface(self):
         sock = Sock(interface="eth12")
         try:
-            sock.connect("www.example.com", 80)
-        except TypeError:
+            sock.connect("www.example.com", 80, timeout=10)
+        except (TypeError, socket.error) as e:
             pass
         sock.close()
         assert(1)
