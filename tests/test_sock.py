@@ -20,16 +20,17 @@ import os
 import tempfile
 import hashlib
 import platform
-import SimpleHTTPServer
 import socket
 if sys.version_info >= (3, 0, 0):
     from urllib.parse import urlparse
     import socketserver as SocketServer
     from http.server import HTTPServer
+    from http.server import SimpleHTTPRequestHandler
 else:
     from urlparse import urlparse
     import SocketServer
     from BaseHTTPServer import HTTPServer
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
 from threading import Thread
 
 
@@ -470,13 +471,13 @@ class TestSock(TestCase):
 
     def test_broken_send_con(self):
         port = 10121
-        server = ThreadingSimpleServer(('', port), SimpleHTTPServer.SimpleHTTPRequestHandler)
+        server = ThreadingSimpleServer(('', port), SimpleHTTPRequestHandler)
         sock = Sock("127.0.0.1", port, debug=1, timeout=6)
         server.server_close()
         print(sock.send(b"test"))
         sock.close()
 
-        server = ThreadingSimpleServer(('', port), SimpleHTTPServer.SimpleHTTPRequestHandler)
+        server = ThreadingSimpleServer(('', port), SimpleHTTPRequestHandler)
 
         def close_server():
             time.sleep(1)
