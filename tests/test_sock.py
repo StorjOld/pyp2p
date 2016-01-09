@@ -20,21 +20,22 @@ import os
 import tempfile
 import hashlib
 import platform
-import BaseHTTPServer
 import SimpleHTTPServer
 import socket
 if sys.version_info >= (3, 0, 0):
     from urllib.parse import urlparse
     import socketserver as SocketServer
+    from http.server import HTTPServer
 else:
     from urlparse import urlparse
     import SocketServer
+    from BaseHTTPServer import HTTPServer
 from threading import Thread
 
 
 class ThreadingSimpleServer(
     SocketServer.ThreadingMixIn,
-    BaseHTTPServer.HTTPServer
+    HTTPServer
 ):
     pass
 
