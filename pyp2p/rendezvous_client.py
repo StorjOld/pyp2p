@@ -662,7 +662,7 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
             addr = ("www.example.com", 80)
             servers = self.rendezvous_servers[:]
             servers.remove(mapping["server"])
-            log.debug("servers = " + servers)
+            log.debug("servers = " + str(servers))
             src, remote, junk = custom_server_con(mapping["source"], servers)
             if remote == mapping["remote"]:
                 reuse += 1
