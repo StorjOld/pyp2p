@@ -103,13 +103,19 @@ def build_bound_socket(source_ip):
     return bound_socket
 
 
+def busy_wait(dt):
+    current_time = time.time()
+    while (time.clock() < current_time + dt):
+        pass
+
+
 def get_ntp_worker(server):
     global ntp_results
 
     if not len(ntp_results):
         try:
             client = ntplib.NTPClient()
-            response = client.request(server)
+            response = client.request(server, version=3)
             ntp = response.tx_time
             ntp_results.append(ntp)
         except Exception as e:
@@ -120,7 +126,7 @@ def get_ntp(local_time=0):
     global ntp_results
 
     if local_time:
-        return int(time.time())
+        return time.time()
 
     ntp_results = []
     servers = [

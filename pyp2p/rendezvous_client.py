@@ -443,13 +443,15 @@ class RendezvousClient:
             log.debug("Future sleep time is too great!")
             return 0
 
-        time.sleep(sleep_time)
+        busy_wait(sleep_time)
         log.debug("At fight")
         """
         Time.sleep isn't guaranteed to sleep for the time specified
         which could cause synchronisation to be off between nodes
         and different OS' as per the discretion of the task scheduler.
-        Think of a better way to do the sleep. Maybe a loop?
+        A busy wait is used to increase the accuracy of sleep.
+        http://stackoverflow.com/questions/17499837/python-time-sleep-vs-busy-wait-accuracy
+        http://stackoverflow.com/questions/1133857/how-accurate-is-pythons-time-sleep
         """
 
         # Can you dodge my special?

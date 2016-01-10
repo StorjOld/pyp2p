@@ -24,9 +24,6 @@ class TestNet(TestCase):
 
         connected = 0
 
-        def failure_notify(con):
-            assert(0)
-
         def success_notify(con):
             global connected
             connected = 1
@@ -34,7 +31,6 @@ class TestNet(TestCase):
 
         # Test threading hasn't broken the timing.
         events = {
-            "failure": failure_notify,
             "success": success_notify
         }
 
@@ -49,6 +45,7 @@ class TestNet(TestCase):
                 subsequent connects from Travis yield RST packets.
 
             The TCP setup for the NATed test node isn't a true NAT / is typical of NATs that are in the wild.
+            Alternatively: the hosts are too close.
             """
             net.unl.connect(unl_value, events)
 
@@ -66,6 +63,8 @@ class TestNet(TestCase):
 
             if connected:
                 break
+
+            time.sleep(10)
 
         net.stop()
 
