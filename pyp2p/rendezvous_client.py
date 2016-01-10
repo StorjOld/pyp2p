@@ -93,6 +93,7 @@ class RendezvousClient:
 
                 # Connect the socket.
                 con.connect(server["addr"], server["port"])
+                log.debug("server con made")
 
                 # Return Sock object.
                 return con
@@ -196,18 +197,18 @@ class RendezvousClient:
                         0
                     )
 
-                # Find socket.
-                for found_sock in r:
-                    # Not us.
-                    if found_sock != s:
-                        continue
+                    # Find socket.
+                    for found_sock in r:
+                        # Not us.
+                        if found_sock != s:
+                            continue
 
-                    # Accept a new con from the listen queue.
-                    log.debug("Accept logic works!")
-                    client, address = s.accept()
-                    con = Sock(blocking=0)
-                    con.set_sock(client)
-                    return con
+                        # Accept a new con from the listen queue.
+                        log.debug("Accept logic works!")
+                        client, address = s.accept()
+                        con = Sock(blocking=0)
+                        con.set_sock(client)
+                        return con
 
         return None
 

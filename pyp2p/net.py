@@ -42,8 +42,8 @@ dht_msg_interval = 5
 rendezvous_interval = 30 * 60
 
 # How often to re-advertise node.
-# Update bootstrapping server every 10 minutes.
-advertise_interval = 10 * 60
+# Update bootstrapping server every 24 hours.
+advertise_interval = 60 * 60 * 12
 
 # Time that must elapse between accepting simultaneous opens.
 sim_open_interval = 2

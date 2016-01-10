@@ -36,7 +36,7 @@ class RendezvousProtocol(LineReceiver):
     def __init__(self, factory):
         self.factory = factory
         self.challege_timeout = 60 * 2 # Seconds.
-        self.node_lifetime = 60 * 60 * 12 # 12 hours.
+        self.node_lifetime = 60 * 60 * 24 # 12 hours.
         self.cleanup = 5 * 60 # Every 5 minutes.
         self.max_candidates = 100 # Per simultaneous node.
         self.connected = False
