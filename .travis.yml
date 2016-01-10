@@ -8,7 +8,7 @@ matrix:
       env: TEST_SUITE=3_3_tests.sh
 script:
   - rm -rf test_out
-  - coverage run --source="pyp2p" -m nose --verbosity=3 --logging-level=DEBUG --nologcapture tests &> test_out
+  - coverage run --source="pyp2p" -m nose --verbosity=2 --logging-level=DEBUG --nologcapture tests &> test_out
   - cat ./test_out
   - cat ./test_out | sed '/FAILED/!{s/f/b/;q}; /FAILED/{q1}'
 
