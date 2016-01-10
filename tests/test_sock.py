@@ -74,7 +74,7 @@ class SockDownload():
         con.send(req, send_all=1)
         buf = u""
         eof = u"\r\n\r\n"
-        while buf != eof:
+        while buf != eof and con.connected:
             ch = con.recv(1)
             if len(ch):
                 buf += ch
@@ -545,7 +545,8 @@ class TestSock(TestCase):
         # You want to fill up the entire networking buffer
         # so that it times out without the needed recv.
         x = 1
-        while x:
+        timeout = time.time() + 10
+        while x and time.time() < timeout:
             x = sock.send(b"x")
 
         time.sleep(2.2)
