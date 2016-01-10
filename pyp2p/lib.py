@@ -22,6 +22,7 @@ import re
 import base64
 import struct
 import uuid
+from threading import Thread
 try:
     import json
 except:
@@ -40,6 +41,8 @@ if platform.system() == "Linux":
         ip = None
 else:
     ip = None
+
+ntp_results = []
 
 
 def get_unused_port(port):
@@ -100,27 +103,51 @@ def build_bound_socket(source_ip):
     return bound_socket
 
 
+def get_ntp_worker(server):
+    global ntp_results
+
+    if not len(ntp_results):
+        try:
+            client = ntplib.NTPClient()
+            response = client.request(server)
+            ntp = response.tx_time
+            ntp_results.append(ntp)
+        except Exception as e:
+            return
+
+
 def get_ntp(local_time=0):
-    """
-    Retrieves network time from a European network time server.
-    """
+    global ntp_results
+
     if local_time:
         return int(time.time())
 
+    ntp_results = []
     servers = [
+    "us.pool.ntp.org",
+    "cn.pool.ntp.org",
+    "de.pool.ntp.org",
+    "nl.pool.ntp.org",
+    "uk.pool.ntp.org",
+    "za.pool.ntp.org",
+    "br.pool.ntp.org",
     "0.pool.ntp.org",
     "1.pool.ntp.org",
     "2.pool.ntp.org",
     "3.pool.ntp.org"]
     for server in servers:
-        try:
-            client = ntplib.NTPClient()
-            response = client.request(server)
-            ntp = response.tx_time
-            return ntp
-        except Exception as e:
-            continue
-    return None
+        Thread(target=get_ntp_worker, args=(server,)).start()
+
+    timeout = time.time() + 5
+    while time.time() < timeout and not len(ntp_results):
+        time.sleep(0.001)
+
+    if len(ntp_results):
+        ntp = ntp_results[0]
+        ntp_results = []
+        return ntp
+    else:
+        return None
 
 
 def get_default_gateway(interface="default"):

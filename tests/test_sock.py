@@ -470,6 +470,10 @@ class TestSock(TestCase):
         )
 
     def test_broken_send_con(self):
+        # Can't monkey patch socket on Linux.
+        if platform.system != "Windows":
+            return
+
         port = 10121
         server = ThreadingSimpleServer(('', port), SimpleHTTPRequestHandler)
         sock = Sock("127.0.0.1", port, debug=1, timeout=6)

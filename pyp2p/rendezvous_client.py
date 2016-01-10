@@ -367,7 +367,9 @@ class RendezvousClient:
             our_ntp = their_ntp
         else:
             # They're the ones figuring out sleep relative to us.
+            log.debug("Getting NTP")
             our_ntp = get_ntp()
+            log.debug("Our ntp = " + str(our_ntp))
             if our_ntp == None:
                 return 0
 
