@@ -219,31 +219,55 @@ def get_lan_ip(interface="default"):
 
 
 def sequential_bind(n, interface="default"):
+    # Get bind address.
+    addr = ''
+    if interface != "default":
+        addr = get_lan_ip(interface)
+
+    # Start the process.
     bound = 0
     mappings = []
+    prospects = []
     while not bound:
+        # Grab a random place to start.
         bound = 1
         start = random.randrange(1024, 65535 - n)
+
+        # Use connect to see if its already bound.
         for i in range(0, n):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             local = start + i
             try:
-                addr = ''
-                if interface != "default":
-                    addr = get_lan_ip(interface)
-                sock.bind((addr, local))
+                sock.connect((addr, local))
+                sock.close()
+                bound = 0
+                break
+            except socket.error:
+                pass
+
+            prospect = {
+                "local": local,
+            }
+            prospects.append(prospect)
+
+        for prospect in prospects:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                sock.bind((addr, prospect["local"]))
             except Exception as e:
                 bound = 0
                 for mapping in mappings:
                     mapping["sock"].close()
                 mappings = []
                 break
+
             mapping = {
-                "source": local,
+                "source": prospect["local"],
                 "sock": sock
             }
             mappings.append(mapping)
-                    
+
     return mappings
 
 

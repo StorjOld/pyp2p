@@ -109,6 +109,35 @@ class RendezvousClient:
         con.close()
         return 1
 
+    def add_listen_sock(self, mappings):
+        new_mappings = []
+        for mapping in mappings:
+            # Create the listen socket.
+            s = socket.socket(
+                socket.AF_INET,
+                socket.SOCK_STREAM
+            )
+
+            # Reuse existing local bind details.
+            for sock in [mapping["sock"], s]:
+                sock.setsockopt(
+                    socket.SOL_SOCKET,
+                    socket.SO_REUSEADDR,
+                    1
+                )
+
+            # Bind to existing local port.
+            s.bind(mapping["sock"].getsockname())
+
+            # Start listening for connections.
+            s.listen(5)
+
+            # Reecord details.
+            mapping["listen"] = s
+            new_mappings.append(mapping)
+
+        return new_mappings
+
     def attend_fight(self, mappings, node_ip, predictions, ntp, passive_sim=0):
         """
         This function is for starting and managing a fight
@@ -116,6 +145,10 @@ class RendezvousClient:
         task of returning any valid connections (if any) that
         may be returned from threads in the simultaneous_fight function.
         """
+
+        # Bind listen server socket.
+        mappings = self.add_listen_sock(mappings)
+        log.debug(mappings)
 
         # Walk to fight.
         self.simultaneous_cons = []
@@ -146,11 +179,34 @@ class RendezvousClient:
                     pass
             """
 
+
+
             try:
                 # Return open hole.
                 return self.simultaneous_cons[0]
             except:
-                return None
+                # Try accept a connection.
+                for mapping in mappings:
+                    # Check if there's a new con.
+                    s = mapping["listen"]
+                    r, w, e = select.select(
+                        [s],
+                        [],
+                        [],
+                        0
+                    )
+
+                # Find socket.
+                for found_sock in r:
+                    # Not us.
+                    if found_sock != s:
+                        continue
+
+                    # Accept a new con from the listen queue.
+                    client, address = s.accept()
+                    con = Sock(blocking=0)
+                    con.set_sock(client)
+                    return con
 
         return None
 
@@ -315,12 +371,8 @@ class RendezvousClient:
         error = 0
         log.debug("Throwing punch")
         for i in range(0, tries):
-            """
-            if local:
-                time.sleep(float(random.randrange(0, 500)) / 1000)
-            """
+            # Attempt to connect.
             try:
-                # Attempt to connect.
                 con.connect(node_ip, remote_port)
                 log.debug("Sim open success!")
 
