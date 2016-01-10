@@ -7,6 +7,7 @@ matrix:
     - python: "3.3"
       env: TEST_SUITE=3_3_tests.sh
 script:
+  - ping 192.187.97.131
   - rm -rf test_out
   - coverage run --source="pyp2p" -m nose --verbosity=2 --logging-level=DEBUG --nologcapture tests &> test_out
   - cat ./test_out

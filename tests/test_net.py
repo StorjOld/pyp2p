@@ -40,19 +40,32 @@ class TestNet(TestCase):
 
         # This is the NATed test node.
         unl_value = "AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc="
-        net.unl.connect(unl_value, events)
+        for i in range(0, 5):
+            """
+            The reason this test sometimes fails is due to
+             timing: the packets need to cross in such a way that the timing for the connects that Travis CI makes to the
+              NATed' test node need to arrive -BEFORE- the
+               test nodes connect times out otherwise
+                subsequent connects from Travis yield RST packets.
 
-        looping = 1
-        future = time.time() + 30
-        while time.time() < future:
-            # Synchronize.
-            for con in net:
-                print("Success")
-                connected = 1
-                future = time.time() - 100
+            The TCP setup for the NATed test node isn't a true NAT / is typical of NATs that are in the wild.
+            """
+            net.unl.connect(unl_value, events)
+
+            looping = 1
+            future = time.time() + 30
+            while time.time() < future:
+                # Synchronize.
+                for con in net:
+                    print("Success")
+                    connected = 1
+                    future = time.time() - 100
+                    break
+
+                time.sleep(0.5)
+
+            if connected:
                 break
-
-            time.sleep(0.5)
 
         net.stop()
 

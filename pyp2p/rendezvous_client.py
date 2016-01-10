@@ -184,6 +184,7 @@ class RendezvousClient:
 
             try:
                 # Return open hole.
+                log.debug("No holes found")
                 return self.simultaneous_cons[0]
             except:
                 # Try accept a connection.
