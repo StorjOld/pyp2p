@@ -203,6 +203,7 @@ class RendezvousClient:
                         continue
 
                     # Accept a new con from the listen queue.
+                    log.debug("Accept logic works!")
                     client, address = s.accept()
                     con = Sock(blocking=0)
                     con.set_sock(client)
