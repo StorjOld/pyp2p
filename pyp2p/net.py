@@ -415,6 +415,7 @@ class Net():
                     except Exception as e:
                         self.debug_print("sim challenge failed")
                         error = parse_exception(e)
+                        self.debug_print(error)
                         log_exception(self.error_log_path, error)
                         return None
                     self.rendezvous.timeout = old_timeout
