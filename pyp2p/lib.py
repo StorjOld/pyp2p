@@ -129,16 +129,9 @@ def get_ntp(local_time=0):
 
     ntp_results = []
     servers = [
-    "us.pool.ntp.org",
-    "cn.pool.ntp.org",
-    "de.pool.ntp.org",
-    "nl.pool.ntp.org",
-    "uk.pool.ntp.org",
-    "za.pool.ntp.org",
-    "br.pool.ntp.org",
+    "2.pool.ntp.org",
     "0.pool.ntp.org",
     "1.pool.ntp.org",
-    "2.pool.ntp.org",
     "3.pool.ntp.org"]
     random.shuffle(servers, random.random)
 
