@@ -1107,14 +1107,17 @@ class Net():
 
                         # Reject duplicate connections.
                         if self.validate_node(node_ip, node_port):
-                            node = {
-                                "type": "accept",
-                                "con": con,
-                                "ip": con.s.getpeername()[0],
-                                "port": con.s.getpeername()[1],
-                            }
-                            self.inbound.append(node)
-                            self.debug_print("Accepted new passive connection: " + str(node))
+                            try:
+                                node = {
+                                    "type": "accept",
+                                    "con": con,
+                                    "ip": con.s.getpeername()[0],
+                                    "port": con.s.getpeername()[1],
+                                }
+                                self.inbound.append(node)
+                                self.debug_print("Accepted new passive connection: " + str(node))
+                            except:
+                                log.debug("con.s.get")
                         else:
                             self.debug_print("Validation failure")
                             con.close()
@@ -1191,13 +1194,17 @@ class Net():
                             candidate_predictions, our_ntp, passive_sim=1
                         )
                         if con is not None:
-                            node = {
-                                "type": "simultaneous",
-                                "con": con,
-                                "ip": con.s.getpeername()[0],
-                                "port": con.s.getpeername()[1],
-                            }
-                            self.inbound.append(node)
+                            try:
+                                node = {
+                                    "type": "simultaneous",
+                                    "con": con,
+                                    "ip": con.s.getpeername()[0],
+                                    "port": con.s.getpeername()[1],
+                                }
+                                self.inbound.append(node)
+                            except:
+                                log.debug(str(e))
+                                pass
 
                         # Create new predictions ready to accept next client.
                         self.rendezvous.simultaneous_cons = []

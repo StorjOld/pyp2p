@@ -104,7 +104,7 @@ def build_bound_socket(source_ip):
 
 
 def busy_wait(dt):
-    current_time = time.time()
+    current_time = time.clock()
     while (time.clock() < current_time + dt):
         pass
 
