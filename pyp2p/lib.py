@@ -106,7 +106,7 @@ def busy_wait(dt):
     if platform.system() == "Windows":
         timer = time.clock
     else:
-        timer = time.time -
+        timer = time.time
 
     current_time = timer()
     while (timer() < current_time + dt):
