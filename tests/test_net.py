@@ -14,7 +14,6 @@ class TestNet(TestCase):
         If the test fails the node may actually be down.
         """
 
-        RendezvousClient.ntp_delay = 10
         net = Net(
             net_type="direct",
             node_type="simultaneous",
@@ -68,7 +67,6 @@ class TestNet(TestCase):
 
         net.stop()
 
-        RendezvousClient.ntp_delay = 6
         if not connected:
             assert(0)
 
