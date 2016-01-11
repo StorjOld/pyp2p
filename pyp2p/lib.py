@@ -133,7 +133,6 @@ def get_ntp(local_time=0):
     "0.pool.ntp.org",
     "1.pool.ntp.org",
     "3.pool.ntp.org"]
-    random.shuffle(servers, random.random)
 
     for server in servers:
         ntp = get_ntp_worker(server)
