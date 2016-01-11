@@ -425,10 +425,13 @@ class RendezvousClient:
         if sys.version_info > (3,0,0):
             sys.setswitchinterval(1000)
         p = psutil.Process(os.getpid())
-        if platform.system() == "Windows":
-            p.nice(psutil.HIGH_PRIORITY_CLASS)
-        else:
-            p.nice(10)
+        try:
+            if platform.system() == "Windows":
+                p.nice(psutil.HIGH_PRIORITY_CLASS)
+            else:
+                p.nice(10)
+        except psutil.AccessDenied:
+            pass
         log.debug("Getting NTP")
         our_ntp = get_ntp()
         log.debug("Our ntp = " + str(our_ntp))
@@ -482,10 +485,13 @@ class RendezvousClient:
         sys.setcheckinterval(100)
         if sys.version_info > (3,0,0):
             sys.setswitchinterval(0.005)
-        if platform.system() == "Windows":
-            p.nice(psutil.NORMAL_PRIORITY_CLASS)
-        else:
-            p.nice(0)
+        try:
+            if platform.system() == "Windows":
+                p.nice(psutil.NORMAL_PRIORITY_CLASS)
+            else:
+                p.nice(5)
+        except psutil.AccessDenied:
+            pass
         gc.enable()
 
         return 1
