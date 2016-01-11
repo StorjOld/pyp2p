@@ -139,7 +139,7 @@ class RendezvousClient:
 
         return new_mappings
 
-    def attend_fight(self, mappings, node_ip, predictions, ntp, passive_sim=0):
+    def attend_fight(self, mappings, node_ip, predictions, ntp):
         """
         This function is for starting and managing a fight
         once the details are known. It also handles the
@@ -154,7 +154,7 @@ class RendezvousClient:
         # Walk to fight.
         self.simultaneous_cons = []
         predictions = predictions.split(" ")
-        self.simultaneous_fight(mappings, node_ip, predictions, ntp, passive_sim)
+        self.simultaneous_fight(mappings, node_ip, predictions, ntp)
 
         # Return hole made in opponent.
         if len(self.simultaneous_cons):
