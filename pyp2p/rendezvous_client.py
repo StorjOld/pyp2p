@@ -388,6 +388,7 @@ class RendezvousClient:
                 return 1
             except Exception as e:
                 # Punch was blocked, opponent is strong.
+                e = str(parse_exception(e))
                 log.debug(e)
                 error = 1
                 continue
