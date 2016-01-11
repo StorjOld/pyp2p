@@ -42,8 +42,6 @@ if platform.system() == "Linux":
 else:
     ip = None
 
-ntp_results = []
-
 
 def get_unused_port(port):
     """Checks if port is already in use."""
@@ -104,27 +102,28 @@ def build_bound_socket(source_ip):
 
 
 def busy_wait(dt):
-    current_time = time.clock()
-    while (time.clock() < current_time + dt):
+    # Use most accurate timer.
+    if platform.system() == "Windows":
+        timer = time.clock
+    else:
+        timer = time.time -
+
+    current_time = timer()
+    while (timer() < current_time + dt):
         pass
 
 
 def get_ntp_worker(server):
-    global ntp_results
-
-    if not len(ntp_results):
-        try:
-            client = ntplib.NTPClient()
-            response = client.request(server, version=3)
-            ntp = response.tx_time
-            ntp_results.append(ntp)
-        except Exception as e:
-            return
+    try:
+        client = ntplib.NTPClient()
+        response = client.request(server, version=3)
+        ntp = response.tx_time
+        return ntp
+    except Exception as e:
+        return None
 
 
 def get_ntp(local_time=0):
-    global ntp_results
-
     if local_time:
         return time.time()
 
@@ -141,19 +140,14 @@ def get_ntp(local_time=0):
     "1.pool.ntp.org",
     "2.pool.ntp.org",
     "3.pool.ntp.org"]
+    random.shuffle(servers, random.random)
+
     for server in servers:
-        Thread(target=get_ntp_worker, args=(server,)).start()
+        ntp = get_ntp_worker(server)
+        if ntp is not None:
+            return ntp
 
-    timeout = time.time() + 5
-    while time.time() < timeout and not len(ntp_results):
-        time.sleep(0.001)
-
-    if len(ntp_results):
-        ntp = ntp_results[0]
-        ntp_results = []
-        return ntp
-    else:
-        return None
+    return None
 
 
 def get_default_gateway(interface="default"):

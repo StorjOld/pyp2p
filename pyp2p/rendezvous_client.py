@@ -31,6 +31,7 @@ Todo:
 * Add better exception handling and tests. 
 """
 
+import psutil
 import socket
 import re
 import os
@@ -38,6 +39,7 @@ import sys
 import ntplib
 import datetime
 import random
+import gc
 import logging
 from multiprocessing.dummy import Pool
 
@@ -418,6 +420,15 @@ class RendezvousClient:
 
         # Get current network time accurate to
         # ~50 ms over WAN (apparently.)
+        gc.disable()
+        sys.setcheckinterval(999999999)
+        if sys.version_info > (3,0,0):
+            sys.setswitchinterval(1000)
+        p = psutil.Process(os.getpid())
+        if platform.system() == "Windows":
+            p.nice(psutil.HIGH_PRIORITY_CLASS)
+        else:
+            p.nice(10)
         log.debug("Getting NTP")
         our_ntp = get_ntp()
         log.debug("Our ntp = " + str(our_ntp))
@@ -467,6 +478,15 @@ class RendezvousClient:
             prediction = predictions[0]
             self.throw_punch([mapping["sock"], node_ip, prediction])
             predictions.remove(prediction)
+
+        sys.setcheckinterval(100)
+        if sys.version_info > (3,0,0):
+            sys.setswitchinterval(0.005)
+        if platform.system() == "Windows":
+            p.nice(psutil.NORMAL_PRIORITY_CLASS)
+        else:
+            p.nice(0)
+        gc.enable()
 
         return 1
 
