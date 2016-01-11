@@ -1166,13 +1166,13 @@ class Net():
                             continue
 
                         # Accept challenge.
-                        our_ntp = get_ntp()
-                        if our_ntp is None:
+                        origin_ntp = get_ntp()
+                        if origin_ntp is None:
                             continue
                         msg = "ACCEPT %s %s TCP %s" % (
                             candidate_ip,
                             self.rendezvous.predictions,
-                            str(our_ntp)
+                            str(origin_ntp)
                         )
                         ret = self.rendezvous.server_con.send_line(msg)
                         if not ret:
@@ -1191,7 +1191,7 @@ class Net():
                         self.last_passive_sim_open = t
                         con = self.rendezvous.attend_fight(
                             self.rendezvous.mappings, candidate_ip,
-                            candidate_predictions, our_ntp, passive_sim=1
+                            candidate_predictions, origin_ntp
                         )
                         if con is not None:
                             try:

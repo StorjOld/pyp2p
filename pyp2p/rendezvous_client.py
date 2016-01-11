@@ -398,7 +398,7 @@ class RendezvousClient:
 
         return 0
 
-    def simultaneous_fight(self, my_mappings, node_ip, predictions, their_ntp, passive_sim=0):
+    def simultaneous_fight(self, my_mappings, node_ip, predictions, origin_ntp):
         """
         TCP hole punching algorithm. It uses network time servers to
         synchronize two nodes to connect to each other on their
@@ -418,20 +418,15 @@ class RendezvousClient:
 
         # Get current network time accurate to
         # ~50 ms over WAN (apparently.)
-        if passive_sim:
-            # We're the one accepting the con + specifying the time.
-            our_ntp = their_ntp
-        else:
-            # They're the ones figuring out sleep relative to us.
-            log.debug("Getting NTP")
-            our_ntp = get_ntp()
-            log.debug("Our ntp = " + str(our_ntp))
-            if our_ntp == None:
-                return 0
+        log.debug("Getting NTP")
+        our_ntp = get_ntp()
+        log.debug("Our ntp = " + str(our_ntp))
+        if our_ntp == None:
+            return 0
 
         # Synchronize code execution to occur at their NTP time + delay.
         current = our_ntp
-        future = float(their_ntp) + float(self.ntp_delay)
+        future = float(origin_ntp) + float(self.ntp_delay)
         sleep_time = future - current
 
         # Check sleep time:
