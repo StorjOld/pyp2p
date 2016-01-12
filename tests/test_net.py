@@ -17,7 +17,7 @@ class TestNet(TestCase):
     def test_get_con_by_unl(self):
         pass
 
-    def test_bootstrap(self):
+    def test_bootstrap_and_challenge(self):
         lan_ip = get_lan_ip()
 
         def run_rendezvous_server():
@@ -30,12 +30,23 @@ class TestNet(TestCase):
                 }
 
                 reactor.listenTCP(8002, factory, interface=lan_ip)
+            except Exception as e:
+                print(parse_exception(e))
+                pass
+
+        Thread(target=run_rendezvous_server).start()
+
+        def run_rendezvous_server():
+            try:
+                factory = RendezvousFactory()
+                reactor.listenTCP(8003, factory, interface=lan_ip)
                 reactor.run()
             except Exception as e:
                 print(parse_exception(e))
                 pass
 
         Thread(target=run_rendezvous_server).start()
+
         time.sleep(2)
         rendezvous_servers = [
             {
@@ -56,21 +67,8 @@ class TestNet(TestCase):
         net.bootstrap()
         assert(len(net.outbound))
         net.stop()
-        reactor.stop()
 
-    def test_challenge(self):
-        lan_ip = get_lan_ip()
 
-        def run_rendezvous_server():
-            try:
-                factory = RendezvousFactory()
-                reactor.listenTCP(8003, factory, interface=lan_ip)
-                reactor.run()
-            except Exception as e:
-                print(parse_exception(e))
-                pass
-
-        Thread(target=run_rendezvous_server).start()
         time.sleep(2)
         rendezvous_servers = [
             {

@@ -38,6 +38,7 @@ class TestRendezvousServer(TestCase):
 
         def run_rendezvous_server():
             try:
+                print("Starting rendezvous srever")
                 factory = RendezvousFactory()
                 reactor.listenTCP(8001, factory, interface=lan_ip)
                 reactor.run()
@@ -55,6 +56,7 @@ class TestRendezvousServer(TestCase):
         # Test bootstrap.
         sock.send_line("BOOTSTRAP 5")
         nodes = sock.recv_line()
+        print(nodes)
         assert("NODES" in nodes)
 
         # Test passive ready.
