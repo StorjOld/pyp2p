@@ -41,9 +41,6 @@ net = Net(
 
 connected = 0
 
-def failure_notify(con):
-    assert(0)
-
 def success_notify(con):
     global connected
     connected = 1
@@ -51,7 +48,6 @@ def success_notify(con):
 
 # Test threading hasn't broken the timing.
 events = {
-    "failure": failure_notify,
     "success": success_notify
 }
 

@@ -42,6 +42,7 @@ import random
 import gc
 import logging
 from multiprocessing.dummy import Pool
+from threading import Thread
 
 from .sock import *
 from .lib import *
@@ -187,10 +188,10 @@ class RendezvousClient:
 
             try:
                 # Return open hole.
-                log.debug("No holes found")
                 return self.simultaneous_cons[0]
             except:
                 # Try accept a connection.
+                log.debug("No holes found")
                 for mapping in mappings:
                     # Check if there's a new con.
                     s = mapping["listen"]
@@ -336,7 +337,7 @@ class RendezvousClient:
 
         return mappings
 
-    def throw_punch(self, args):
+    def throw_punch(self, args, tries=1):
         """
         Attempt to open a hole by TCP hole punching. This
         function is called by the simultaneous fight function
@@ -370,8 +371,6 @@ class RendezvousClient:
             """
             tries = 20 # 20
             local = 1
-        else:
-            tries = 1
 
         source_port = sock.getsockname()[1]
         error = 0
@@ -458,6 +457,18 @@ class RendezvousClient:
             return 0
 
         busy_wait(sleep_time)
+        sys.setcheckinterval(100)
+        if sys.version_info > (3,0,0):
+            sys.setswitchinterval(0.005)
+        try:
+            if platform.system() == "Windows":
+                p.nice(psutil.NORMAL_PRIORITY_CLASS)
+            else:
+                p.nice(5)
+        except psutil.AccessDenied:
+            pass
+        gc.enable()
+
         log.debug("At fight")
         """
         Time.sleep isn't guaranteed to sleep for the time specified
@@ -475,6 +486,8 @@ class RendezvousClient:
         have no care for source ports and assign incremental
         ports no matter what.
         """
+        threads = []
+        log.debug("Mapping len " + str(len(my_mappings)))
         for mapping in my_mappings:
             # Tried all predictions.
             prediction_len = len(predictions)
@@ -483,20 +496,29 @@ class RendezvousClient:
 
             # Throw punch.
             prediction = predictions[0]
-            self.throw_punch([mapping["sock"], node_ip, prediction])
+            if self.nat_type == "delta":
+                self.throw_punch([mapping["sock"], node_ip, prediction])
+            else:
+                # Thread params.
+                args = ([
+                    mapping["sock"],
+                    node_ip,
+                    prediction
+                ], 20)
+
+                # Start thread.
+                t = Thread(
+                    target=self.throw_punch,
+                    args=args
+                )
+                threads.append(t)
+                t.start()
+
             predictions.remove(prediction)
 
-        sys.setcheckinterval(100)
-        if sys.version_info > (3,0,0):
-            sys.setswitchinterval(0.005)
-        try:
-            if platform.system() == "Windows":
-                p.nice(psutil.NORMAL_PRIORITY_CLASS)
-            else:
-                p.nice(5)
-        except psutil.AccessDenied:
-            pass
-        gc.enable()
+        # Wait for threads to finish.
+        for t in threads:
+            t.join()
 
         return 1
 
