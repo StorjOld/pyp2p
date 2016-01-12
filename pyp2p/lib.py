@@ -116,7 +116,7 @@ def busy_wait(dt):
 def get_ntp_worker(server):
     try:
         client = ntplib.NTPClient()
-        response = client.request(server, version=4)
+        response = client.request(server, version=3)
         ntp = response.tx_time
         return ntp
     except Exception as e:
@@ -134,6 +134,7 @@ def get_ntp(local_time=0):
     "3.pool.ntp.org"
     ]
     random.shuffle(servers, random.random)
+    servers = ["pool.ntp.org"] + servers
 
     for server in servers:
         ntp = get_ntp_worker(server)
