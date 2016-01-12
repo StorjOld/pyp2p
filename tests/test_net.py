@@ -2,6 +2,7 @@ from unittest import TestCase
 from pyp2p.lib import *
 from pyp2p.dht_msg import DHT
 from pyp2p.net import *
+from pyp2p.sys_clock import SysClock
 import random
 from threading import Thread
 import time
@@ -13,12 +14,12 @@ class TestNet(TestCase):
         """
         If the test fails the node may actually be down.
         """
-
         net = Net(
             net_type="direct",
             node_type="simultaneous",
             nat_type="preserving",
-            passive_port=48310
+            passive_port=48310,
+            sys_clock=SysClock()
         ).start()
 
         connected = 0

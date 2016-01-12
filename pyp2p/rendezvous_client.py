@@ -53,7 +53,7 @@ log.setLevel(logging.DEBUG)
 
 
 class RendezvousClient:
-    def __init__(self, nat_type, rendezvous_servers, interface="default"):
+    def __init__(self, nat_type, rendezvous_servers, interface="default", sys_clock=None):
         self.nat_type = nat_type
         self.delta = 0
         self.port_collisions = 1
@@ -69,6 +69,7 @@ class RendezvousClient:
         self.ntp_delay = 6
         self.timeout = 5 # Socket timeout.
         self.predictable_nats = ["preserving", "delta"]
+        self.sys_clock = sys_clock
 
     def server_connect(self, sock=None, index=None, servers=None):
         # Get server index if appropriate.
@@ -433,7 +434,10 @@ class RendezvousClient:
         except psutil.AccessDenied:
             pass
         log.debug("Getting NTP")
-        our_ntp = get_ntp()
+        if self.sys_clock is not None:
+            our_ntp = self.sys_clock.time()
+        else:
+            our_ntp = get_ntp()
         log.debug("Our ntp = " + str(our_ntp))
         if our_ntp == None:
             return 0

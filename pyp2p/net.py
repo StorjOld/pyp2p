@@ -131,7 +131,7 @@ class Net():
     def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown",
                  max_outbound=10, max_inbound=10, passive_bind="0.0.0.0",
                  passive_port=50500, interface="default", wan_ip=None, dht_node=None,
-                 error_log_path="error.log", debug=0):
+                 error_log_path="error.log", debug=0, sys_clock=None):
         # List of outbound connections (from us, to another node.)
         self.outbound = []
 
@@ -211,7 +211,8 @@ class Net():
         # Rendezvous / boostrapping client.
         self.rendezvous = RendezvousClient(
             self.nat_type, rendezvous_servers=rendezvous_servers,
-            interface=self.interface
+            interface=self.interface,
+            sys_clock=self.sys_clock
         )
 
         # DHT node for receiving direct messages from other nodes.
@@ -219,6 +220,9 @@ class Net():
 
         # DHT messages received from DHT.
         self.dht_messages = []
+
+        # Calculate clock skew from NTP.
+        self.sys_clock = sys_clock
 
         # Subscribes to certain messages from DHT.
         # Todo: move status messages to file transfer client
@@ -1167,7 +1171,10 @@ class Net():
                             continue
 
                         # Accept challenge.
-                        origin_ntp = get_ntp()
+                        if self.sys_clock is not None:
+                            origin_ntp = self.sys_clock.time()
+                        else:
+                            origin_ntp = get_ntp()
                         if origin_ntp is None:
                             continue
                         msg = "ACCEPT %s %s TCP %s" % (
