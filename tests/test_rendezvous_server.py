@@ -41,7 +41,8 @@ class TestRendezvousServer(TestCase):
                 factory = RendezvousFactory()
                 reactor.listenTCP(8001, factory, interface=lan_ip)
                 reactor.run()
-            except:
+            except Exception as e:
+                print(log_exception(e))
                 pass
 
         Thread(target=run_rendezvous_server).start()
