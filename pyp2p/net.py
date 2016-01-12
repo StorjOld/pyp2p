@@ -131,7 +131,7 @@ class Net():
     def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown",
                  max_outbound=10, max_inbound=10, passive_bind="0.0.0.0",
                  passive_port=50500, interface="default", wan_ip=None, dht_node=None,
-                 error_log_path="error.log", debug=0, sys_clock=None):
+                 error_log_path="error.log", debug=0, sys_clock=None, servers=None):
         # List of outbound connections (from us, to another node.)
         self.outbound = []
 
@@ -211,9 +211,12 @@ class Net():
         # Calculate clock skew from NTP.
         self.sys_clock = sys_clock
 
+        # List of rendezvous servers.
+        self.rendezvous_servers = servers or rendezvous_servers
+
         # Rendezvous / boostrapping client.
         self.rendezvous = RendezvousClient(
-            self.nat_type, rendezvous_servers=rendezvous_servers,
+            self.nat_type, rendezvous_servers=self.rendezvous_servers,
             interface=self.interface,
             sys_clock=self.sys_clock
         )
@@ -510,11 +513,7 @@ class Net():
             connection_slots = self.max_outbound - (len(self.outbound))
             if connection_slots > 0:
                 # Connect to rendezvous server.
-                rendezvous_con = Sock(
-                    self.rendezvous.rendezvous_servers[0]["addr"],
-                    self.rendezvous.rendezvous_servers[0]["port"],
-                    blocking=1, interface=self.interface, timeout=3
-                )
+                rendezvous_con = self.rendezvous.server_connect()
 
                 # Retrieve random nodes to bootstrap with.
                 rendezvous_con.send_line("BOOTSTRAP " + str(self.max_outbound * 2))
@@ -539,6 +538,7 @@ class Net():
 
                     # Add to list of passive nodes.
                     node_type, node_ip, node_port = node
+                    self.debug_print(str(node))
                     if node_type == "p":
                         passive_nodes.append(node)
 
@@ -1066,11 +1066,14 @@ class Net():
                         node_id = their_unl["node_id"]
 
                         # Do we know about this?
-                        if their_unl not in self.unl.pending_reverse_con:
+                        if their_unl["value"] not in self.unl.pending_reverse_con:
+                            self.debug_print(their_unl)
+                            self.debug_print(str(self.unl.pending_reverse_con))
+                            self.debug_print("oops, we don't know about this reverse query!")
                             processed.append(dht_response)
                             continue
                         else:
-                            self.unl.pending_reverse_con.remove(their_unl)
+                            self.unl.pending_reverse_con.remove(their_unl["value"])
 
                         # Send query.
                         query = "REVERSE_ORIGIN:" + self.unl.value

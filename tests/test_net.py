@@ -3,6 +3,9 @@ from pyp2p.lib import *
 from pyp2p.dht_msg import DHT
 from pyp2p.net import *
 from pyp2p.sys_clock import SysClock
+from twisted.internet import reactor
+from pyp2p.rendezvous_client import RendezvousClient
+from pyp2p.rendezvous_server import RendezvousFactory, RendezvousProtocol, LineReceiver
 import random
 from threading import Thread
 import time
@@ -10,6 +13,99 @@ import unittest
 
 
 class TestNet(TestCase):
+    @unittest.skip("Not implemented")
+    def test_get_con_by_unl(self):
+        pass
+
+    def test_bootstrap(self):
+        lan_ip = get_lan_ip()
+
+        def run_rendezvous_server():
+            try:
+                factory = RendezvousFactory()
+                test_ip = "74.125.224.72"
+                factory.nodes["passive"][test_ip] = {
+                    "ip_addr": test_ip,
+                    "port": 80
+                }
+
+                reactor.listenTCP(8001, factory, interface=lan_ip)
+                reactor.run()
+            except:
+                pass
+
+        Thread(target=run_rendezvous_server).start()
+        rendezvous_servers = [
+            {
+                "addr": lan_ip,
+                "port": 8001
+            }
+        ]
+
+        net = Net(
+            debug=1,
+            net_type="p2p",
+            node_type="simultaneous",
+            nat_type="preserving",
+            passive_port=0,
+            servers=rendezvous_servers
+        ).start()
+        assert(net.enable_bootstrap)
+        net.bootstrap()
+        assert(len(net.outbound))
+        net.stop()
+        reactor.stop()
+
+    def test_challenge(self):
+        lan_ip = get_lan_ip()
+
+        def run_rendezvous_server():
+            try:
+                factory = RendezvousFactory()
+                reactor.listenTCP(8001, factory, interface=lan_ip)
+                reactor.run()
+            except:
+                pass
+
+        Thread(target=run_rendezvous_server).start()
+        rendezvous_servers = [
+            {
+                "addr": lan_ip,
+                "port": 8001
+            }
+        ]
+
+        alice = Net(
+            debug=1,
+            net_type="direct",
+            node_type="simultaneous",
+            nat_type="preserving",
+            passive_port=0,
+            servers=rendezvous_servers
+        ).start()
+
+        bob = Net(
+            debug=1,
+            net_type="direct",
+            node_type="simultaneous",
+            nat_type="preserving",
+            passive_port=0,
+            servers=rendezvous_servers
+        ).start()
+        bob.advertise()
+        alice.add_node(lan_ip, 0, "simultaneous")
+        alice.stop()
+        bob.stop()
+        reactor.stop()
+
+    @unittest.skip("Not implemented")
+    def test_con_by_id(self):
+        pass
+
+    @unittest.skip("Not implemented")
+    def test_generate_con_id(self):
+        pass
+
     def test_nat_tcp_hole_punch(self):
         """
         If the test fails the node may actually be down.
