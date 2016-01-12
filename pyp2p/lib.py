@@ -122,24 +122,31 @@ def get_ntp_worker(server):
     except Exception as e:
         return None
 
-
-def get_ntp(local_time=0):
-    if local_time:
-        return time.time()
-
-    servers = [
+ntp_servers = [
+    "pool.ntp.org",
     "2.pool.ntp.org",
     "0.pool.ntp.org",
     "1.pool.ntp.org",
     "3.pool.ntp.org"
-    ]
-    random.shuffle(servers, random.random)
-    servers = ["pool.ntp.org"] + servers
+]
 
-    for server in servers:
+def get_ntp(local_time=0):
+    global ntp_servers
+    if local_time:
+        return time.time()
+
+    random.shuffle(ntp_servers, random.random)
+
+    unreachable = []
+    for server in ntp_servers:
         ntp = get_ntp_worker(server)
         if ntp is not None:
             return ntp
+        else:
+            unreachable.append(server)
+
+    for server in unreachable:
+        ntp_servers.remove(server)
 
     return None
 
