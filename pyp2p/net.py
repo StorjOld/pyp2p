@@ -207,6 +207,9 @@ class Net():
 
         # Network: p2p or direct.
         self.net_type = net_type
+        
+        # Calculate clock skew from NTP.
+        self.sys_clock = sys_clock
 
         # Rendezvous / boostrapping client.
         self.rendezvous = RendezvousClient(
@@ -220,9 +223,6 @@ class Net():
 
         # DHT messages received from DHT.
         self.dht_messages = []
-
-        # Calculate clock skew from NTP.
-        self.sys_clock = sys_clock
 
         # Subscribes to certain messages from DHT.
         # Todo: move status messages to file transfer client
