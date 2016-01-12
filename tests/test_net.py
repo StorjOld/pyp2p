@@ -32,7 +32,7 @@ class TestNet(TestCase):
                 reactor.listenTCP(8002, factory, interface=lan_ip)
                 reactor.run()
             except Exception as e:
-                print(log_exception(e))
+                print(parse_exception(e))
                 pass
 
         Thread(target=run_rendezvous_server).start()
@@ -67,7 +67,7 @@ class TestNet(TestCase):
                 reactor.listenTCP(8003, factory, interface=lan_ip)
                 reactor.run()
             except Exception as e:
-                print(log_exception(e))
+                print(parse_exception(e))
                 pass
 
         Thread(target=run_rendezvous_server).start()
