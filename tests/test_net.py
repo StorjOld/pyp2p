@@ -18,6 +18,10 @@ class TestNet(TestCase):
         pass
 
     def test_bootstrap_and_challenge(self):
+        # Test bootstrap
+        # Test challenge protocol for sim open
+        # Test rendezvous protocol
+        # All in same func due to twisted errors ...
         lan_ip = get_lan_ip()
 
         def run_rendezvous_server():
@@ -40,6 +44,17 @@ class TestNet(TestCase):
             try:
                 factory = RendezvousFactory()
                 reactor.listenTCP(8003, factory, interface=lan_ip)
+            except Exception as e:
+                print(parse_exception(e))
+                pass
+
+        Thread(target=run_rendezvous_server).start()
+
+        def run_rendezvous_server():
+            try:
+                print("Starting rendezvous srever")
+                factory = RendezvousFactory()
+                reactor.listenTCP(8001, factory, interface=lan_ip)
                 reactor.run()
             except Exception as e:
                 print(parse_exception(e))
@@ -98,6 +113,52 @@ class TestNet(TestCase):
         alice.add_node(lan_ip, 0, "simultaneous")
         alice.stop()
         bob.stop()
+
+        print("Ready")
+        time.sleep(2)
+        print(lan_ip)
+        sock = Sock(lan_ip, 8001, blocking=1)
+        assert(sock.connected)
+
+        # Test bootstrap.
+        sock.send_line("BOOTSTRAP 5")
+        nodes = sock.recv_line()
+        print(nodes)
+        assert("NODES" in nodes)
+
+        # Test passive ready.
+        sock.send_line("PASSIVE READY 8001 100")
+
+        # Test simultaneous ready.
+        sock.send_line("SIMULTANEOUS READY 0 100")
+
+        # Test get remote port.
+        sock.send_line("SOURCE TCP")
+        ret = sock.recv_line()
+        assert("REMOTE" in ret)
+
+        # Test candidate.
+        msg = "CANDIDATE %s TCP 3232 2345 2245" % (lan_ip)
+        sock.send_line(msg)
+        ret = sock.recv_line()
+        assert("PREDICTION" in ret)
+        ret = sock.recv_line()
+        assert("CHALLENGE" in ret)
+
+        # Test accept.
+        msg = "ACCEPT %s 3423 23423 34 TCP %s" % (lan_ip, str(time.time()))
+        sock.send_line(msg)
+        ret = sock.recv_line()
+        assert("FIGHT" in ret)
+
+        # Test clear.
+        sock.send_line("CLEAR")
+
+        # Test quit.
+        sock.send_line("QUIT")
+
+        # Cleanup.
+        sock.close()
         reactor.stop()
 
     @unittest.skip("Not implemented")
