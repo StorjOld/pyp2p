@@ -207,7 +207,7 @@ class Net():
 
         # Network: p2p or direct.
         self.net_type = net_type
-        
+
         # Calculate clock skew from NTP.
         self.sys_clock = sys_clock
 

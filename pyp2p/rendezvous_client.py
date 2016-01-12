@@ -443,7 +443,7 @@ class RendezvousClient:
             return 0
 
         # Synchronize code execution to occur at their NTP time + delay.
-        current = our_ntp
+        current = float(our_ntp)
         future = float(origin_ntp) + float(self.ntp_delay)
         sleep_time = future - current
 

@@ -1,5 +1,6 @@
 from pyp2p.unl import UNL
 import pyp2p
+from pyp2p.sys_clock import SysClock
 from pyp2p.lib import *
 from pyp2p.dht_msg import DHT
 from pyp2p.net import Net, clear_seen_messages
@@ -31,6 +32,7 @@ If the test fails the node may actually be down.
 """
 
 net = Net(
+    sys_clock=SysClock(),
     net_type="direct",
     node_type="simultaneous",
     nat_type="preserving",
