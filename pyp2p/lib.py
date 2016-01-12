@@ -130,23 +130,38 @@ ntp_servers = [
     "3.pool.ntp.org"
 ]
 
+bad_ntp_servers = None
+
+
+def remove_bad_ntp_servers():
+    global ntp_servers
+    global bad_ntp_servers
+
+    bad_ntp_servers = []
+    for server in ntp_servers:
+        ntp = get_ntp_worker(server)
+        if ntp is None:
+            bad_ntp_servers.append(server)
+
+    for server in bad_ntp_servers:
+        ntp_servers.remove(server)
+
+
 def get_ntp(local_time=0):
     global ntp_servers
+    global bad_ntp_servers
+
     if local_time:
         return time.time()
 
-    random.shuffle(ntp_servers, random.random)
+    if bad_ntp_servers is None:
+        remove_bad_ntp_servers()
 
-    unreachable = []
+    random.shuffle(ntp_servers, random.random)
     for server in ntp_servers:
         ntp = get_ntp_worker(server)
         if ntp is not None:
             return ntp
-        else:
-            unreachable.append(server)
-
-    for server in unreachable:
-        ntp_servers.remove(server)
 
     return None
 
