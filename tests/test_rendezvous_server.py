@@ -46,9 +46,10 @@ class TestRendezvousServer(TestCase):
 
         Thread(target=run_rendezvous_server).start()
         print("Ready")
-        time.sleep(1)
+        time.sleep(2)
         print(lan_ip)
         sock = Sock(lan_ip, 8001, blocking=1)
+        assert(sock.connected)
 
         # Test bootstrap.
         sock.send_line("BOOTSTRAP 5")

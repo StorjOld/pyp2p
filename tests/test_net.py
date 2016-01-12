@@ -29,16 +29,17 @@ class TestNet(TestCase):
                     "port": 80
                 }
 
-                reactor.listenTCP(8001, factory, interface=lan_ip)
+                reactor.listenTCP(8002, factory, interface=lan_ip)
                 reactor.run()
             except:
                 pass
 
         Thread(target=run_rendezvous_server).start()
+        time.sleep(2)
         rendezvous_servers = [
             {
                 "addr": lan_ip,
-                "port": 8001
+                "port": 8002
             }
         ]
 
@@ -62,16 +63,17 @@ class TestNet(TestCase):
         def run_rendezvous_server():
             try:
                 factory = RendezvousFactory()
-                reactor.listenTCP(8001, factory, interface=lan_ip)
+                reactor.listenTCP(8003, factory, interface=lan_ip)
                 reactor.run()
             except:
                 pass
 
         Thread(target=run_rendezvous_server).start()
+        time.sleep(2)
         rendezvous_servers = [
             {
                 "addr": lan_ip,
-                "port": 8001
+                "port": 8003
             }
         ]
 
