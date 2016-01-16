@@ -45,8 +45,8 @@ else:
 
 def get_unused_port(port):
     """Checks if port is already in use."""
-    if port is None or port < 1024 or port > 49151:
-        port = random.randint(1024, 49151)
+    if port is None or port <= 1024 or port >= 65535:
+        port = random.randint(1024, 65535)
     while True:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:

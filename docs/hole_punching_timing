@@ -1,0 +1,21 @@
+Timing issues:
+* If the OS task switches the process loses timing accuracy
+    * Partially solved using a higher process priority
+* If Python schedules garbage collection it can interrupt the timing loop
+    * Temporarily disabled during punching routine
+* If another python "thread" interrupts the process
+    * Temporarily disabled thread switching during punching routine
+* If code executes between getting the NTP time and going to the meeting
+    * No longer happens - code is optimised.
+* If using time.sleep which isn't guaranteed to sleep for requested amount
+    * Solved using noisy while loop that consumes all the CPU until the requested time frame.
+* NTP accuracy over WLAN ranges from 20 - 100ms with increased accuracy seemingly based on using as close as server as possible.
+    * Network congestion can also make this worse.
+        * Partially solved by computing an average clock skew of the system clock compared to a number of NTP times. However, WAN-based NTP time can only approximate within 20 - 35ms at the best.
+            * To do: pull as list of all NTP servers from scrapping all URLS like http://support.ntp.org/bin/view/Servers/PublicTimeServer000935 and organize list based on geographical closeness. Then choose NTP servers based on proximity to the host.
+            * Could also have a port scanning routing to find local NTP servers based on ISP trace route and subnet scanning.
+            * For now the servers used are just from the main pool.
+* If there is network congestion
+    * The increased congestion makes the syn packets cross with unexpected timing
+
+The algorithm no longer needs absolutely synced time to operate as it now uses threading with a short loop of connects for each prediction (although it attempts to maintain as accurate code execution sync as possible.)

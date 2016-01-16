@@ -75,9 +75,6 @@ class UNL():
         self.mutex = Lock()
 
     def debug_print(self, msg):
-        if self.debug:
-            log.setLevel(logging.DEBUG)
-
         log.debug(str(msg))
 
     def __eq__(self, other):
@@ -292,6 +289,7 @@ class UNL():
         # Wait for other UNLs to finish.
         end_time = time.time()
         end_time += len(self.pending_unls) * 60
+        self.debug_print("Waiting for other unls to finish")
         while their_unl in self.pending_unls and time.time() < end_time:
             # This is an undifferentiated duplicate.
             if events is None:
@@ -299,6 +297,8 @@ class UNL():
                 return
 
             time.sleep(1)
+
+        self.debug_print("Other unl finished")
 
         is_exception = 0
         try:
@@ -308,11 +308,14 @@ class UNL():
                 self.pending_sim_open.append(their_unl["value"])
                 end_time = time.time()
                 end_time += len(self.pending_unls) * 60
+                self.debug_print("wait for other hole punches to finish")
                 while len(self.pending_sim_open) and time.time() < end_time:
                     if self.pending_sim_open[0] == their_unl["value"]:
                         break
 
                     time.sleep(1)
+
+                self.debug_print("other hole punches finished")
 
             # Set pending UNL.
             self.pending_unls.append(their_unl)

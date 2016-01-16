@@ -65,9 +65,6 @@ class DHT():
         self.relay_links[node_id.decode("utf-8")] = dht
 
     def debug_print(self, msg):
-        if self.debug:
-            log.setLevel(logging.DEBUG)
-
         logging.debug(str(msg))
 
     def add_message_handler(self, handler):

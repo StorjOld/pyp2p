@@ -308,9 +308,6 @@ class Net():
         self.is_net_started = 0
 
     def debug_print(self, msg):
-        if self.debug:
-            log.setLevel(logging.DEBUG)
-
         log.debug(str(msg))
 
     def disable_duplicates(self):
@@ -997,6 +994,7 @@ class Net():
                     msg = str(dht_response["message"])
                     if re.match("^REVERSE_CONNECT:[a-zA-Z0-9+/-=_\s]+:[a-fA-F0-9]{64}$", msg) is not None:
                         # Process message.
+                        self.debug_print(str(msg))
                         call, their_unl, nonce = msg.split(":")
                         their_unl = UNL(value=their_unl).deconstruct()
                         our_unl = UNL(value=self.unl.value).deconstruct()
