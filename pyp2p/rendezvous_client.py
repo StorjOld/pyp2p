@@ -27,8 +27,8 @@ you predict the NAT's remote mapping for the port and arrange
 for both nodes to connect to each other's predicted port
 simultaneously.
 
-Todo: 
-* Add better exception handling and tests. 
+Todo:
+* Add better exception handling and tests.
 """
 
 import psutil
@@ -50,7 +50,6 @@ from .lib import *
 # Debug logging.
 logging.basicConfig()
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 
 class RendezvousClient:
