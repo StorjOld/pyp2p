@@ -1,8 +1,6 @@
 from unittest import TestCase
-from pyp2p.lib import *
 from pyp2p.rendezvous_client import *
-import random
-import socket
+
 
 # if sys.version_info >= (3,0,0):
 

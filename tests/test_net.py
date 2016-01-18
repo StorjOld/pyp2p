@@ -1,10 +1,10 @@
-import time
 import unittest
-from pyp2p.net import *
-from threading import Thread
 from unittest import TestCase
-from pyp2p.sys_clock import SysClock
+
 from twisted.internet import reactor
+
+from pyp2p.net import *
+from pyp2p.sys_clock import SysClock
 from pyp2p.rendezvous_server import RendezvousFactory
 
 
@@ -487,7 +487,7 @@ class TestNet(TestCase):
 
                 if option == 1 or option == 0:
                     cmd = "net." + name + " = " + str(option)
-                    exec cmd
+                    exec(cmd)
                     assert(eval("net." + name) == option)
 
             # Start networking.
