@@ -35,14 +35,14 @@ debug = 1
 class RendezvousProtocol(LineReceiver):
     def __init__(self, factory):
         self.factory = factory
-        self.challege_timeout = 60 * 2 # Seconds.
-        self.node_lifetime = 60 * 60 * 24 # 12 hours.
-        self.cleanup = 5 * 60 # Every 5 minutes.
-        self.max_candidates = 100 # Per simultaneous node.
+        self.challege_timeout = 60 * 2  # Seconds.
+        self.node_lifetime = 60 * 60 * 24  # 12 hours.
+        self.cleanup = 5 * 60  # Every 5 minutes.
+        self.max_candidates = 100  # Per simultaneous node.
         self.connected = False
 
     def log_entry(self, msg, direction="none"):
-        if sys.version_info >= (3,0,0):
+        if sys.version_info >= (3, 0, 0):
             if type(msg) == bytes:
                 msg = msg.decode("utf-8")
         ip_addr = str(self.transport.getPeer().host)

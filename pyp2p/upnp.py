@@ -1,6 +1,10 @@
 from .lib import *
 from .sock import *
-import re, sys, select, socket, time
+import re
+import sys
+import time
+import select
+import socket
 
 try:
     from urllib.request import urlopen
@@ -105,12 +109,15 @@ class UPnP():
                 def check_gateway(self, ip, port):
                     try:
                         # Fast connect() / SYN open scanning.
-                        s = Sock(ip, port, blocking=1, timeout=5, interface=self.interface)
+                        s = Sock(ip, port, blocking=1, timeout=5,
+                                 interface=self.interface)
                         s.close()
 
                         # Build http request.
-                        gateway_addr = "http://" + str(ip) + ":" + str(port) + "/"
-                        buf = urlopen(gateway_addr, timeout=self.timeout).read().decode("utf-8")
+                        gateway_addr = "http://" + str(ip) + ":" +\
+                                       str(port) + "/"
+                        buf = urlopen(gateway_addr, timeout=self.timeout).\
+                            read().decode("utf-8")
 
                         # Check response is XML and device is a router.
                         if 'InternetGatewayDevice' in buf:
@@ -120,7 +127,8 @@ class UPnP():
 
                 # Brute force port by scanning.
                 for port in likely_candidates:
-                    t = Thread(target=check_gateway, args=(self, default_gateway, port))
+                    t = Thread(target=check_gateway,
+                               args=(self, default_gateway, port))
                     t.start()
 
                 time.sleep(5)
@@ -187,8 +195,12 @@ class UPnP():
 
         # Use UPnP binary for forwarding on Windows.
         if platform.system() == "Windows":
-            cmd = "upnpc-static.exe -a %s %s %s %s" % (get_lan_ip(), str(src_port), str(dest_port), proto)
-            out, err = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+            cmd = "upnpc-static.exe -a %s %s %s %s" % (get_lan_ip(),
+                                                       str(src_port),
+                                                       str(dest_port),
+                                                       proto)
+            out, err = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE).communicate()
             if "is not recognized" in err:
                 raise Exception("Missing upnpc-static.exe")
             

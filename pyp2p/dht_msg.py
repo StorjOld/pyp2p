@@ -48,7 +48,7 @@ class DHT():
 
         self.node_id = binascii.hexlify(self.node_id).decode('utf-8')
         self.password = password or self.rand_str(30)
-        self.check_interval = 3 # For slow connections, unfortunately.
+        self.check_interval = 3  # For slow connections, unfortunately.
         self.last_check = 0
         self.debug = debug
         self.networking = networking

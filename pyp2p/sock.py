@@ -19,13 +19,23 @@ fast as it could - there would be a max message limit
 per check period.
 
 Quirks:
-* send_line will block until the entire line has been sent even if the socket has been set to non-blocking to make things easier. If you need a non-blocking way to send a line: use send(). Note that you will have to check for the number of bytes sent and resend if needed just like the real send function.
-* connect has the same behaviour as above to make things simpler (so will block regardless of whether socket is in non-blocking mode or not.) If you want to bypass this behaviour you can always connect the socket outside this class and then pass it to set_socket.
+* send_line will block until the entire line has been sent even if the socket
+  has been set to non-blocking to make things easier. If you need a non-blocking
+  way to send a line: use send(). Note that you will have to check for the
+  number of bytes sent and resend if needed just like the real send function.
+* connect has the same behaviour as above to make things simpler (so will block
+  regardless of whether socket is in non-blocking mode or not.) If you want to
+  bypass this behaviour you can always connect the socket outside this class
+  and then pass it to set_socket.
 
-Otherwise, all functions in this class behave how you would expect them to (depending on whether you're using non-blocking mode or blocking mode.) It's assumed that all blocking operations have a timeout by default. This can't be disabled.
+Otherwise, all functions in this class behave how you would expect them to
+(depending on whether you're using non-blocking mode or blocking mode.) It's
+assumed that all blocking operations have a timeout by default. This can't be
+disabled.
 
 Todo: test various functions under connection exit.
-Timeouts are needed for non-blocking too under conditions where you attempt to send all / recv all.
+Timeouts are needed for non-blocking too under conditions where you attempt to
+send all / recv all.
 """
 
 import socket
@@ -41,13 +51,14 @@ error_log_path = "error.log"
 
 
 class Sock:
-    def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0, debug=0):
+    def __init__(self, addr=None, port=None, blocking=0, timeout=5,
+                 interface="default", use_ssl=0, debug=0):
         self.nonce = None
         self.nonce_buf = u""
         self.reply_filter = None
         self.buf = u""
-        self.max_buf = 1024 * 1024 # 1 MB.
-        self.max_chunks = 1024 # Prevents spamming of multiple short messages.
+        self.max_buf = 1024 * 1024  # 1 MB.
+        self.max_chunks = 1024  # Prevents spamming of multiple short messages.
         self.chunk_size = 1024 * 4
         self.replies = []
         self.blocking = blocking
@@ -70,7 +81,7 @@ class Sock:
 
         # Connect socket.
         if addr is not None and port is not None:
-            # Set a timeout for blocking operations so they don't DoS the program.
+            # Set a timeout for blocking operations so they don't DoS program.
             # Disabled after connect if non-blocking is set.
             # (Connect is so far always blocking regardless of blocking mode.)
             self.s.settimeout(5)
@@ -84,14 +95,17 @@ class Sock:
         if self.debug:
             print(msg)
 
-    def set_keep_alive(self, sock, after_idle_sec=5, interval_sec=60, max_fails=5):
+    def set_keep_alive(self, sock, after_idle_sec=5, interval_sec=60,
+                       max_fails=5):
         """
-        This function instructs the TCP socket to send a heart beat every n seconds to detect dead connections.
-         It's the TCP equivalent of the IRC ping-pong protocol
-        and allows for better cleanup / detection of dead TCP connections.
+        This function instructs the TCP socket to send a heart beat every n
+        seconds to detect dead connections. It's the TCP equivalent of the
+        IRC ping-pong protocol and allows for better cleanup / detection
+        of dead TCP connections.
 
-It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive ping once every 3 seconds
- (interval_sec), and closes the connection after 5 failed ping (max_fails), or 15 seconds
+        It activates after 1 second (after_idle_sec) of idleness, then sends
+        a keepalive ping once every 3 seconds(interval_sec), and closes the
+        connection after 5 failed ping (max_fails), or 15 seconds
         """
 
         # OSX
@@ -106,8 +120,10 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
         if platform.system() == "Linux":
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, after_idle_sec)
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE,
+                            after_idle_sec)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL,
+                            interval_sec)
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
     def set_blocking(self, blocking, timeout=5):
@@ -133,7 +149,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
 
     def set_sock(self, s):
         self.debug_print("Setting sock")
-        self.close() # Close old socket.
+        self.close()  # Close old socket.
         self.s = s
         self.set_blocking(self.blocking, self.timeout)
         # self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -294,7 +310,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                 # DoSed by multiple small replies.
                 if chunk_no >= max_chunks and not self.blocking:
                     break
-                
+
                 try:
                     chunk = self.s.recv(chunk_size)
                 except socket.timeout as e:
@@ -390,7 +406,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     # Blocking or non-blocking.
     def send(self, msg, send_all=0, timeout=5):
         # Sanity check.
-        assert(len(msg))
+        assert (len(msg))
         # Not connected.
         if not self.connected:
             return 0
@@ -403,13 +419,13 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         if self.debug:
             blocking = self.s.gettimeout()
             if self.blocking:
-                assert(blocking >= 1 or blocking is None)
+                assert (blocking >= 1 or blocking is None)
             else:
-                assert(blocking == 0.0)
+                assert (blocking == 0.0)
 
         try:
             # Convert to bytes Python 2 & 3
-            if sys.version_info >= (3,0,0):
+            if sys.version_info >= (3, 0, 0):
                 if type(msg) == str:
                     msg = msg.encode("ascii")
             else:
@@ -426,9 +442,12 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     # This won't work if the network buffer is already full.
                     try:
                         self.debug_print("Attempting to send: ")
-                        self.debug_print(str(len(msg[total_sent:self.chunk_size])))
-                        self.debug_print("Blocking mode = " + str(self.s.gettimeout()))
-                        bytes_sent = self.s.send(msg[total_sent:self.chunk_size])
+                        self.debug_print(
+                                str(len(msg[total_sent:self.chunk_size])))
+                        self.debug_print(
+                                "Blocking mode = " + str(self.s.gettimeout()))
+                        bytes_sent = self.s.send(
+                                msg[total_sent:self.chunk_size])
                     except socket.timeout as e:
                         err = e.args[0]
                         self.debug_print("Con send: " + str(e))
@@ -491,7 +510,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     # Blocking or non-blocking.
     def recv(self, n, encoding="unicode", timeout=5):
         # Sanity checking.
-        assert(n)
+        assert (n)
 
         # Disconnect.
         if not self.connected:
@@ -508,9 +527,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         if self.debug:
             blocking = self.s.gettimeout()
             if self.blocking:
-                assert(blocking >= 1 or blocking is None)
+                assert (blocking >= 1 or blocking is None)
             else:
-                assert(blocking == 0.0)
+                assert (blocking == 0.0)
 
         try:
             # Save current buffer state.
@@ -543,7 +562,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
             if encoding != "unicode":
                 # Convert from unicode string with latin-1 encoding
                 # To a byte string.
-                if sys.version_info >= (3,0,0):
+                if sys.version_info >= (3, 0, 0):
                     codes = []
                     for ch in ret:
                         codes.append(ord(ch))
@@ -574,7 +593,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     # Blocking: blocks until entire line is sent for simplicity.
     def send_line(self, msg, timeout=5):
         # Sanity checking.
-        assert(len(msg))
+        assert (len(msg))
 
         # Not connected.
         if not self.connected:
@@ -588,9 +607,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         if self.debug:
             blocking = self.s.gettimeout()
             if self.blocking:
-                assert(blocking >= 1 or blocking is None)
+                assert (blocking >= 1 or blocking is None)
             else:
-                assert(blocking == 0.0)
+                assert (blocking == 0.0)
 
         try:
             # Convert to bytes Python 2 & 3
@@ -602,16 +621,18 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     msg = str(msg)
 
             # Convert delimiter to bytes.
-            if sys.version_info >= (3,0,0):
+            if sys.version_info >= (3, 0, 0):
                 msg += self.delimiter.encode("ascii")
             else:
                 msg += str(self.delimiter)
 
             """
-            The inclusion of the send_all flag makes this function behave like a blocking socket for the purposes
-             of sending a full line even if the socket is non-blocking. It's assumed that lines will be small and
-              if the network buffer is full this code won't end up as a bottleneck. (Otherwise you would have to check the
-              number of bytes returned every time you sent a line which is quite annoying.)
+            The inclusion of the send_all flag makes this function behave like
+            a blocking socket for the purposes of sending a full line even if
+            the socket is non-blocking. It's assumed that lines will be small
+            and if the network buffer is full this code won't end up as a
+            bottleneck. (Otherwise you would have to check the number of bytes
+            returned every time you sent a line which is quite annoying.)
             """
             ret = self.send(msg, send_all=1, timeout=timeout)
 
@@ -638,9 +659,9 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
         if self.debug:
             blocking = self.s.gettimeout()
             if self.blocking:
-                assert(blocking >= 1 or blocking is None)
+                assert (blocking >= 1 or blocking is None)
             else:
-                assert(blocking == 0.0)
+                assert (blocking == 0.0)
 
         # Return existing reply.
         if len(self.replies):
@@ -658,7 +679,8 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
                     return u""
 
                 # Non-blocking.
-                if not ((not len(self.replies) or len(self.buf) >= self.max_buf) and self.blocking):
+                if not ((not len(self.replies) or len(
+                        self.buf) >= self.max_buf) and self.blocking):
                     break
 
                 # Timeout elapsed.
@@ -685,6 +707,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     for replies in sock:
         To process replies without handling networking boilerplate.
     """
+
     def __len__(self):
         self.update()
         return len(self.replies)
@@ -730,6 +753,7 @@ It activates after 1 second (after_idle_sec) of idleness, then sends a keepalive
     def __reversed__(self):
         return self.__iter__()
 
+
 if __name__ == "__main__":
     """
     s = Sock("158.69.201.105", 8540)
@@ -748,7 +772,3 @@ if __name__ == "__main__":
     # print(s.recv_line())
     # print("yes")
     """
-
-
-
-    # def __init__(self, addr=None, port=None, blocking=0, timeout=5, interface="default", use_ssl=0):

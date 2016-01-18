@@ -53,7 +53,8 @@ log = logging.getLogger(__name__)
 
 
 class RendezvousClient:
-    def __init__(self, nat_type, rendezvous_servers, interface="default", sys_clock=None):
+    def __init__(self, nat_type, rendezvous_servers, interface="default",
+                 sys_clock=None):
         self.nat_type = nat_type
         self.delta = 0
         self.port_collisions = 1
