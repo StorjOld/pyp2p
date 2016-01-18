@@ -32,7 +32,7 @@ for the code.
 """
 
 
-class UPnP():
+class UPnP:
     def __init__(self, interface=u"default"):
         """
         Port used to listen to UPnP replies on.
@@ -67,14 +67,14 @@ class UPnP():
 
         # Create socket for UDP broadcasts.
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('', self.upnp_port)) # All addresses.
+        s.bind(('', self.upnp_port))  # All addresses.
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         s.setblocking(0)
 
         # Broadcast search message to multicast address.
-        search_msg =  b"M-SEARCH * HTTP/1.1\r\n"
+        search_msg = b"M-SEARCH * HTTP/1.1\r\n"
         search_msg += b"HOST: %s" + self.multicast + b":"
-        if sys.version_info >= (3,0,0):
+        if sys.version_info >= (3, 0, 0):
             search_msg += str(self.upnp_port).encode("ascii")
         else:
             search_msg += str(self.upnp_port)
@@ -104,7 +104,8 @@ class UPnP():
                 return None
             else:
                 # Optimise scanning.
-                likely_candidates = [80, 1780, 1900, 1981, 2468, 5555, 5678, 49000, 55345, 65535]
+                likely_candidates = [80, 1780, 1900, 1981, 2468, 5555, 5678,
+                                     49000, 55345, 65535]
 
                 def check_gateway(self, ip, port):
                     try:
@@ -235,7 +236,7 @@ class UPnP():
 
         # Attempt to add new port map.
         x = 'http://' + rhost[1] + '/' + ctrl
-        if sys.version_info >= (3,0,0):
+        if sys.version_info >= (3, 0, 0):
             msg = bytes(msg, "utf-8")
 
         req = Request('http://' + rhost[1] + '/' + ctrl, msg)

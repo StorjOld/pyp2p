@@ -146,8 +146,8 @@ if __name__ == "__main__":
         if dif < 0.05:
             break
 
-    #print(get_ntp())
-    #print(get_ntp())
+    # print(get_ntp())
+    # print(get_ntp())
 
     """
     print(sys_clock.time())

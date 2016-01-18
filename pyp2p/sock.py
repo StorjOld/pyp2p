@@ -510,7 +510,7 @@ class Sock:
     # Blocking or non-blocking.
     def recv(self, n, encoding="unicode", timeout=5):
         # Sanity checking.
-        assert (n)
+        assert n
 
         # Disconnect.
         if not self.connected:

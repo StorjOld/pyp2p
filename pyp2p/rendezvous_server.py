@@ -234,7 +234,8 @@ class RendezvousProtocol(LineReceiver):
                     old_candidates = []
                     for candidate in self.factory.candidates[node_ip]:
                         # Hole punching is ms time sensitive.
-                        # Candidates older than this is safe to assume they're not needed.
+                        # Candidates older than this is safe to assume
+                        # they're not needed.
                         if not node_ip in self.factory.nodes["simultaneous"] and t - candidate["time"] >= self.challenge_timeout * 5:
                             old_candidates.append(candidate)
 
@@ -463,9 +464,10 @@ class RendezvousProtocol(LineReceiver):
                             candidate["con"].send_line(msg)
 
                             """
-                            Signal to propogate_candidates() not to relay this candidate again.
-                             Note that this occurs after a valid accept which
-                             thus counts as acknowledging receiving the challenge.
+                            Signal to propogate_candidates() not to relay this
+                            candidate again. Note that this occurs after a
+                            valid accept which thus counts as acknowledging
+                            receiving the challenge.
                             """
                             candidate["propogated"] = 1
                             break
