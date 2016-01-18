@@ -145,9 +145,13 @@ class RendezvousProtocol(LineReceiver):
                     continue
 
                 # Notify node of challege from client.
-                msg = "CHALLENGE %s %s %s" % (candidate["ip_addr"], " ".join(map(str, candidate["predictions"])), candidate["proto"])
+                msg = "CHALLENGE %s %s %s" % (
+                    candidate["ip_addr"],
+                    " ".join(map(str, candidate["predictions"])),
+                    candidate["proto"])
                 
-                self.factory.nodes["simultaneous"][node_ip]["con"].send_line(msg)
+                self.factory.nodes["simultaneous"][node_ip]["con"].\
+                    send_line(msg)
                 old_candidates.append(candidate)
 
     def synchronize_simultaneous(self, node_ip):
@@ -167,9 +171,12 @@ class RendezvousProtocol(LineReceiver):
                 continue
 
             # Synchronise simultaneous node.
-            if candidate["time"] - self.factory.nodes["simultaneous"][node_ip]["time"] > self.challege_timeout:
+            if candidate["time"] -\
+                    self.factory.nodes["simultaneous"][node_ip]["time"] >\
+                    self.challege_timeout:
                 msg = "RECONNECT"
-                self.factory.nodes["simultaneous"][node_ip]["con"].send_line(msg)
+                self.factory.nodes["simultaneous"][node_ip]["con"].\
+                    send_line(msg)
                 return
  
         self.cleanup_candidates(node_ip)
@@ -185,7 +192,8 @@ class RendezvousProtocol(LineReceiver):
             ip_addr = self.transport.getPeer().host
             if ip_addr in self.factory.nodes["simultaneous"]:
                 # Update time.
-                self.factory.nodes["simultaneous"][ip_addr]["time"] = time.time()
+                self.factory.nodes["simultaneous"][ip_addr]["time"] =\
+                    time.time()
                 self.synchronize_simultaneous(ip_addr)
         except Exception as e:
             error = parse_exception(e)
@@ -220,7 +228,8 @@ class RendezvousProtocol(LineReceiver):
                 # Delete old simultaneous nodes.
                 old_node_ips = []
                 for node_ip in list(self.factory.nodes["simultaneous"]):
-                    simultaneous_node = self.factory.nodes["simultaneous"][node_ip]
+                    simultaneous_node =\
+                        self.factory.nodes["simultaneous"][node_ip]
                     # Gives enough time for passive nodes to receive clients.
                     if t - simultaneous_node["time"] >= self.node_lifetime:
                         old_node_ips.append(node_ip)
@@ -244,7 +253,8 @@ class RendezvousProtocol(LineReceiver):
                         self.factory.candidates[node_ip].remove(candidate)
 
                     # Record old node IPs.
-                    if not len(self.factory.candidates[node_ip]) and not node_ip in self.factory.nodes["simultaneous"]:
+                    if not len(self.factory.candidates[node_ip]) and \
+                            not node_ip in self.factory.nodes["simultaneous"]:
                         old_node_ips.append(node_ip)
 
                 # Remove old node IPs.
@@ -310,7 +320,8 @@ class RendezvousProtocol(LineReceiver):
                                 continue
 
                             # Append new node.
-                            msg += node_type[0] + ":" + ip_addr + ":" + str(element["port"]) + " "
+                            msg += node_type[0] + ":" + ip_addr + ":"
+                            msg += str(element["port"]) + " "
                             ip_addr_list.remove(ip_addr)
                             node_no += 1
 
@@ -401,7 +412,8 @@ class RendezvousProtocol(LineReceiver):
                     # Delete candidate if it already exists.
                     if node_ip in self.factory.candidates:
                         # Max candidates reached.
-                        if len(self.factory.candidates[node_ip]) >= self.max_candidates:
+                        num_candidates = len(self.factory.candidates[node_ip])
+                        if num_candidates >= self.max_candidates:
                             print("Candidate max candidates reached.")
                             break
 

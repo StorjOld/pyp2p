@@ -260,5 +260,3 @@ if __name__ == "__main__":
     print(UPnP().forward_port("TCP", port, addr))
     print(is_port_forwarded(get_lan_ip(), str(port), "TCP", forwarding_servers))
     """
-
-

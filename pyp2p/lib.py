@@ -94,7 +94,8 @@ true_socket = socket.socket
 def build_bound_socket(source_ip):
     def bound_socket(*a, **k):
         if source_ip == "127.0.0.1":
-            raise Exception("This function requires a LAN IP (127.0.0.1 passed.)")
+            raise Exception("This function requires a LAN IP"
+                            " (127.0.0.1 passed.)")
 
         sock = true_socket(*a, **k)
         sock.bind((source_ip, 0))
@@ -291,7 +292,7 @@ def sequential_bind(n, interface="default"):
 
 def is_port_forwarded(source_ip, port, proto, forwarding_servers):
     global true_socket
-    if source_ip != None:
+    if source_ip is not None:
         socket.socket = build_bound_socket(source_ip)
 
     ret = 0

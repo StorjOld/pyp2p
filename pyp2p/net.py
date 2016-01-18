@@ -406,7 +406,8 @@ class Net:
                 # Check they've started net first
                 # If they haven't we won't know the NAT details / node type.
                 if not self.is_net_started:
-                    raise Exception("Make sure to start net before you add node.")
+                    raise Exception("Make sure to start net before you add"
+                                    " node.")
 
                 if self.nat_type in self.rendezvous.predictable_nats:
                     # Attempt to make active simultaneous connection.
@@ -637,7 +638,8 @@ class Net:
             # Check port isn't already forwarded.
             if is_port_forwarded(lan_ip, self.passive_port, "TCP",
                                  self.forwarding_servers):
-                self.debug_print("Port already forwarded. Skipping NAT traversal.")
+                msg = "Port already forwarded. Skipping NAT traversal."
+                self.debug_print(msg)
 
                 self.forwarding_type = "forwarded"
                 return "passive"
@@ -676,7 +678,8 @@ class Net:
                         self.debug_print("Port forwarded with NATPMP.")
                     else:
                         self.debug_print("Failed to forward port with NATPMP.")
-                        self.debug_print("Falling back on TCP hole punching or proxying.")
+                        self.debug_print("Falling back on TCP hole punching or"
+                                         " proxying.")
                 except Exception as e:
                     # Log exception
                     error = parse_exception(e)
@@ -712,7 +715,8 @@ class Net:
         """
 
         self.debug_print("Starting networking.")
-        self.debug_print("Make sure to iterate over replies if you need connection alive management!")
+        self.debug_print("Make sure to iterate over replies if you need"
+                         " connection alive management!")
 
         # Register a cnt + c handler
         signal.signal(signal.SIGINT, self.stop)
@@ -746,7 +750,8 @@ class Net:
         # is manually specified.
         if self.node_type == "simultaneous":
             if self.nat_type not in self.rendezvous.predictable_nats:
-                self.debug_print("Manual setting of simultanous specified but ignored since NAT does not support it.")
+                self.debug_print("Manual setting of simultanous specified but"
+                                 " ignored since NAT does not support it.")
                 self.node_type = "active"
         else:
             # Determine node type.
@@ -1045,7 +1050,8 @@ class Net:
                         def success_builder():
                             def success(con):
                                 # Indicate status.
-                                self.debug_print("Received reverse connect notice")
+                                self.debug_print("Received reverse connect"
+                                                 " notice")
                                 self.debug_print(nonce)
 
                                 # Did you send this?
@@ -1082,7 +1088,8 @@ class Net:
                         if their_unl["value"] not in self.unl.pending_reverse_con:
                             self.debug_print(their_unl)
                             self.debug_print(str(self.unl.pending_reverse_con))
-                            self.debug_print("oops, we don't know about this reverse query!")
+                            self.debug_print("oops, we don't know about this"
+                                             " reverse query!")
                             processed.append(dht_response)
                             continue
                         else:
@@ -1101,7 +1108,8 @@ class Net:
                             pattern = "^REVERSE_ORIGIN:" + reverse_query["unl"]
                             pattern += "$"
                             if re.match(pattern, msg) is not None:
-                                self.debug_print("Removing pending reverse query: success!")
+                                self.debug_print("Removing pending reverse"
+                                                 " query: success!")
                                 self.pending_reverse_queries.remove(
                                         reverse_query)
                                 processed.append(dht_response)

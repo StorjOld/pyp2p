@@ -92,7 +92,7 @@ class RendezvousClient:
                 )
 
                 # Pre-bound socket.
-                if sock != None:
+                if sock is not None:
                     con.set_sock(sock)
 
                 # Connect the socket.
@@ -310,7 +310,8 @@ class RendezvousClient:
         delta type mapping behaviour.
         """
         if self.nat_type not in self.predictable_nats:
-            raise Exception("Can't predict mappings for non-predictable NAT type.")
+            msg = "Can't predict mappings for non-predictable NAT type."
+            raise Exception(msg)
 
         for mapping in mappings:
             mapping["bound"] = mapping["sock"].getsockname()[1]
@@ -700,7 +701,8 @@ class RendezvousClient:
         # Check collision ration.
         if self.port_collisions * 5 > self.nat_tests:
             msg = "Port collision number is too high compared to nat tests."
-            msg += " Collisions must be in ratio 1 : 5 to avoid ambiguity in test results."
+            msg += " Collisions must be in ratio 1 : 5 to avoid ambiguity"
+            msg += " in test results."
             raise Exception(msg)
 
         # Load mappings for reuse test.
