@@ -1,12 +1,23 @@
-.. image:: https://coveralls.io/repos/Storj/pyp2p/badge.svg?branch=develop&service=github
-  :target: https://coveralls.io/github/Storj/pyp2p?branch=develop
-
-.. image:: https://travis-ci.org/Storj/pyp2p.svg?branch=develop
-    :target: https://travis-ci.org/Storj/pyp2p
-
 ##################
 Welcome to PyP2P
 ##################
+
+|BuildLink|_ |CoverageLink|_ |BuildLink2|_ |CoverageLink2|_ |LicenseLink|_
+
+.. |BuildLink| image:: https://img.shields.io/travis/Storj/pyp2p/master.svg?label=Build-Master
+.. _BuildLink: https://travis-ci.org/Storj/pyp2p
+
+.. |CoverageLink| image:: https://img.shields.io/coveralls/Storj/pyp2p/master.svg?label=Coverage-Master
+.. _CoverageLink: https://coveralls.io/r/Storj/pyp2p
+
+.. |BuildLink2| image:: https://img.shields.io/travis/Storj/pyp2p/develop.svg?label=Build-Develop
+.. _BuildLink2: https://travis-ci.org/Storj/pyp2p
+
+.. |CoverageLink2| image:: https://img.shields.io/coveralls/Storj/pyp2p/develop.svg?label=Coverage-Develop
+.. _CoverageLink2: https://coveralls.io/r/Storj/pyp2p
+
+.. |LicenseLink| image:: https://img.shields.io/badge/license-MIT-blue.svg
+.. _LicenseLink: https://raw.githubusercontent.com/Storj/pyp2p
 
 PyP2P is a simplified networking library for building peer-to-peer networks in Python. The library is designed to solve the pain of finding nodes and bypassing NATs so you can focus on writing your application code.
 

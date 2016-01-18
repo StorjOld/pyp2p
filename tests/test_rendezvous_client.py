@@ -1,8 +1,6 @@
 from unittest import TestCase
-from pyp2p.lib import *
 from pyp2p.rendezvous_client import *
-import random
-import socket
+
 
 # if sys.version_info >= (3,0,0):
 
@@ -11,7 +9,8 @@ class TestRendezvousClient(TestCase):
     def test_connect_fail_over(self):
         from pyp2p.net import rendezvous_servers
         rendezvous_servers[0]["port"] += 10
-        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        client = RendezvousClient(nat_type="preserving",
+                                  rendezvous_servers=rendezvous_servers)
         try:
             con = client.server_connect()
             assert(con is not None)
@@ -23,7 +22,8 @@ class TestRendezvousClient(TestCase):
 
     def test_00001(self):
         from pyp2p.net import rendezvous_servers
-        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        client = RendezvousClient(nat_type="preserving",
+                                  rendezvous_servers=rendezvous_servers)
 
         # attend_fight (Not tested)
 
@@ -45,7 +45,7 @@ class TestRendezvousClient(TestCase):
         assert(client.parse_remote_port("REMOTE TCP 50000") == 50000)
         assert(client.parse_remote_port(u"REMOTE TCP 50000") == 50000)
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 100
             },
@@ -64,7 +64,7 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == 100)
         assert(ret["nat_type"] == "delta")
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 100
             },
@@ -83,7 +83,7 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == 100)
         assert(ret["nat_type"] == "delta")
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 100
             },
@@ -102,7 +102,7 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == 0)
         assert(ret["nat_type"] == "random")
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 1
             },
@@ -127,7 +127,7 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == 1)
         assert(ret["nat_type"] == "delta")
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 1
             },
@@ -152,7 +152,7 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == 1)
         assert(ret["nat_type"] == "delta")
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 6
             },
@@ -177,7 +177,7 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == -1)
         assert(ret["nat_type"] == "delta")
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 6
             },
@@ -202,7 +202,7 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == -1)
         assert(ret["nat_type"] == "delta")
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 600
             },
@@ -221,7 +221,7 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == -50)
         assert(ret["nat_type"] == "delta")
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 600
             },
@@ -240,7 +240,7 @@ class TestRendezvousClient(TestCase):
         assert(ret["delta"] == -50)
         assert(ret["nat_type"] == "delta")
 
-        mappings = [\
+        mappings = [
             {
                 "remote": 1000
             },
@@ -267,7 +267,8 @@ class TestRendezvousClient(TestCase):
 
     def test_delta_mappings(self):
         from pyp2p.net import rendezvous_servers
-        client = RendezvousClient(nat_type="delta", rendezvous_servers=rendezvous_servers)
+        client = RendezvousClient(nat_type="delta",
+                                  rendezvous_servers=rendezvous_servers)
         client.delta = 5
         mappings = []
         for i in range(0, 5):

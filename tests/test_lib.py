@@ -1,6 +1,5 @@
-from unittest import TestCase
 from pyp2p.lib import *
-import random
+from unittest import TestCase
 
 
 class TestLib(TestCase):
