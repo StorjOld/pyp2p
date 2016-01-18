@@ -53,7 +53,8 @@ log = logging.getLogger(__name__)
 
 
 class RendezvousClient:
-    def __init__(self, nat_type, rendezvous_servers, interface="default", sys_clock=None):
+    def __init__(self, nat_type, rendezvous_servers, interface="default",
+                 sys_clock=None):
         self.nat_type = nat_type
         self.delta = 0
         self.port_collisions = 1
@@ -67,7 +68,7 @@ class RendezvousClient:
         self.rendezvous_servers = rendezvous_servers
         self.interface = interface
         self.ntp_delay = 6
-        self.timeout = 5 # Socket timeout.
+        self.timeout = 5  # Socket timeout.
         self.predictable_nats = ["preserving", "delta"]
         self.sys_clock = sys_clock
 
@@ -182,8 +183,6 @@ class RendezvousClient:
                 except:
                     pass
             """
-
-
 
             try:
                 # Return open hole.
@@ -357,18 +356,21 @@ class RendezvousClient:
         local = 0
         if is_ip_private(node_ip):
             """
-            When simulating nodes on the same computer a delay needs to be set for the loop back interface to
-             simulate the delays that occur over a WAN link. This requirement may also be needed for nodes on a LAN.
+            When simulating nodes on the same computer a delay needs to be set
+            for the loop back interface to simulate the delays that occur over
+            a WAN link. This requirement may also be needed for nodes on a LAN.
 
             sudo tc qdisc replace dev lo root handle 1:0 netem delay 0.5sec
 
-            Speculation: The simulation problem may be to do with CPU cores. If the program is run on the same
-             core then the connects will always be out of
-              synch. If that's the case -- tries will need to be set to ~1000 which was what it was before.
-             Perhaps a delay could be simulated by sleeping for random periods if its a local connection?
-             That could help punch through at least once and then just set the tries to >= 1000.
+            Speculation: The simulation problem may be to do with CPU cores.
+            If the program is run on the same core then the connects will always
+            be out of sync. If that's the case -- tries will need to be set to
+            ~1000 which was what it was before. Perhaps a delay could be
+            simulated by sleeping for random periods if its a local connection?
+            That could help punch through at least once and then just set the
+            tries to >= 1000.
             """
-            tries = 20 # 20
+            tries = 20  # 20
             local = 1
 
         source_port = sock.getsockname()[1]
@@ -421,7 +423,7 @@ class RendezvousClient:
         # ~50 ms over WAN (apparently.)
         gc.disable()
         sys.setcheckinterval(999999999)
-        if sys.version_info > (3,0,0):
+        if sys.version_info > (3, 0, 0):
             sys.setswitchinterval(1000)
         p = psutil.Process(os.getpid())
         try:
@@ -437,7 +439,7 @@ class RendezvousClient:
         else:
             our_ntp = get_ntp()
         log.debug("Our ntp = " + str(our_ntp))
-        if our_ntp == None:
+        if our_ntp is None:
             return 0
 
         # Synchronize code execution to occur at their NTP time + delay.
@@ -448,7 +450,8 @@ class RendezvousClient:
         # Check sleep time:
         log.debug("Waiting for fight")
         if sleep_time < 0:
-            log.debug("We missed the meeting! It happened " + str(-sleep_time) + "seconds ago!")
+            log.debug("We missed the meeting! It happened " + str(-sleep_time) +
+                      "seconds ago!")
             return 0
 
         if sleep_time >= 300:
@@ -457,7 +460,7 @@ class RendezvousClient:
 
         busy_wait(sleep_time)
         sys.setcheckinterval(100)
-        if sys.version_info > (3,0,0):
+        if sys.version_info > (3, 0, 0):
             sys.setswitchinterval(0.005)
         try:
             if platform.system() == "Windows":
@@ -598,7 +601,8 @@ class RendezvousClient:
             # Overflow.
             if i + 1 >= mapping_no:
                 break
-            differences.append(mappings[i + 1]["remote"] - mappings[i]["remote"])
+            differences.append(mappings[i + 1]["remote"] -
+                               mappings[i]["remote"])
         differences = list(set(differences))
 
         # Record delta pattern results.
@@ -616,19 +620,24 @@ class RendezvousClient:
                     if i == j:
                         continue
 
-                    # Use value of mappings[i] to derive test value for mappings[j].
+                    # Use value of mappings[i] to derive test value
+                    # for mappings[j].
                     if i > j:
                         # How many bellow it?
-                        test_val = mappings[i]["remote"] - (difference * (i - j))
+                        test_val = mappings[i]["remote"] -\
+                                   (difference * (i - j))
                     else:
                         # How many above it?
-                        test_val = mappings[i]["remote"] + (difference * (j - i))
+                        test_val = mappings[i]["remote"] +\
+                                   (difference * (j - i))
 
-                    # Pattern was predicted for relative comparison so increment matches.
+                    # Pattern was predicted for relative comparison so
+                    # increment matches.
                     if test_val == mappings[j]["remote"]:
                         matches += 1
 
-                # Matches parses the minimum threshold so these don't count as collisions.
+                # Matches parses the minimum threshold so these don't count
+                # as collisions.
                 if matches + 1 > self.port_collisions:
                     masked.append(mappings[i]["remote"])
 
@@ -677,11 +686,11 @@ class RendezvousClient:
         for that connection.
 
         Good NAT characteristic references and definitions:
-[0] http://nutss.gforge.cis.cornell.edu/pub/imc05-tcpnat.pdf
-[1] http://doc.cacaoweb.org/misc/cacaoweb-and-nats/nat-behavioral-specifications-for-p2p-applications/#tcpholepun
-[2] http://www.deusty.com/2007/07/nat-traversal-port-prediction-part-2-of.html
-http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_BitTorrent
-[3] http://en.wikipedia.org/wiki/TCP_hole_punching
+        [0] http://nutss.gforge.cis.cornell.edu/pub/imc05-tcpnat.pdf
+        [1] http://doc.cacaoweb.org/misc/cacaoweb-and-nats/nat-behavioral-specifications-for-p2p-applications/#tcpholepun
+        [2] http://www.deusty.com/2007/07/nat-traversal-port-prediction-part-2-of.html
+        http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_BitTorrent
+        [3] http://en.wikipedia.org/wiki/TCP_hole_punching
         """
         # Already set.
         if self.nat_type != "unknown":
@@ -734,7 +743,7 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
             remote_port = self.parse_remote_port(con.recv_line(timeout=2))
             con.send_line("QUIT")
 
-            return (source_port, remote_port, server)
+            return source_port, remote_port, server
 
         log.debug("Starting initial mappings for preserving + reuse tests")
         mappings = []
@@ -749,7 +758,6 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
         log.debug(len(mappings))
         log.debug(self.nat_tests)
         log.debug("Finished mappings")
-
 
         # Preserving test.
         preserving = 0
@@ -802,5 +810,6 @@ http://www.researchgate.net/publication/239801764_Implementing_NAT_Traversal_on_
 
 if __name__ == "__main__":
     from pyp2p.net import rendezvous_servers
-    client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+    client = RendezvousClient(nat_type="preserving",
+                              rendezvous_servers=rendezvous_servers)
 

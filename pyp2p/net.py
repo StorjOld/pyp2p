@@ -127,11 +127,12 @@ def clear_seen_messages():
     seen_messages = {}
 
 
-class Net():
+class Net:
     def __init__(self, net_type="p2p", nat_type="unknown", node_type="unknown",
                  max_outbound=10, max_inbound=10, passive_bind="0.0.0.0",
-                 passive_port=50500, interface="default", wan_ip=None, dht_node=None,
-                 error_log_path="error.log", debug=0, sys_clock=None, servers=None):
+                 passive_port=50500, interface="default", wan_ip=None,
+                 dht_node=None, error_log_path="error.log", debug=0,
+                 sys_clock=None, servers=None):
         # List of outbound connections (from us, to another node.)
         self.outbound = []
 
@@ -326,7 +327,7 @@ class Net():
         self.enable_forwarding = 0
 
     def get_connection_no(self):
-        return (len(self.outbound) + len(self.inbound))
+        return len(self.outbound) + len(self.inbound)
 
     # Used to reject duplicate connections.
     def validate_node(self, node_ip, node_port=None, same_nodes=1):
@@ -513,7 +514,8 @@ class Net():
                 rendezvous_con = self.rendezvous.server_connect()
 
                 # Retrieve random nodes to bootstrap with.
-                rendezvous_con.send_line("BOOTSTRAP " + str(self.max_outbound * 2))
+                rendezvous_con.send_line("BOOTSTRAP " +
+                                         str(self.max_outbound * 2))
                 choices = rendezvous_con.recv_line(timeout=2)
                 if choices == "NODES EMPTY":
                     rendezvous_con.close()
@@ -594,11 +596,13 @@ class Net():
         try:
             # We're a passive node.
             if self.node_type == "passive" and self.passive_port is not None and self.enable_advertise:
-                self.rendezvous.passive_listen(self.passive_port, self.max_inbound)
+                self.rendezvous.passive_listen(self.passive_port,
+                                               self.max_inbound)
 
             """
-            Simultaneous open is only used as a fail-safe for connections to nodes on the direct_net
-             and only direct_net can list itself as simultaneous so its safe to leave this enabled.
+            Simultaneous open is only used as a fail-safe for connections to
+            nodes on the direct_net and only direct_net can list itself as
+            simultaneous so its safe to leave this enabled.
             """
             if self.node_type == "simultaneous":
                 self.rendezvous.simultaneous_listen()
@@ -610,7 +614,8 @@ class Net():
 
     def determine_node(self):
         """
-        Determines the type of node based on a combination of forwarding reachability and NAT type.
+        Determines the type of node based on a combination of forwarding
+        reachability and NAT type.
         """
 
         # Manually set node_type as simultaneous.
@@ -630,7 +635,8 @@ class Net():
             self.debug_print("Checking if port is forwarded.")
 
             # Check port isn't already forwarded.
-            if is_port_forwarded(lan_ip, self.passive_port, "TCP", self.forwarding_servers):
+            if is_port_forwarded(lan_ip, self.passive_port, "TCP",
+                                 self.forwarding_servers):
                 self.debug_print("Port already forwarded. Skipping NAT traversal.")
 
                 self.forwarding_type = "forwarded"
@@ -642,9 +648,11 @@ class Net():
             try:
                 self.debug_print("Trying UPnP")
 
-                UPnP(self.interface).forward_port("TCP", self.passive_port, lan_ip)
+                UPnP(self.interface).forward_port("TCP", self.passive_port,
+                                                  lan_ip)
 
-                if is_port_forwarded(lan_ip, self.passive_port, "TCP", self.forwarding_servers):
+                if is_port_forwarded(lan_ip, self.passive_port, "TCP",
+                                     self.forwarding_servers):
                     self.forwarding_type = "UPnP"
                     self.debug_print("Forwarded port with UPnP.")
                 else:
@@ -659,8 +667,11 @@ class Net():
                 # Apple devices.
                 try:
                     self.debug_print("Trying NATPMP.")
-                    NatPMP(self.interface).forward_port("TCP", self.passive_port, lan_ip)
-                    if is_port_forwarded(lan_ip, self.passive_port, "TCP", self.forwarding_servers):
+                    NatPMP(self.interface).forward_port("TCP",
+                                                        self.passive_port,
+                                                        lan_ip)
+                    if is_port_forwarded(lan_ip, self.passive_port, "TCP",
+                                         self.forwarding_servers):
                         self.forwarding_type = "NATPMP"
                         self.debug_print("Port forwarded with NATPMP.")
                     else:
@@ -750,9 +761,10 @@ class Net():
         if self.net_type == "p2p":
             """
             TCP hole punching is reserved specifically for direct networks
-            (a net object reserved for receiving direct connections -- p2p is for connecting
-             to the main network. The reason for this is you can't do multiple TCP hole punches at the same time
-              so its reserved for direct network where it's most needed.
+            (a net object reserved for receiving direct connections
+            -- p2p is for connecting to the main network. The reason for this
+            is you can't do multiple TCP hole punches at the same time so
+            reserved for direct network where it's most needed.
             """
             if self.node_type == "simultaneous":
                 self.debug_print("Simultaneous is not allowed for P2P")
@@ -831,7 +843,7 @@ class Net():
             # Used to block UNLs until nonces are received.
             # Otherwise they might try do I/O and ruin their protocols.
             if self.net_type == "direct":
-                if node["con"].nonce == None:
+                if node["con"].nonce is None:
                     continue
 
             if node["ip"] == ip:
@@ -963,7 +975,7 @@ class Net():
         # Get connection nonce (for building IDs.)
         if self.net_type == "direct":
             for node in self.inbound + self.outbound:
-                if node["con"].nonce != None:
+                if node["con"].nonce is not None:
                     continue
 
                 # Receive nonce part.
@@ -1038,7 +1050,8 @@ class Net():
 
                                 # Did you send this?
                                 query = "REVERSE_QUERY:" + self.unl.value
-                                self.dht_node.repeat_relay_message(node_id, query)
+                                self.dht_node.repeat_relay_message(node_id,
+                                                                   query)
 
                                 # Record pending query state.
                                 query = {
@@ -1051,7 +1064,9 @@ class Net():
                             return success
 
                         self.debug_print("Attempting to do reverse connect")
-                        self.unl.connect(their_unl["value"], {"success": success_builder()}, nonce=nonce)
+                        self.unl.connect(their_unl["value"],
+                                         {"success": success_builder()},
+                                         nonce=nonce)
 
                         processed.append(dht_response)
 
@@ -1079,7 +1094,6 @@ class Net():
 
                         processed.append(dht_response)
 
-
                     # Found reverse origin (yes I made this.)
                     elif re.match("^REVERSE_ORIGIN:[a-zA-Z0-9+/-=_\s]+$", msg) is not None:
                         self.debug_print("Received reverse origin")
@@ -1088,7 +1102,8 @@ class Net():
                             pattern += "$"
                             if re.match(pattern, msg) is not None:
                                 self.debug_print("Removing pending reverse query: success!")
-                                self.pending_reverse_queries.remove(reverse_query)
+                                self.pending_reverse_queries.remove(
+                                        reverse_query)
                                 processed.append(dht_response)
 
                 # Remove processed messages.
@@ -1121,7 +1136,9 @@ class Net():
                                     "port": con.s.getpeername()[1],
                                 }
                                 self.inbound.append(node)
-                                self.debug_print("Accepted new passive connection: " + str(node))
+                                self.debug_print(
+                                        "Accepted new passive connection: " +
+                                        str(node))
                             except:
                                 log.debug("con.s.get")
                         else:
@@ -1158,7 +1175,8 @@ class Net():
                         parts = re.findall("^CHALLENGE ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+) (TCP|UDP)$", reply)
                         if not len(parts):
                             continue
-                        (candidate_ip, candidate_predictions, candidate_proto) = parts[0]
+                        (candidate_ip, candidate_predictions, candidate_proto)\
+                            = parts[0]
                         self.debug_print("Found challenge")
                         self.debug_print(parts[0])
 

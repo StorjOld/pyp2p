@@ -16,7 +16,7 @@ Todo: you need to return a special kind of hybrid reply that has a custom
 import time
 
 
-class HybridReply():
+class HybridReply:
     def __init__(self, msg, network, recipient, retransmit_interval=0,
                  record_seen=1):
         self.msg = msg

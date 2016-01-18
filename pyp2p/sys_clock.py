@@ -57,7 +57,7 @@ class SysClock:
             if n < 2:
                 raise ValueError('variance requires at least two data points')
             ss = _ss(data)
-            pvar = ss/n # the population variance
+            pvar = ss/n  # the population variance
             return pvar**Decimal("0.5")
 
         return pstdev(data_points)
@@ -146,8 +146,8 @@ if __name__ == "__main__":
         if dif < 0.05:
             break
 
-    #print(get_ntp())
-    #print(get_ntp())
+    # print(get_ntp())
+    # print(get_ntp())
 
     """
     print(sys_clock.time())

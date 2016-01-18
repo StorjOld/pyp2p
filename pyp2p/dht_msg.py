@@ -1,7 +1,7 @@
-import requests
-import time
 import sys
+import time
 import binascii
+import requests
 from ast import literal_eval
 
 try:
@@ -31,12 +31,12 @@ logging.basicConfig()
 log = logging.getLogger(__name__)
 
 
-class DHTProtocol():
+class DHTProtocol:
     def __init__(self):
         self.messages_received = Queue(maxsize=100)
 
 
-class DHT():
+class DHT:
     def __init__(self, node_id=None, password=None, debug=1, networking=1):
         self.node_id = node_id or self.rand_str(20)
         if sys.version_info >= (3, 0, 0):
@@ -48,7 +48,7 @@ class DHT():
 
         self.node_id = binascii.hexlify(self.node_id).decode('utf-8')
         self.password = password or self.rand_str(30)
-        self.check_interval = 3 # For slow connections, unfortunately.
+        self.check_interval = 3  # For slow connections, unfortunately.
         self.last_check = 0
         self.debug = debug
         self.networking = networking
@@ -267,9 +267,9 @@ class DHT():
 
 if __name__ == "__main__":
     """
-    #dht_node = DHT(node_id=b"\111" * 20, password="svymQQzF1j7FGmYf8fENs4mvRdAX6f")
+    #dht_node = DHT(node_id=b"\111" * 20, password="svymQQzF1j7FGmYf8fENs4mvRd")
 
-    dht_node = DHT(node_id=u"T", password="svymQQzF1j7FGmYf8fENs4mvRdAX6f")
+    dht_node = DHT(node_id=u"T", password="svymQQzF1j7FGmYf8fENs4mvRd")
 
     x = [("a", 2), ("b!%--", 2)]
     dht_node.put(dht_node.node_id, x)

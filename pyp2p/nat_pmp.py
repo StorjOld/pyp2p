@@ -157,7 +157,7 @@ class PublicAddressResponse(NATPMPResponse):
        ip_int contains the same in the original 4-byte unsigned int.
     """
     def __init__(self, bytes):
-        if (len(bytes) > 12):
+        if len(bytes) > 12:
             bytes = bytes[:12]
         version, opcode, result, sec_since_epoch, self.ip_int = struct.unpack("!BBHII", bytes)
         NATPMPResponse.__init__(self, version, opcode, result, sec_since_epoch)
