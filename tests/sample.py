@@ -41,6 +41,7 @@ net = Net(
 
 connected = 0
 
+
 def success_notify(con):
     global connected
     connected = 1
@@ -70,5 +71,5 @@ while time.time() < future:
 net.stop()
 
 if not connected:
-    assert(0)
+    assert 0
 

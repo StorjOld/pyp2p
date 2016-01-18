@@ -50,7 +50,7 @@ class TestUNL(TestCase):
             debug=1
         ).start()
         bob_port = bob_direct.passive_port
-        assert(bob_port)
+        assert bob_port
 
         assert(bob_direct.node_type == "active")
 
@@ -71,7 +71,7 @@ class TestUNL(TestCase):
             return success
 
         def failure(con):
-            assert(0)
+            assert 0
 
         events = {
             "success": success_builder(first_con),
@@ -81,8 +81,10 @@ class TestUNL(TestCase):
         # Tell alice to connect but wait on specific connection.
         nonce = b"something"
         nonce = hashlib.sha256(nonce).hexdigest()
-        bob_direct.unl.connect(alice_direct.unl.value, events, nonce=nonce, hairpin=0, force_master=0)
-        alice_direct.unl.connect(bob_direct.unl.value, events, nonce=nonce, hairpin=0, force_master=0)
+        bob_direct.unl.connect(alice_direct.unl.value, events, nonce=nonce,
+                               hairpin=0, force_master=0)
+        alice_direct.unl.connect(bob_direct.unl.value, events, nonce=nonce,
+                                 hairpin=0, force_master=0)
 
         # Process connections.
         end_time = time.time() + 5
@@ -416,7 +418,7 @@ Overwrite:
 
             # Failure.
             if not test_no_1_success:
-                assert(0)
+                assert 0
                 break
 
         # Unpatch sock.send.
