@@ -3,6 +3,7 @@ from pyp2p.nat_pmp import *
 
 from unittest import TestCase
 
+
 class TestNATPMP(TestCase):
     def test_00001(self):
         try:
