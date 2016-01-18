@@ -739,7 +739,7 @@ class RendezvousClient:
             remote_port = self.parse_remote_port(con.recv_line(timeout=2))
             con.send_line("QUIT")
 
-            return (source_port, remote_port, server)
+            return source_port, remote_port, server
 
         log.debug("Starting initial mappings for preserving + reuse tests")
         mappings = []

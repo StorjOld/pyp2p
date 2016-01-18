@@ -111,7 +111,7 @@ def busy_wait(dt):
         timer = time.time
 
     current_time = timer()
-    while (timer() < current_time + dt):
+    while timer() < current_time + dt:
         pass
 
 
@@ -320,7 +320,7 @@ def is_ip_private(ip_addr):
         if type(ip_addr) == str:
             ip_addr = unicode(ip_addr)
     else:
-        if(type(ip_addr) == bytes):
+        if type(ip_addr) == bytes:
             ip_addr = ip_addr.decode("utf-8")
 
     if ipaddress.ip_address(ip_addr).is_private and ip_addr != "127.0.0.1":
@@ -334,7 +334,7 @@ def is_ip_public(ip_addr):
         if type(ip_addr) == str:
             ip_addr = unicode(ip_addr)
     else:
-        if(type(ip_addr) == bytes):
+        if type(ip_addr) == bytes:
             ip_addr = ip_addr.decode("utf-8")
 
     if is_ip_private(ip_addr):
@@ -350,7 +350,7 @@ def is_ip_valid(ip_addr):
         if type(ip_addr) == str:
             ip_addr = unicode(ip_addr)
     else:
-        if(type(ip_addr) == bytes):
+        if type(ip_addr) == bytes:
             ip_addr = ip_addr.decode("utf-8")
 
     try:
