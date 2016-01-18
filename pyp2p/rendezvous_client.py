@@ -439,7 +439,7 @@ class RendezvousClient:
         else:
             our_ntp = get_ntp()
         log.debug("Our ntp = " + str(our_ntp))
-        if our_ntp == None:
+        if our_ntp is None:
             return 0
 
         # Synchronize code execution to occur at their NTP time + delay.
@@ -450,7 +450,8 @@ class RendezvousClient:
         # Check sleep time:
         log.debug("Waiting for fight")
         if sleep_time < 0:
-            log.debug("We missed the meeting! It happened " + str(-sleep_time) + "seconds ago!")
+            log.debug("We missed the meeting! It happened " + str(-sleep_time) +
+                      "seconds ago!")
             return 0
 
         if sleep_time >= 300:
@@ -600,7 +601,8 @@ class RendezvousClient:
             # Overflow.
             if i + 1 >= mapping_no:
                 break
-            differences.append(mappings[i + 1]["remote"] - mappings[i]["remote"])
+            differences.append(mappings[i + 1]["remote"] -
+                               mappings[i]["remote"])
         differences = list(set(differences))
 
         # Record delta pattern results.
@@ -622,10 +624,12 @@ class RendezvousClient:
                     # for mappings[j].
                     if i > j:
                         # How many bellow it?
-                        test_val = mappings[i]["remote"] - (difference * (i - j))
+                        test_val = mappings[i]["remote"] -\
+                                   (difference * (i - j))
                     else:
                         # How many above it?
-                        test_val = mappings[i]["remote"] + (difference * (j - i))
+                        test_val = mappings[i]["remote"] +\
+                                   (difference * (j - i))
 
                     # Pattern was predicted for relative comparison so
                     # increment matches.

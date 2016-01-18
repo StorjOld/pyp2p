@@ -110,9 +110,9 @@ class IPgetter(object):
         self.url = None
 
     def get_externalip(self):
-        '''
+        """
         This function gets your IP from a random server
-        '''
+        """
 
         random.shuffle(self.server_list)
         myip = ''
@@ -130,9 +130,9 @@ class IPgetter(object):
             self.url = None
 
     def fetch(self, server):
-        '''
+        """
         This function gets your IP from a specific server
-        '''
+        """
         t = None
         socket_default_timeout = socket.getdefaulttimeout()
         opener = urllib.build_opener()
@@ -163,7 +163,7 @@ class IPgetter(object):
                 except UnicodeDecodeError:
                     content = content.decode('ISO-8859-1')
 
-            p  = '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.('
+            p = '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.('
             p += '25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|['
             p += '01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
             m = re.search(
@@ -210,4 +210,3 @@ class IPgetter(object):
 
 if __name__ == '__main__':
     print(myip())
-

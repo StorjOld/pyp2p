@@ -140,7 +140,7 @@ class Sock:
 
         # Adjust timeout if needed.
         if blocking:
-            if timeout != None:
+            if timeout is not None:
                 self.s.settimeout(timeout)
 
         # Update blocking status.
@@ -289,7 +289,7 @@ class Sock:
         chunk_no = 0
         max_buf = self.max_buf
         max_chunks = self.max_chunks
-        if fixed_limit != None:
+        if fixed_limit is not None:
             max_buf = fixed_limit
             max_chunks = fixed_limit
 
@@ -378,7 +378,7 @@ class Sock:
 
             # Block until there's a full reply or there's a timeout.
             if self.blocking:
-                if fixed_limit == None and encoding == "unicode":
+                if fixed_limit is None and encoding == "unicode":
                     # Partial response.
                     if self.delimiter not in self.buf:
                         repeat = 1

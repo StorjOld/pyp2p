@@ -843,7 +843,7 @@ class Net:
             # Used to block UNLs until nonces are received.
             # Otherwise they might try do I/O and ruin their protocols.
             if self.net_type == "direct":
-                if node["con"].nonce == None:
+                if node["con"].nonce is None:
                     continue
 
             if node["ip"] == ip:
@@ -975,7 +975,7 @@ class Net:
         # Get connection nonce (for building IDs.)
         if self.net_type == "direct":
             for node in self.inbound + self.outbound:
-                if node["con"].nonce != None:
+                if node["con"].nonce is not None:
                     continue
 
                 # Receive nonce part.
@@ -1102,7 +1102,8 @@ class Net:
                             pattern += "$"
                             if re.match(pattern, msg) is not None:
                                 self.debug_print("Removing pending reverse query: success!")
-                                self.pending_reverse_queries.remove(reverse_query)
+                                self.pending_reverse_queries.remove(
+                                        reverse_query)
                                 processed.append(dht_response)
 
                 # Remove processed messages.
@@ -1135,7 +1136,9 @@ class Net:
                                     "port": con.s.getpeername()[1],
                                 }
                                 self.inbound.append(node)
-                                self.debug_print("Accepted new passive connection: " + str(node))
+                                self.debug_print(
+                                        "Accepted new passive connection: " +
+                                        str(node))
                             except:
                                 log.debug("con.s.get")
                         else:
@@ -1172,7 +1175,8 @@ class Net:
                         parts = re.findall("^CHALLENGE ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+) ((?:[0-9]+\s?)+) (TCP|UDP)$", reply)
                         if not len(parts):
                             continue
-                        (candidate_ip, candidate_predictions, candidate_proto) = parts[0]
+                        (candidate_ip, candidate_predictions, candidate_proto)\
+                            = parts[0]
                         self.debug_print("Found challenge")
                         self.debug_print(parts[0])
 

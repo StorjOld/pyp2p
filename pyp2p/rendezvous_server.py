@@ -384,7 +384,8 @@ class RendezvousProtocol(LineReceiver):
                         break
 
                     # Not connected.
-                    if not self.factory.nodes["simultaneous"][node_ip]["con"].connected:
+                    if not self.factory.nodes["simultaneous"][node_ip]["con"].\
+                            connected:
                         print("Candidate not connected.")
                         break
 
@@ -422,8 +423,8 @@ class RendezvousProtocol(LineReceiver):
                     self.synchronize_simultaneous(node_ip)
                     break
 
-
-            # Node wishes to respond to a simultaneous open challenge from a client.
+            # Node wishes to respond to a simultaneous open challenge from
+            # a client.
             if re.match("^ACCEPT", line) is not None:
                 # ACCEPT 192.168.0.1 4552 345 TCP 1412137849.288068
                 p = "^ACCEPT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+)"
