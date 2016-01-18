@@ -39,11 +39,11 @@ class ThreadingSimpleServer(
 
 
 def md5sum(fname):
-    hash = hashlib.md5()
+    my_hash = hashlib.md5()
     with open(fname, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
-            hash.update(chunk)
-    return hash.hexdigest()
+            my_hash.update(chunk)
+    return my_hash.hexdigest()
 
 
 class SockDownload:

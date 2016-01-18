@@ -2,7 +2,7 @@ from pyp2p.upnp import *
 from unittest import TestCase
 
 
-class testUPNP(TestCase):
+class TestUPNP(TestCase):
     def test_upnp(self):
         try:
             assert (UPnP().forward_port("TCP", 50500, get_lan_ip()) is None)
