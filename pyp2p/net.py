@@ -256,7 +256,6 @@ class Net:
                     except:
                         return
                     """
-                self.debug_print(msg)
 
                 # Check for matches.
                 for needle in valid_needles:
