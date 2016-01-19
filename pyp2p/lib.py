@@ -1,17 +1,13 @@
+import netifaces
 import os
+import struct
 import sys
 import time
-import netifaces
 
 import ipaddress
 import ntplib
+from future.moves.urllib.request import urlopen
 
-try:
-    from urllib.request import urlopen
-except:
-    from urllib2 import urlopen
-
-import struct
 try:
     import json
 except:

@@ -4,24 +4,15 @@ All networking functions are ultimately done through
 this class.
 """
 
-import logging
-import socket
-import select
 import hashlib
-import re
+import signal
 import zlib
 from ast import literal_eval
-from threading import Thread
-import signal
 
-from .upnp import *
 from .nat_pmp import NatPMP
-from .lib import *
-from .sock import *
 from .rendezvous_client import *
-from .hybrid_reply import *
 from .unl import UNL
-from .dht_msg import DHT
+from .upnp import *
 
 # How many times a single message can be retransmitted.
 max_retransmissions = 1

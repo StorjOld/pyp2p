@@ -1,17 +1,9 @@
+import select
+
 from .lib import *
 from .sock import *
-import re
-import sys
-import time
-import select
-import socket
 
-try:
-    from urllib.request import urlopen
-    from urllib.request import Request
-except:
-    from urllib2 import urlopen
-    from urllib2 import Request
+from future.moves.urllib.request import urlopen, Request
 
 import platform
 import subprocess

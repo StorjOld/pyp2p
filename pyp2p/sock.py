@@ -38,13 +38,13 @@ Timeouts are needed for non-blocking too under conditions where you attempt to
 send all / recv all.
 """
 
-import socket
-import time
-import ssl
-import select
 import errno
 import platform
+import socket
+import ssl
 import sys
+import time
+
 from pyp2p.lib import get_lan_ip, parse_exception, log_exception
 
 error_log_path = "error.log"

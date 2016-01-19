@@ -8,9 +8,10 @@ https://github.com/gtk-gnutella/gtk-gnutella/
 blob/devel/src/core/clock.c 
 """
 
-from .lib import *
-import time
+
 from decimal import Decimal
+
+from .lib import *
 
 
 class SysClock:

@@ -1,7 +1,9 @@
 from pyp2p.net import *
 from pyp2p.sock import Sock
 from unittest import TestCase
+from pyp2p.dht_msg import DHT
 from pyp2p.unl import UNL, is_valid_unl
+
 
 success_no = 0
 found_con = 0

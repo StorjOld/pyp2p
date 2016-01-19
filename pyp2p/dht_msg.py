@@ -1,13 +1,8 @@
 import sys
+import random
 import requests
 from ast import literal_eval
-
-try:
-    from urllib.parse import urlencode
-except:
-    from urllib import urlencode
-
-import random
+from future.moves.urllib.parse import urlencode
 
 try:
     import json

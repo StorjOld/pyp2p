@@ -3,15 +3,13 @@ Universal Node Locator (UNL.) Allows nodes to direct connect
 and helps to debug issues in doing so.
 """
 
-from .lib import *  # FIXME * is evil!
-import time
-import struct
-import random
-import binascii
 import base64
-import logging
+import binascii
 import hashlib
+import logging
 from threading import Thread, Lock
+
+from .lib import *  # FIXME * is evil!
 
 logging.basicConfig()
 log = logging.getLogger(__name__)

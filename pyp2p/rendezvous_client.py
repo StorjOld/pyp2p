@@ -31,21 +31,14 @@ Todo:
 * Add better exception handling and tests.
 """
 
-import psutil
-import socket
-import re
-import os
-import sys
-import ntplib
-import datetime
-import random
 import gc
 import logging
-from multiprocessing.dummy import Pool
 from threading import Thread
 
-from .sock import *
+import psutil
+
 from .lib import *
+from .sock import *
 
 # Debug logging.
 logging.basicConfig()

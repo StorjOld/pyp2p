@@ -16,16 +16,10 @@ send the clear command which causes the server to remove
 the node details.
 """
 
-import re
-import socket
-import random
-import time
-import ipaddress
-import os
-import sys
+from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import reactor
+
 from .lib import *
 
 error_log_path = "error.log"
