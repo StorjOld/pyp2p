@@ -70,6 +70,9 @@ class DHT():
     def add_message_handler(self, handler):
         self.message_handlers.add(handler)
 
+    def remove_transfer_request_handler(self, handler):
+        pass
+
     def rand_str(self, length):
         return ''.join(random.choice(u'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for i in range(length))
 
