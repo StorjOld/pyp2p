@@ -2,11 +2,18 @@ PY_VERSION := 3
 WHEEL_DIR := /tmp/wheelhouse
 PIP := env/bin/pip
 PY := env/bin/python
+COVERAGE := env/bin/coverage
 USE_WHEELS := 0
 ifeq ($(USE_WHEELS), 0)
   WHEEL_INSTALL_ARGS := # void
 else
   WHEEL_INSTALL_ARGS := --use-wheel --no-index --find-links=$(WHEEL_DIR)
+endif
+
+ifeq ($(PY_VERSION), 3)
+  export TEST_SUITE=3_3_tests.sh
+else
+  export TEST_SUITE=2_7_tests.sh
 endif
 
 
@@ -65,6 +72,7 @@ shell: setup
 
 test: setup
 	$(PY) setup.py test
+	$(COVERAGE) run --source="pyp2p" -m nose --verbosity=2 --logging-level=DEBUG --nologcapture tests
 
 
 publish: test
