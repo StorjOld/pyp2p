@@ -379,7 +379,7 @@ def send_request_with_retry(gateway_ip, request, response_data_class=None,
     data = ""
     while n <= retry and not data:
         send_request(gateway_socket, request)
-        data, source_addr = read_response(gateway_socket, n * request.retry_increment, responseSize=response_size)
+        data, source_addr = read_response(gateway_socket, n * request.retry_increment, response_size=response_size)
         if data is None or source_addr[0] != gateway_ip or source_addr[1] != NATPMP_PORT:
             data = ""  # discard data if source mismatch, as per specification
         n += 1
