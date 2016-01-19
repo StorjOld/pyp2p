@@ -41,8 +41,8 @@ are permitted provided that the following conditions are met:
 * Redistributions in binary form must reproduce the above copyright notice,
   this list of conditions and the following disclaimer in the documentation
   and/or other materials provided with the distribution.
-* The names of the author and contributors may not be used to endorse or promote products
-  derived from this software without specific prior written permission.
+* The names of the author and contributors may not be used to endorse or promote
+  products derived from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 'AS IS'
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -69,24 +69,24 @@ NATPMP_GATEWAY_NO_VALID_GATEWAY = -10
 NATPMP_GATEWAY_NO_SUPPORT = -11
 NATPMP_GATEWAY_CANNOT_FIND = -12
 
-NATPMP_RESULT_SUCCESS = 0 # Success
-NATPMP_RESULT_UNSUPPORTED_VERSION = 1 # Unsupported Version
-NATPMP_RESULT_NOT_AUTHORIZED = 2 # Not Authorized/Refused/NATPMP turned off
-NATPMP_RESULT_NETWORK_FAILURE = 3 # Network Failure
-NATPMP_RESULT_OUT_OF_RESOURCES = 4 # can not create more mappings
-NATPMP_RESULT_UNSUPPORTED_OPERATION = 5 # not a supported opcode
+NATPMP_RESULT_SUCCESS = 0  # Success
+NATPMP_RESULT_UNSUPPORTED_VERSION = 1  # Unsupported Version
+NATPMP_RESULT_NOT_AUTHORIZED = 2  # Not Authorized/Refused/NATPMP turned off
+NATPMP_RESULT_NETWORK_FAILURE = 3  # Network Failure
+NATPMP_RESULT_OUT_OF_RESOURCES = 4  # can not create more mappings
+NATPMP_RESULT_UNSUPPORTED_OPERATION = 5  # not a supported opcode
 # all remaining results are fatal errors
 
 NATPMP_ERROR_DICT = {
-                NATPMP_RESULT_SUCCESS:"No error.",
-                NATPMP_RESULT_UNSUPPORTED_VERSION:"The protocol version specified is unsupported.",
-                NATPMP_RESULT_NOT_AUTHORIZED:"The operation was refused.  NAT-PMP may be turned off on gateway.",
-                NATPMP_RESULT_NETWORK_FAILURE:"There was a network failure.  The gateway may not have an IP address.",# Network Failure
-                NATPMP_RESULT_OUT_OF_RESOURCES:"The NAT-PMP gateway is out of resources and cannot create more mappings.", # can not create more mappings
-                NATPMP_RESULT_UNSUPPORTED_OPERATION:"The NAT-PMP gateway does not support this operation", # not a supported opcode
-                NATPMP_GATEWAY_NO_SUPPORT:'The gateway does not support NAT-PMP',
-                NATPMP_GATEWAY_NO_VALID_GATEWAY:'No valid gateway address was specified.',
-                NATPMP_GATEWAY_CANNOT_FIND:'Cannot automatically determine gateway address.  Must specify manually.'
+                NATPMP_RESULT_SUCCESS: "No error.",
+                NATPMP_RESULT_UNSUPPORTED_VERSION: "The protocol version specified is unsupported.",
+                NATPMP_RESULT_NOT_AUTHORIZED: " The operation was refused.  NAT-PMP may be turned off on gateway.",
+                NATPMP_RESULT_NETWORK_FAILURE: "There was a network failure.  The gateway may not have an IP address.",  # Network Failure
+                NATPMP_RESULT_OUT_OF_RESOURCES: "The NAT-PMP gateway is out of resources and cannot create more mappings.",  # can not create more mappings
+                NATPMP_RESULT_UNSUPPORTED_OPERATION: "The NAT-PMP gateway does not support this operation",  # not a supported opcode
+                NATPMP_GATEWAY_NO_SUPPORT: 'The gateway does not support NAT-PMP',
+                NATPMP_GATEWAY_NO_VALID_GATEWAY: 'No valid gateway address was specified.',
+                NATPMP_GATEWAY_CANNOT_FIND: 'Cannot automatically determine gateway address.  Must specify manually.'
               }
 
 
@@ -96,7 +96,7 @@ class NATPMPRequest(object):
        
        Other requests are derived from NATPMPRequest.
     """
-    retry_increment = 0.250 # seconds
+    retry_increment = 0.250  # seconds
 
     def __init__(self, version, opcode):
         self.version = version
@@ -121,14 +121,17 @@ class PortMapRequest(NATPMPRequest):
        the fields private_port, public_port, and lifetime.  The first two
        are 2-byte unsigned shorts, and the last is a 4-byte unsigned integer.
     """
-    def __init__(self, protocol, private_port, public_port, lifetime=3600, version=0):
+    def __init__(self, protocol, private_port, public_port, lifetime=3600,
+                 version=0):
         NATPMPRequest.__init__(self, version, protocol)
         self.private_port = private_port
         self.public_port = public_port
         self.lifetime = lifetime
 
     def toBytes(self):
-        s= NATPMPRequest.toBytes(self) + struct.pack('!HHHI', NATPMP_RESERVED_VAL, self.private_port, self.public_port, self.lifetime)  
+        s = NATPMPRequest.toBytes(self) +\
+            struct.pack('!HHHI', NATPMP_RESERVED_VAL, self.private_port
+                        , self.public_port, self.lifetime)
         return s
 
 
@@ -146,7 +149,9 @@ class NATPMPResponse(object):
         self.sec_since_epoch = sec_since_epoch
         
     def __str__(self):
-        return "NATPMPResponse(%d, %d, %d, $d)" % (self.version, self.opcode, self.result, self.sec_since_epoch)
+        return "NATPMPResponse(%d, %d, %d, $d)" % (self.version, self.opcode,
+                                                   self.result,
+                                                   self.sec_since_epoch)
 
 
 class PublicAddressResponse(NATPMPResponse):
@@ -163,7 +168,7 @@ class PublicAddressResponse(NATPMPResponse):
         version, opcode, result, sec_since_epoch, self.ip_int = struct.unpack("!BBHII", bytes)
         NATPMPResponse.__init__(self, version, opcode, result, sec_since_epoch)
         self.ip = socket.inet_ntoa(bytes[8:8+4])
-        #self.ip  = socket.inet_ntoa(self.ip_bytes)
+        # self.ip  = socket.inet_ntoa(self.ip_bytes)
 
     def __str__(self):
         return "PublicAddressResponse: version %d, opcode %d (%d), result %d, ssec %d, ip %s" % (self.version, self.opcode, self.result, self.sec_since_epoch, self.ip)
@@ -180,7 +185,8 @@ class PortMapResponse(NATPMPResponse):
     def __init__(self, bytes):
         if len(bytes) > 16:
             bytes = bytes[:16]
-        version, opcode, result, sec_since_epoch, self.private_port, self.public_port, self.lifetime = struct.unpack('!BBHIHHI', bytes)
+        version, opcode, result, sec_since_epoch, self.private_port,\
+            self.public_port, self.lifetime = struct.unpack('!BBHIHHI', bytes)
         NATPMPResponse.__init__(self, version, opcode, result, sec_since_epoch)
     
     def __str__(self):
@@ -188,7 +194,9 @@ class PortMapResponse(NATPMPResponse):
         msg += " result %d, ssec %d, private_port %d, public port %d,"
         msg += " lifetime %d"
 
-        return msg % (self.version, self.opcode, self.opcode, self.result, self.sec_since_epoch, self.private_port, self.public_port, self.lifetime)
+        return msg % (self.version, self.opcode, self.opcode, self.result,
+                      self.sec_since_epoch, self.private_port, self.public_port,
+                      self.lifetime)
 
 
 class NATPMPError(Exception):
@@ -234,7 +242,8 @@ def get_gateway_socket(gateway):
        e.g. addr = get_gateway_socket('10.0.1.1')
     """
     if not gateway:
-        raise NATPMPNetworkError(NATPMP_GATEWAY_NO_VALID_GATEWAY, error_str(NATPMP_GATEWAY_NO_VALID_GATEWAY))
+        raise NATPMPNetworkError(NATPMP_GATEWAY_NO_VALID_GATEWAY,
+                                 error_str(NATPMP_GATEWAY_NO_VALID_GATEWAY))
     response_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     response_socket.setblocking(0)
     response_socket.connect((gateway, NATPMP_PORT))
@@ -261,12 +270,14 @@ def get_public_address(gateway_ip=None, retry=9):
     if addr_response.result != 0:
         # sys.stderr.write("NAT-PMP error %d: %s\n" % (addr_response.result, error_str(addr_response.result)))
         # sys.stderr.flush()
-        raise NATPMPResultError(addr_response.result, error_str(addr_response.result), addr_response)
+        raise NATPMPResultError(addr_response.result,
+                                error_str(addr_response.result), addr_response)
     addr = addr_response.ip
     return addr
 
 
-def map_tcp_port(public_port, private_port, lifetime=3600, gateway_ip=None, retry=9, use_exception=True):
+def map_tcp_port(public_port, private_port, lifetime=3600, gateway_ip=None,
+                 retry=9, use_exception=True):
     """A high-level wrapper to map_port() that requests a mapping
        for a public TCP port on the NAT to a private TCP port on this host.
        Returns the complete response on success.
@@ -283,10 +294,13 @@ def map_tcp_port(public_port, private_port, lifetime=3600, gateway_ip=None, retr
             use_exception - throw an exception if an error result is
                            received from the gateway.  Defaults to True.
     """
-    return map_port(NATPMP_PROTOCOL_TCP, public_port, private_port, lifetime, gateway_ip=gateway_ip, retry=retry, use_exception=use_exception)
+    return map_port(NATPMP_PROTOCOL_TCP, public_port, private_port, lifetime,
+                    gateway_ip=gateway_ip, retry=retry,
+                    use_exception=use_exception)
 
 
-def map_udp_port(public_port, private_port, lifetime=3600, gateway_ip=None, retry=9, use_exception=True):
+def map_udp_port(public_port, private_port, lifetime=3600, gateway_ip=None,
+                 retry=9, use_exception=True):
     """A high-level wrapper to map_port() that requests a mapping for
        a public UDP port on the NAT to a private UDP port on this host.
        Returns the complete response on success.
@@ -303,10 +317,13 @@ def map_udp_port(public_port, private_port, lifetime=3600, gateway_ip=None, retr
             use_exception - throw an exception if an error result is
                             received from the gateway.  Defaults to True.
     """
-    return map_port(NATPMP_PROTOCOL_UDP, public_port, private_port, lifetime, gateway_ip=gateway_ip, retry=retry, use_exception=use_exception)
+    return map_port(NATPMP_PROTOCOL_UDP, public_port, private_port, lifetime,
+                    gateway_ip=gateway_ip, retry=retry,
+                    use_exception=use_exception)
 
 
-def map_port(protocol, public_port, private_port, lifetime=3600, gateway_ip=None, retry=9, use_exception=True):
+def map_port(protocol, public_port, private_port, lifetime=3600,
+             gateway_ip=None, retry=9, use_exception=True):
     """A function to map public_port to private_port of protocol.
        Returns the complete response on success.
        
@@ -328,10 +345,13 @@ def map_port(protocol, public_port, private_port, lifetime=3600, gateway_ip=None
     if gateway_ip is None:
         gateway_ip = get_gateway_addr()
     response = None
-    port_mapping_request = PortMapRequest(protocol, private_port, public_port, lifetime)
+    port_mapping_request = PortMapRequest(protocol, private_port,
+                                          public_port, lifetime)
     port_mapping_response = send_request_with_retry(gateway_ip, port_mapping_request, response_data_class=PortMapResponse, retry=retry)
     if port_mapping_response.result != 0 and use_exception:
-        raise NATPMPResultError(port_mapping_response.result, error_str(port_mapping_response.result), port_mapping_response)
+        raise NATPMPResultError(port_mapping_response.result,
+                                error_str(port_mapping_response.result),
+                                port_mapping_response)
     return port_mapping_response
 
 
@@ -339,31 +359,33 @@ def send_request(gateway_socket, request):
     gateway_socket.sendall(request.toBytes())
 
 
-def read_response(gateway_socket, timeout, responseSize=16):
+def read_response(gateway_socket, timeout, response_size=16):
     data = ""
     source_addr = ("", "")
     rlist, wlist, xlist = select.select([gateway_socket], [], [], timeout)
     if rlist:
         resp_socket = rlist[0]
         try:
-            data, source_addr = resp_socket.recvfrom(responseSize)
+            data, source_addr = resp_socket.recvfrom(response_size)
         except Exception:
             return None, None
-    return data,source_addr
+    return data, source_addr
 
 
-def send_request_with_retry(gateway_ip, request, response_data_class=None, retry=9, response_size=16):
+def send_request_with_retry(gateway_ip, request, response_data_class=None,
+                            retry=9, response_size=16):
     gateway_socket = get_gateway_socket(gateway_ip)
     n = 1
     data = ""
     while n <= retry and not data:
         send_request(gateway_socket, request)
-        data,source_addr = read_response(gateway_socket, n * request.retry_increment, responseSize=response_size)
+        data, source_addr = read_response(gateway_socket, n * request.retry_increment, responseSize=response_size)
         if data is None or source_addr[0] != gateway_ip or source_addr[1] != NATPMP_PORT:
-            data = "" # discard data if source mismatch, as per specification
+            data = ""  # discard data if source mismatch, as per specification
         n += 1
     if n >= retry and not data:
-        raise NATPMPUnsupportedError(NATPMP_GATEWAY_NO_SUPPORT, error_str(NATPMP_GATEWAY_NO_SUPPORT))
+        raise NATPMPUnsupportedError(NATPMP_GATEWAY_NO_SUPPORT,
+                                     error_str(NATPMP_GATEWAY_NO_SUPPORT))
     if data and response_data_class:
         data = response_data_class(data)
     return data
