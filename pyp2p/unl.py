@@ -10,6 +10,7 @@ import random
 import binascii
 import base64
 import logging
+import hashlib
 from threading import Thread, Lock
 
 logging.basicConfig()

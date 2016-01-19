@@ -1,35 +1,22 @@
 import os
-import platform
+import sys
+import time
 import netifaces
-import random
-import socket
+
 import ipaddress
 import ntplib
-import time
-import sys
 
 try:
     from urllib.request import urlopen
 except:
     from urllib2 import urlopen
 
-import select
-import hashlib
-import random
-import datetime
-import binascii
-import re
-import base64
 import struct
-import uuid
-from threading import Thread
 try:
     import json
 except:
     import simplejson as json
 import traceback
-
-from decimal import Decimal
 from .ipgetter import *
 from .ip_routes import *
 

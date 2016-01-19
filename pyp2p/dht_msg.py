@@ -1,6 +1,4 @@
 import sys
-import time
-import binascii
 import requests
 from ast import literal_eval
 
@@ -16,6 +14,7 @@ try:
 except:
     import simplejson as json
 
+import string
 import binascii
 
 try:
@@ -71,7 +70,9 @@ class DHT:
         self.message_handlers.add(handler)
 
     def rand_str(self, length):
-        return ''.join(random.choice(u'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for i in range(length))
+        return ''.join(random.choice(string.digits + string.lowercase +
+                                     string.ascii_uppercase
+                                     ) for i in range(length))
 
     def register(self, node_id, password, no=1):
         # Only retry up to 5 times.

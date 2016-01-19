@@ -325,7 +325,7 @@ class RendezvousClient:
 
                 # Overflow or underflow = wrap port around.
                 if mapping["remote"] > max_port:
-                    mapping["remote"] = mapping["remote"] - max_port
+                    mapping["remote"] -= max_port
                 if mapping["remote"] < 0:
                     mapping["remote"] = max_port - -mapping["remote"]
 

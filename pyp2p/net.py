@@ -596,7 +596,9 @@ class Net:
         # Tell rendezvous server to list us.
         try:
             # We're a passive node.
-            if self.node_type == "passive" and self.passive_port is not None and self.enable_advertise:
+            if self.node_type == "passive" and\
+                            self.passive_port is not None and\
+                            self.enable_advertise:
                 self.rendezvous.passive_listen(self.passive_port,
                                                self.max_inbound)
 
@@ -632,7 +634,8 @@ class Net:
             lan_ip = self.passive_bind
 
         # Passive node checks.
-        if lan_ip is not None and self.passive_port is not None and self.enable_forwarding:
+        if lan_ip is not None \
+                and self.passive_port is not None and self.enable_forwarding:
             self.debug_print("Checking if port is forwarded.")
 
             # Check port isn't already forwarded.
@@ -1077,7 +1080,8 @@ class Net:
                         processed.append(dht_response)
 
                     # Found reverse query (did you make this?)
-                    elif re.match("^REVERSE_QUERY:[a-zA-Z0-9+/-=_\s]+$", msg) is not None:
+                    elif re.match("^REVERSE_QUERY:[a-zA-Z0-9+/-=_\s]+$", msg)\
+                            is not None:
                         # Process message.
                         self.debug_print("Received reverse query")
                         call, their_unl = msg.split(":")
@@ -1085,7 +1089,8 @@ class Net:
                         node_id = their_unl["node_id"]
 
                         # Do we know about this?
-                        if their_unl["value"] not in self.unl.pending_reverse_con:
+                        if their_unl["value"] not in \
+                                self.unl.pending_reverse_con:
                             self.debug_print(their_unl)
                             self.debug_print(str(self.unl.pending_reverse_con))
                             self.debug_print("oops, we don't know about this"
@@ -1093,7 +1098,8 @@ class Net:
                             processed.append(dht_response)
                             continue
                         else:
-                            self.unl.pending_reverse_con.remove(their_unl["value"])
+                            self.unl.pending_reverse_con.remove(
+                                    their_unl["value"])
 
                         # Send query.
                         query = "REVERSE_ORIGIN:" + self.unl.value
@@ -1102,7 +1108,8 @@ class Net:
                         processed.append(dht_response)
 
                     # Found reverse origin (yes I made this.)
-                    elif re.match("^REVERSE_ORIGIN:[a-zA-Z0-9+/-=_\s]+$", msg) is not None:
+                    elif re.match("^REVERSE_ORIGIN:[a-zA-Z0-9+/-=_\s]+$", msg) \
+                            is not None:
                         self.debug_print("Received reverse origin")
                         for reverse_query in self.pending_reverse_queries:
                             pattern = "^REVERSE_ORIGIN:" + reverse_query["unl"]

@@ -13,10 +13,8 @@ except:
     from urllib2 import urlopen
     from urllib2 import Request
 
-import multiprocessing
-import threading
-import subprocess
 import platform
+import subprocess
 from threading import Thread
 
 """
@@ -98,7 +96,7 @@ class UPnP:
             s = None
 
         # Error: no UPnP replies - try guess gateway.
-        if replies == []:
+        if not replies:
             default_gateway = get_default_gateway(self.interface)
             if default_gateway is None or default_gateway == {}:
                 return None
@@ -218,13 +216,14 @@ class UPnP:
         res = res.replace('\r', '')
         res = res.replace('\n', '')
         res = res.replace('\t', '')
-        pres = res.split('<serviceId>urn:upnp-org:serviceId:WANIPConn1</serviceId>')
+        pres = res.split('<serviceId>urn:upnp-org:serviceId:WANIPConn1'
+                         '</serviceId>')
         p2res = pres[1].split('</controlURL>')
         p3res = p2res[0].split('<controlURL>')
         ctrl = p3res[1]
         rip = res.split('<presentationURL>')
         rip1 = rip[1].split('</presentationURL>')
-        routerIP = rip1[0]
+        router_ip = rip1[0]
 
         port_map_desc = "PyP2P"
         msg = \

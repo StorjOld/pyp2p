@@ -149,7 +149,7 @@ class RendezvousProtocol(LineReceiver):
                     candidate["ip_addr"],
                     " ".join(map(str, candidate["predictions"])),
                     candidate["proto"])
-                
+
                 self.factory.nodes["simultaneous"][node_ip]["con"].\
                     send_line(msg)
                 old_candidates.append(candidate)
@@ -178,7 +178,7 @@ class RendezvousProtocol(LineReceiver):
                 self.factory.nodes["simultaneous"][node_ip]["con"].\
                     send_line(msg)
                 return
- 
+
         self.cleanup_candidates(node_ip)
         self.propogate_candidates(node_ip)
 
@@ -245,7 +245,8 @@ class RendezvousProtocol(LineReceiver):
                         # Hole punching is ms time sensitive.
                         # Candidates older than this is safe to assume
                         # they're not needed.
-                        if not node_ip in self.factory.nodes["simultaneous"] and t - candidate["time"] >= self.challenge_timeout * 5:
+                        if node_ip not in self.factory.nodes["simultaneous"] \
+                                and t - candidate["time"] >= self.challenge_timeout * 5:
                             old_candidates.append(candidate)
 
                     # Remove old candidates.
@@ -254,7 +255,7 @@ class RendezvousProtocol(LineReceiver):
 
                     # Record old node IPs.
                     if not len(self.factory.candidates[node_ip]) and \
-                            not node_ip in self.factory.nodes["simultaneous"]:
+                            node_ip not in self.factory.nodes["simultaneous"]:
                         old_node_ips.append(node_ip)
 
                 # Remove old node IPs.
@@ -284,7 +285,7 @@ class RendezvousProtocol(LineReceiver):
                     if not len(parts):
                         break
                     n = int(parts[0])
-            
+
                     # Invalid number.
                     if n < 1 or n > 100:
                         break
@@ -314,7 +315,8 @@ class RendezvousProtocol(LineReceiver):
                                 continue
 
                             # Not connected.
-                            if node_type == "simultaneous" and not element["con"].connected:
+                            if node_type == "simultaneous" and\
+                                    not element["con"].connected:
                                 i -= 1
                                 ip_addr_list.remove(ip_addr)
                                 continue
@@ -334,7 +336,8 @@ class RendezvousProtocol(LineReceiver):
                     break
 
             # Add node details to relevant sections.
-            if re.match("^(SIMULTANEOUS|PASSIVE) READY [0-9]+ [0-9]+$", line) is not None:
+            if re.match("^(SIMULTANEOUS|PASSIVE) READY [0-9]+ [0-9]+$", line)\
+                    is not None:
                 # Get type.
                 node_type, passive_port, max_inbound = re.findall("^(SIMULTANEOUS|PASSIVE) READY ([0-9]+) ([0-9]+)", line)[0]
                 node_type = node_type.lower()
@@ -355,7 +358,7 @@ class RendezvousProtocol(LineReceiver):
 
                 # Passive doesn't have a candidates list.
                 if node_type == "simultaneous":
-                    if not node_ip in self.factory.candidates:
+                    if node_ip not in self.factory.candidates:
                         self.factory.candidates[node_ip] = []
                     else:
                         self.cleanup_candidates(node_ip)
@@ -449,7 +452,7 @@ class RendezvousProtocol(LineReceiver):
                     client_ip, predictions, proto, ntp = parts[0]
 
                     # Invalid IP address.
-                    node_ip = self.transport.getPeer().host                
+                    node_ip = self.transport.getPeer().host
                     if node_ip not in self.factory.candidates:
                         break
 
@@ -466,7 +469,8 @@ class RendezvousProtocol(LineReceiver):
                     ntp = ntp
                     t = time.time()
                     minute = 60 * 10
-                    if int(float(ntp)) < t - minute or int(float(ntp)) > t + minute:
+                    if int(float(ntp)) < t - minute or\
+                            int(float(ntp)) > t + minute:
                         break
 
                     # Relay fight to client_ip.
