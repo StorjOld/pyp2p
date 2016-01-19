@@ -65,7 +65,7 @@ class DHT:
         self.message_handlers.add(handler)
 
     def rand_str(self, length):
-        return ''.join(random.choice(string.digits + string.lowercase +
+        return ''.join(random.choice(string.digits + string.ascii_lowercase +
                                      string.ascii_uppercase
                                      ) for i in range(length))
 
