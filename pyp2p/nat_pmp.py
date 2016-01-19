@@ -325,7 +325,7 @@ def map_port(protocol, public_port, private_port, lifetime=3600, gateway_ip=None
     """
     if protocol not in [NATPMP_PROTOCOL_UDP, NATPMP_PROTOCOL_TCP]:
         raise ValueError("Must be either NATPMP_PROTOCOL_UDP or NATPMP_PROTOCOL_TCP")
-    if gateway_ip == None:
+    if gateway_ip is None:
         gateway_ip = get_gateway_addr()
     response = None
     port_mapping_request = PortMapRequest(protocol, private_port, public_port, lifetime)
@@ -384,7 +384,7 @@ class NatPMP:
             raise Exception("Invalid port for forwarding.")
 
         # Source port is forwarded to same destination port number.
-        if dest_port == None:
+        if dest_port is None:
             dest_port = src_port
 
         if proto == "TCP":

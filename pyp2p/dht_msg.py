@@ -4,11 +4,7 @@ import requests
 from ast import literal_eval
 from future.moves.urllib.parse import urlencode
 
-try:
-    import json
-except:
-    import simplejson as json
-
+import json
 import string
 import binascii
 

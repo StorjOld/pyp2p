@@ -8,10 +8,6 @@ import ipaddress
 import ntplib
 from future.moves.urllib.request import urlopen
 
-try:
-    import json
-except:
-    import simplejson as json
 import traceback
 from .ipgetter import *
 from .ip_routes import *

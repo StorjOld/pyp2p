@@ -1,6 +1,6 @@
-##################
+################
 Welcome to PyP2P
-##################
+################
 
 |BuildLink|_ |CoverageLink|_ |BuildLink2|_ |CoverageLink2|_ |LicenseLink|_
 
@@ -28,16 +28,16 @@ PyP2P is a simplified networking library for building peer-to-peer networks in P
 * Python 2 (tested on 2.7 - experimental) & 3 (tested on 3.3)
 * Linux and Windows - yep
 
-=============
+============
 Code example
-=============
+============
 PyP2P is designed to work with simple non-blocking TCP sockets. To use them, your application must create an infinite loop which is used to periodically look for new replies. As you look for replies, the software also handles accepting new connections and removing old ones automatically.
 
 The library also handles constructing replies, which are returned in full as a simple list. The underlying message format is a simple line-based protocol: the messages you want to send are terminated with a new line and are returned in full when they've arrived which makes debugging and developing p2p protocols very simple (text-based protocols are easy to debug.)
 
-=============
+==========
 Alice node
-=============
+==========
 This will create a new listening server on port 44444, bound to listen for connections from the LAN. The interface is specified mostly to ensure that connections are only made from that interface. By default, connections will be made from the default interface (usually wlan0 or eth0) which isn't useful for simulating and testing a P2P network on the same computer.
 
 .. code:: python
@@ -59,9 +59,9 @@ This will create a new listening server on port 44444, bound to listen for conne
 
         time.sleep(1)
 
-============
+========
 Bob node
-============
+========
 This code will make a connection to the Alice node and repeatedly send her the word test. Note how they're both on different interfaces, with completely different IPs. This is necessary for connecting to nodes on the same computer as the library doesn't allow the Net class to connect to itself itself when running in P2P mode (type="p2p" for the Net class.) If you want to be able to make duplicate connections to nodes on the same interface then specify the type as "direct" which will make testing code easier. Note that type is "p2p" by default.
 
 .. code:: python
@@ -81,9 +81,9 @@ This code will make a connection to the Alice node and repeatedly send her the w
 
         time.sleep(1)
 
-=================
+==============
 Direct connect
-=================
+==============
 The code shown so far is good for standard broadcast / flooding style P2P networks where the only requirement is to get a message out to the whole network (e.g. Bitcoin and Bitmessage) - but if you want to do anything more complicated you're going to need to be able to communicate with nodes directly.
 
 Theoretically you can specify the recipient of a message and broadcast it to the network to reach them but this approach won't scale well for most people. What is needed is a way to direct connect to a node with a high level of reliability. To support this function we use something called a UNL: short for Universal Node Locator.
@@ -140,9 +140,9 @@ UNLs describe how to connect to a node behind a NAT, firewall, or on the same LA
 
 In the previous code the Net class was used to spawn a server to accept connections from nodes on the p2p network and managing connections for the purpose of broadcasting. To manage direct connections the same class is used, the difference is the class disables bootstrapping and advertising the connection details to the bootstrapping server as this service is reserved specifically for receiving direct connections.
 
-================
+============
 Dependencies
-================
+============
 * netifaces
 * ntplib
 * twisted
