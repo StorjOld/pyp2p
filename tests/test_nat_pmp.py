@@ -1,6 +1,7 @@
-from unittest import TestCase
 from pyp2p.lib import *
 from pyp2p.nat_pmp import *
+
+from unittest import TestCase
 
 
 class TestNATPMP(TestCase):

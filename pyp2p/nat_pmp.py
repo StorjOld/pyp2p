@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
-"""NAT-PMP client library
+import struct
+import socket
+import select
+import netifaces
+
+"""
+NAT-PMP client library
 
 Provides functions to interact with NAT-PMP gateways implementing version 0
 of the NAT-PMP draft specification.
@@ -23,8 +29,6 @@ this library more cross-platform.
 * Added an easy to use port forwarding function with the same
 interface as that seen in the UPnP module.
 """
-
-import netifaces
 
 __version__ = "0.2.3"
 __license__ = """Copyright (c) 2008-2014, Yiming Liu, All rights reserved.
@@ -53,9 +57,6 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE."""
 
 __author__ = "Yiming Liu <http://www.yimingliu.com/>"
-
-import struct, socket, select, time, platform
-import sys, os, re
 
 NATPMP_PORT = 5351
 
@@ -157,7 +158,7 @@ class PublicAddressResponse(NATPMPResponse):
        ip_int contains the same in the original 4-byte unsigned int.
     """
     def __init__(self, bytes):
-        if (len(bytes) > 12):
+        if len(bytes) > 12:
             bytes = bytes[:12]
         version, opcode, result, sec_since_epoch, self.ip_int = struct.unpack("!BBHII", bytes)
         NATPMPResponse.__init__(self, version, opcode, result, sec_since_epoch)

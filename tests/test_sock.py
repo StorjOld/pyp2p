@@ -1,26 +1,24 @@
 """
-* Test whether multiple recvs on the same connection (non-blocking) will eventually have the connection
- closed (use another net instance.)
+* Test whether multiple recvs on the same connection (non-blocking) will
+ eventually have the connection closed (use another net instance.)
 
-* Test whether multiple sends on the same connection (non-blocking) will eventually lead to the connection
- being closed (use a net instance with no recvs! and loop over the cons)
+* Test whether multiple sends on the same connection (non-blocking) will
+ eventually lead to the connection being closed (use a net instance with
+ no recvs! and loop over the cons)
 
 (Not implemented for now since these will greatly slow the build.)
 """
 
-from unittest import TestCase
-import pyp2p
-from pyp2p.sock import *
-from pyp2p.rendezvous_client import RendezvousClient
-from pyp2p.net import rendezvous_servers
-import time
-import sys
-import random
+import hashlib
 import os
 import tempfile
-import hashlib
-import platform
-import socket
+from threading import Thread
+from unittest import TestCase
+
+from pyp2p.net import rendezvous_servers
+from pyp2p.rendezvous_client import RendezvousClient
+from pyp2p.sock import *
+
 if sys.version_info >= (3, 0, 0):
     from urllib.parse import urlparse
     import socketserver as SocketServer
@@ -31,7 +29,6 @@ else:
     import SocketServer
     from BaseHTTPServer import HTTPServer
     from SimpleHTTPServer import SimpleHTTPRequestHandler
-from threading import Thread
 
 
 class ThreadingSimpleServer(
@@ -42,17 +39,19 @@ class ThreadingSimpleServer(
 
 
 def md5sum(fname):
-    hash = hashlib.md5()
+    my_hash = hashlib.md5()
     with open(fname, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
-            hash.update(chunk)
-    return hash.hexdigest()
+            my_hash.update(chunk)
+    return my_hash.hexdigest()
 
 
-class SockDownload():
-    def __init__(self, url, expected_hash, file_size, blocking=0, encoding="ascii"):
+class SockDownload:
+    def __init__(self, url, expected_hash, file_size, blocking=0,
+                 encoding="ascii"):
         """
-        Download a file from a HTTP URL and compare it to an MD5 hash. Uses the sock.py module for testing.
+        Download a file from a HTTP URL and compare it to an MD5 hash.
+        Uses the sock.py module for testing.
 
         :param url: URL to download
         :param expected_hash: MD5 hash of file (md5sum file from term)
@@ -112,13 +111,13 @@ class SockDownload():
             assert(found_hash == expected_hash)
 
     def build_request(self, host, resource):
-        req  = "GET %s HTTP/1.1\r\n" % (resource)
-        req += "Host: %s\r\n\r\n" % (host)
+        req = "GET %s HTTP/1.1\r\n" % resource
+        req += "Host: %s\r\n\r\n" % host
 
         return req
 
 
-class SockUpload():
+class SockUpload:
     def __init__(self, upload_size, blocking=0):
         host = u"185.86.149.128"
         port = 80
@@ -147,16 +146,18 @@ class SockUpload():
         assert(expected_hash in ret)
 
     def build_request(self, host, resource, content):
-        req  = "POST %s HTTP/1.1\r\n" % (resource)
-        req += "Host: %s\r\n" % (host)
-        req += "User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:42.0) Gecko/20100101 Firefox/42.0\r\n"
-        req += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+        req = "POST %s HTTP/1.1\r\n" % resource
+        req += "Host: %s\r\n" % host
+        req += "User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:42.0) "
+        req += "Gecko/20100101 Firefox/42.0\r\n"
+        req += "Accept: text/html,"
+        req += "application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
         req += "Accept-Language: en-US,en;q=0.5\r\n"
         req += "Accept-Encoding: gzip, deflate\r\n"
         req += "Connection: keep-alive\r\n"
         req += "Content-Type: application/x-www-form-urlencoded\r\n"
         req += "Content-Length: %d\r\n\r\n" % (len(content) + 5)
-        req += "test=" # Hence the extra + 5.
+        req += "test="  # Hence the extra + 5.
 
         return req
 
@@ -225,28 +226,31 @@ class TestSock(TestCase):
         x.close()
 
     def test_blocking_timeout(self):
-        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        client = RendezvousClient(nat_type="preserving",
+                                  rendezvous_servers=rendezvous_servers)
         s = client.server_connect()
         t = time.time()
         s.recv_line(timeout=1)
         if time.time() - t >= 4:
             print("Manual timeout failed.")
-            assert(0)
+            assert 0
         s.close()
 
     def test_non_blocking_timeout(self):
-        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        client = RendezvousClient(nat_type="preserving",
+                                  rendezvous_servers=rendezvous_servers)
         s = client.server_connect()
         assert(s.recv_line() == u"")
         assert(s.recv(1) == u"")
         s.close()
 
     def test_encoding(self):
-        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        client = RendezvousClient(nat_type="preserving",
+                                  rendezvous_servers=rendezvous_servers)
         s = client.server_connect()
         s.send_line("SOURCE TCP 50")
         ret = s.recv(1, encoding="ascii")
-        if sys.version_info >= (3,0,0):
+        if sys.version_info >= (3, 0, 0):
             assert(type(ret) == bytes)
         else:
             assert(type(ret) == str)
@@ -256,7 +260,8 @@ class TestSock(TestCase):
         s.close()
 
     def test_recv_recvline_switch(self):
-        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        client = RendezvousClient(nat_type="preserving",
+                                  rendezvous_servers=rendezvous_servers)
         s = client.server_connect()
         s.send_line("SOURCE TCP 32")
         ret = s.recv(1)
@@ -285,11 +290,12 @@ class TestSock(TestCase):
         s.close()
 
     def test_0000001_sock(self):
-        client = RendezvousClient(nat_type="preserving", rendezvous_servers=rendezvous_servers)
+        client = RendezvousClient(nat_type="preserving",
+                                  rendezvous_servers=rendezvous_servers)
         s = client.server_connect()
-        assert (s.connected)
+        assert s.connected
         s.send_line("SOURCE TCP 323")
-        assert (s.connected)
+        assert s.connected
         line = s.recv_line()
         assert ("REMOTE" in line)
 
@@ -396,7 +402,7 @@ class TestSock(TestCase):
             sock.close()
 
         platform.system = old_system
-        assert(1)
+        assert 1
 
     def test_non_default_iface(self):
         sock = Sock(interface="eth12")
@@ -405,7 +411,7 @@ class TestSock(TestCase):
         except (TypeError, socket.error) as e:
             pass
         sock.close()
-        assert(1)
+        assert 1
 
     def test_ssl(self):
         s = Sock(
@@ -513,7 +519,7 @@ class TestSock(TestCase):
 
         # You want to fill up the entire networking buffer
         # so that it times out without the needed recv.
-        buf_size = sock.s.getsockopt(socket.SOL_SOCKET,socket.SO_SNDBUF) + 1
+        buf_size = sock.s.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF) + 1
         buf_size *= 2
         sock.chunk_size = buf_size
         total = 0

@@ -1,35 +1,18 @@
-import os
-import platform
 import netifaces
-import random
-import socket
+import os
+import struct
+import sys
+import time
+
 import ipaddress
 import ntplib
-import time
-import sys
+from future.moves.urllib.request import urlopen
 
-try:
-    from urllib.request import urlopen
-except:
-    from urllib2 import urlopen
-
-import select
-import hashlib
-import random
-import datetime
-import binascii
-import re
-import base64
-import struct
-import uuid
-from threading import Thread
 try:
     import json
 except:
     import simplejson as json
 import traceback
-
-from decimal import Decimal
 from .ipgetter import *
 from .ip_routes import *
 
@@ -52,7 +35,8 @@ def get_unused_port(port):
         try:
             s.bind(('', port))  # Try to open port
         except socket.error as e:
-            if e.errno is 98:  # Errorno 98 means address already bound
+            if e.errno in (98, 10048):  # Error num 98 or 10048 means address
+                                        # already bound
                 return get_unused_port(None)
             raise e
         s.close()
@@ -69,7 +53,8 @@ def parse_exception(e, output=0):
     tb = traceback.format_exc()
     exc_type, exc_obj, exc_tb = sys.exc_info()
     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-    error = "%s %s %s %s %s" % (str(tb), str(exc_type), str(fname), str(exc_tb.tb_lineno), str(e))
+    error = "%s %s %s %s %s" % (str(tb), str(exc_type), str(fname),
+                                str(exc_tb.tb_lineno), str(e))
 
     if output:
         print(error)
@@ -77,12 +62,12 @@ def parse_exception(e, output=0):
     return str(error)
 
 
-def ip2int(addr):                                                               
-    return struct.unpack("!I", socket.inet_aton(addr))[0]                       
+def ip2int(addr):
+    return struct.unpack("!I", socket.inet_aton(addr))[0]
 
 
 def int2ip(addr):
-    return socket.inet_ntoa(struct.pack("!I", addr))    
+    return socket.inet_ntoa(struct.pack("!I", addr))
 
 # Patches for urllib2 and requests to bind on specific interface.
 # http://rossbates.com/2009/10/26/urllib2-with-multiple-network-interfaces/
@@ -92,12 +77,13 @@ true_socket = socket.socket
 def build_bound_socket(source_ip):
     def bound_socket(*a, **k):
         if source_ip == "127.0.0.1":
-            raise Exception("This function requires a LAN IP (127.0.0.1 passed.)")
+            raise Exception("This function requires a LAN IP"
+                            " (127.0.0.1 passed.)")
 
         sock = true_socket(*a, **k)
         sock.bind((source_ip, 0))
         return sock
-    
+
     return bound_socket
 
 
@@ -109,7 +95,7 @@ def busy_wait(dt):
         timer = time.time
 
     current_time = timer()
-    while (timer() < current_time + dt):
+    while timer() < current_time + dt:
         pass
 
 
@@ -167,7 +153,7 @@ def get_ntp(local_time=0):
 
 
 def get_default_gateway(interface="default"):
-    if sys.version_info < (3,0,0):
+    if sys.version_info < (3, 0, 0):
         if type(interface) == str:
             interface = unicode(interface)
     else:
@@ -177,13 +163,13 @@ def get_default_gateway(interface="default"):
     if platform.system() == "Windows":
         if interface == "default":
             default_routes = [r for r in get_ipv4_routing_table()
-                          if r[0] == '0.0.0.0']
+                              if r[0] == '0.0.0.0']
             if default_routes:
                 return default_routes[0][2]
 
     try:
         gws = netifaces.gateways()
-        if sys.version_info < (3,0,0):
+        if sys.version_info < (3, 0, 0):
             return gws[interface][netifaces.AF_INET][0].decode("utf-8")
         else:
             return gws[interface][netifaces.AF_INET][0]
@@ -193,7 +179,7 @@ def get_default_gateway(interface="default"):
 
 
 def get_lan_ip(interface="default"):
-    if sys.version_info < (3,0,0):
+    if sys.version_info < (3, 0, 0):
         if type(interface) == str:
             interface = unicode(interface)
     else:
@@ -289,7 +275,7 @@ def sequential_bind(n, interface="default"):
 
 def is_port_forwarded(source_ip, port, proto, forwarding_servers):
     global true_socket
-    if source_ip != None:
+    if source_ip is not None:
         socket.socket = build_bound_socket(source_ip)
 
     ret = 0
@@ -314,11 +300,11 @@ def is_port_forwarded(source_ip, port, proto, forwarding_servers):
 
 
 def is_ip_private(ip_addr):
-    if sys.version_info < (3,0,0):
+    if sys.version_info < (3, 0, 0):
         if type(ip_addr) == str:
             ip_addr = unicode(ip_addr)
     else:
-        if(type(ip_addr) == bytes):
+        if type(ip_addr) == bytes:
             ip_addr = ip_addr.decode("utf-8")
 
     if ipaddress.ip_address(ip_addr).is_private and ip_addr != "127.0.0.1":
@@ -328,11 +314,11 @@ def is_ip_private(ip_addr):
 
 
 def is_ip_public(ip_addr):
-    if sys.version_info < (3,0,0):
+    if sys.version_info < (3, 0, 0):
         if type(ip_addr) == str:
             ip_addr = unicode(ip_addr)
     else:
-        if(type(ip_addr) == bytes):
+        if type(ip_addr) == bytes:
             ip_addr = ip_addr.decode("utf-8")
 
     if is_ip_private(ip_addr):
@@ -344,11 +330,11 @@ def is_ip_public(ip_addr):
 
 
 def is_ip_valid(ip_addr):
-    if sys.version_info < (3,0,0):
+    if sys.version_info < (3, 0, 0):
         if type(ip_addr) == str:
             ip_addr = unicode(ip_addr)
     else:
-        if(type(ip_addr) == bytes):
+        if type(ip_addr) == bytes:
             ip_addr = ip_addr.decode("utf-8")
 
     try:
@@ -381,12 +367,14 @@ def memoize(function):
             return rv
     return wrapper
 
+
 @memoize
 def get_wan_ip(n=0):
     """
-    That IP module sucks. Occasionally it returns an IP address behind cloudflare which probably happens
-    when cloudflare tries to proxy your web request because it thinks you're trying to DoS.
-    It's better if we just run our own infrastructure.
+    That IP module sucks. Occasionally it returns an IP address behind
+    cloudflare which probably happens when cloudflare tries to proxy your web
+    request because it thinks you're trying to DoS. It's better if we just run
+    our own infrastructure.
     """
 
     if n == 5:

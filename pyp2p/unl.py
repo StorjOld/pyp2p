@@ -3,14 +3,13 @@ Universal Node Locator (UNL.) Allows nodes to direct connect
 and helps to debug issues in doing so.
 """
 
-from .lib import *  # FIXME * is evil!
-import time
-import struct
-import random
-import binascii
 import base64
+import binascii
+import hashlib
 import logging
 from threading import Thread, Lock
+
+from .lib import *  # FIXME * is evil!
 
 logging.basicConfig()
 log = logging.getLogger(__name__)
@@ -29,8 +28,9 @@ def is_valid_unl(value):
         return 1
 
 
-class UNL():
-    def __init__(self, net=None, dht_node=None, value=None, wan_ip=None, debug=0):
+class UNL:
+    def __init__(self, net=None, dht_node=None, value=None, wan_ip=None,
+                 debug=0):
         self.unl_threads = []
         self.debug = debug
         self.version = 2
@@ -189,12 +189,13 @@ class UNL():
                 else:
                     # Tell them to connect to us.
                     if self.dht_node is not None and force_master:
-                        con_request = "REVERSE_CONNECT:%s:%s" % (self.value, nonce)
+                        con_request = "REVERSE_CONNECT:%s:%s" % (self.value,
+                                                                 nonce)
                         node_id = their_unl["node_id"]
                         if int(binascii.hexlify(node_id), 16):
                             self.pending_reverse_con.append(their_unl["value"])
                             self.dht_node.repeat_relay_message(node_id,
-                                                              con_request)
+                                                               con_request)
 
                     # They will connect to us.
                     found_con = 0
@@ -363,7 +364,8 @@ class UNL():
                 if "failure" in events:
                     events["failure"](con)
 
-    def connect(self, their_unl, events, force_master=1, hairpin=1, nonce="0" * 64):
+    def connect(self, their_unl, events, force_master=1, hairpin=1,
+                nonce="0" * 64):
         """
         A new thread is spawned because many of the connection techniques
         rely on sleep to determine connection outcome or to synchronise hole

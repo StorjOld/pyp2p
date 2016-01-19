@@ -16,16 +16,10 @@ send the clear command which causes the server to remove
 the node details.
 """
 
-import re
-import socket
-import random
-import time
-import ipaddress
-import os
-import sys
+from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import reactor
+
 from .lib import *
 
 error_log_path = "error.log"
@@ -35,14 +29,14 @@ debug = 1
 class RendezvousProtocol(LineReceiver):
     def __init__(self, factory):
         self.factory = factory
-        self.challege_timeout = 60 * 2 # Seconds.
-        self.node_lifetime = 60 * 60 * 24 # 12 hours.
-        self.cleanup = 5 * 60 # Every 5 minutes.
-        self.max_candidates = 100 # Per simultaneous node.
+        self.challege_timeout = 60 * 2  # Seconds.
+        self.node_lifetime = 60 * 60 * 24  # 12 hours.
+        self.cleanup = 5 * 60  # Every 5 minutes.
+        self.max_candidates = 100  # Per simultaneous node.
         self.connected = False
 
     def log_entry(self, msg, direction="none"):
-        if sys.version_info >= (3,0,0):
+        if sys.version_info >= (3, 0, 0):
             if type(msg) == bytes:
                 msg = msg.decode("utf-8")
         ip_addr = str(self.transport.getPeer().host)
@@ -145,9 +139,13 @@ class RendezvousProtocol(LineReceiver):
                     continue
 
                 # Notify node of challege from client.
-                msg = "CHALLENGE %s %s %s" % (candidate["ip_addr"], " ".join(map(str, candidate["predictions"])), candidate["proto"])
-                
-                self.factory.nodes["simultaneous"][node_ip]["con"].send_line(msg)
+                msg = "CHALLENGE %s %s %s" % (
+                    candidate["ip_addr"],
+                    " ".join(map(str, candidate["predictions"])),
+                    candidate["proto"])
+
+                self.factory.nodes["simultaneous"][node_ip]["con"].\
+                    send_line(msg)
                 old_candidates.append(candidate)
 
     def synchronize_simultaneous(self, node_ip):
@@ -167,11 +165,14 @@ class RendezvousProtocol(LineReceiver):
                 continue
 
             # Synchronise simultaneous node.
-            if candidate["time"] - self.factory.nodes["simultaneous"][node_ip]["time"] > self.challege_timeout:
+            if candidate["time"] -\
+                    self.factory.nodes["simultaneous"][node_ip]["time"] >\
+                    self.challege_timeout:
                 msg = "RECONNECT"
-                self.factory.nodes["simultaneous"][node_ip]["con"].send_line(msg)
+                self.factory.nodes["simultaneous"][node_ip]["con"].\
+                    send_line(msg)
                 return
- 
+
         self.cleanup_candidates(node_ip)
         self.propogate_candidates(node_ip)
 
@@ -185,7 +186,8 @@ class RendezvousProtocol(LineReceiver):
             ip_addr = self.transport.getPeer().host
             if ip_addr in self.factory.nodes["simultaneous"]:
                 # Update time.
-                self.factory.nodes["simultaneous"][ip_addr]["time"] = time.time()
+                self.factory.nodes["simultaneous"][ip_addr]["time"] =\
+                    time.time()
                 self.synchronize_simultaneous(ip_addr)
         except Exception as e:
             error = parse_exception(e)
@@ -220,7 +222,8 @@ class RendezvousProtocol(LineReceiver):
                 # Delete old simultaneous nodes.
                 old_node_ips = []
                 for node_ip in list(self.factory.nodes["simultaneous"]):
-                    simultaneous_node = self.factory.nodes["simultaneous"][node_ip]
+                    simultaneous_node =\
+                        self.factory.nodes["simultaneous"][node_ip]
                     # Gives enough time for passive nodes to receive clients.
                     if t - simultaneous_node["time"] >= self.node_lifetime:
                         old_node_ips.append(node_ip)
@@ -234,8 +237,10 @@ class RendezvousProtocol(LineReceiver):
                     old_candidates = []
                     for candidate in self.factory.candidates[node_ip]:
                         # Hole punching is ms time sensitive.
-                        # Candidates older than this is safe to assume they're not needed.
-                        if not node_ip in self.factory.nodes["simultaneous"] and t - candidate["time"] >= self.challenge_timeout * 5:
+                        # Candidates older than this is safe to assume
+                        # they're not needed.
+                        if node_ip not in self.factory.nodes["simultaneous"] \
+                                and t - candidate["time"] >= self.challenge_timeout * 5:
                             old_candidates.append(candidate)
 
                     # Remove old candidates.
@@ -243,7 +248,8 @@ class RendezvousProtocol(LineReceiver):
                         self.factory.candidates[node_ip].remove(candidate)
 
                     # Record old node IPs.
-                    if not len(self.factory.candidates[node_ip]) and not node_ip in self.factory.nodes["simultaneous"]:
+                    if not len(self.factory.candidates[node_ip]) and \
+                            node_ip not in self.factory.nodes["simultaneous"]:
                         old_node_ips.append(node_ip)
 
                 # Remove old node IPs.
@@ -273,7 +279,7 @@ class RendezvousProtocol(LineReceiver):
                     if not len(parts):
                         break
                     n = int(parts[0])
-            
+
                     # Invalid number.
                     if n < 1 or n > 100:
                         break
@@ -303,13 +309,15 @@ class RendezvousProtocol(LineReceiver):
                                 continue
 
                             # Not connected.
-                            if node_type == "simultaneous" and not element["con"].connected:
+                            if node_type == "simultaneous" and\
+                                    not element["con"].connected:
                                 i -= 1
                                 ip_addr_list.remove(ip_addr)
                                 continue
 
                             # Append new node.
-                            msg += node_type[0] + ":" + ip_addr + ":" + str(element["port"]) + " "
+                            msg += node_type[0] + ":" + ip_addr + ":"
+                            msg += str(element["port"]) + " "
                             ip_addr_list.remove(ip_addr)
                             node_no += 1
 
@@ -322,7 +330,8 @@ class RendezvousProtocol(LineReceiver):
                     break
 
             # Add node details to relevant sections.
-            if re.match("^(SIMULTANEOUS|PASSIVE) READY [0-9]+ [0-9]+$", line) is not None:
+            if re.match("^(SIMULTANEOUS|PASSIVE) READY [0-9]+ [0-9]+$", line)\
+                    is not None:
                 # Get type.
                 node_type, passive_port, max_inbound = re.findall("^(SIMULTANEOUS|PASSIVE) READY ([0-9]+) ([0-9]+)", line)[0]
                 node_type = node_type.lower()
@@ -343,7 +352,7 @@ class RendezvousProtocol(LineReceiver):
 
                 # Passive doesn't have a candidates list.
                 if node_type == "simultaneous":
-                    if not node_ip in self.factory.candidates:
+                    if node_ip not in self.factory.candidates:
                         self.factory.candidates[node_ip] = []
                     else:
                         self.cleanup_candidates(node_ip)
@@ -383,7 +392,8 @@ class RendezvousProtocol(LineReceiver):
                         break
 
                     # Not connected.
-                    if not self.factory.nodes["simultaneous"][node_ip]["con"].connected:
+                    if not self.factory.nodes["simultaneous"][node_ip]["con"].\
+                            connected:
                         print("Candidate not connected.")
                         break
 
@@ -399,7 +409,8 @@ class RendezvousProtocol(LineReceiver):
                     # Delete candidate if it already exists.
                     if node_ip in self.factory.candidates:
                         # Max candidates reached.
-                        if len(self.factory.candidates[node_ip]) >= self.max_candidates:
+                        num_candidates = len(self.factory.candidates[node_ip])
+                        if num_candidates >= self.max_candidates:
                             print("Candidate max candidates reached.")
                             break
 
@@ -421,8 +432,8 @@ class RendezvousProtocol(LineReceiver):
                     self.synchronize_simultaneous(node_ip)
                     break
 
-
-            # Node wishes to respond to a simultaneous open challenge from a client.
+            # Node wishes to respond to a simultaneous open challenge from
+            # a client.
             if re.match("^ACCEPT", line) is not None:
                 # ACCEPT 192.168.0.1 4552 345 TCP 1412137849.288068
                 p = "^ACCEPT ([0-9]+[.][0-9]+[.][0-9]+[.][0-9]+)"
@@ -435,7 +446,7 @@ class RendezvousProtocol(LineReceiver):
                     client_ip, predictions, proto, ntp = parts[0]
 
                     # Invalid IP address.
-                    node_ip = self.transport.getPeer().host                
+                    node_ip = self.transport.getPeer().host
                     if node_ip not in self.factory.candidates:
                         break
 
@@ -452,7 +463,8 @@ class RendezvousProtocol(LineReceiver):
                     ntp = ntp
                     t = time.time()
                     minute = 60 * 10
-                    if int(float(ntp)) < t - minute or int(float(ntp)) > t + minute:
+                    if int(float(ntp)) < t - minute or\
+                            int(float(ntp)) > t + minute:
                         break
 
                     # Relay fight to client_ip.
@@ -463,9 +475,10 @@ class RendezvousProtocol(LineReceiver):
                             candidate["con"].send_line(msg)
 
                             """
-                            Signal to propogate_candidates() not to relay this candidate again.
-                             Note that this occurs after a valid accept which
-                             thus counts as acknowledging receiving the challenge.
+                            Signal to propogate_candidates() not to relay this
+                            candidate again. Note that this occurs after a
+                            valid accept which thus counts as acknowledging
+                            receiving the challenge.
                             """
                             candidate["propogated"] = 1
                             break

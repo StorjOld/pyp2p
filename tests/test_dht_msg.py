@@ -1,8 +1,6 @@
-from unittest import TestCase
-from pyp2p.lib import *
-from pyp2p.dht_msg import DHT
-import random
 import logging
+from unittest import TestCase
+from pyp2p.dht_msg import DHT
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
