@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-
+import os
+import re
 import struct
 import socket
 import select
-import netifaces
+import platform
 
 """
 NAT-PMP client library
@@ -243,7 +244,39 @@ class NATPMPUnsupportedError(NATPMPError):
 
 
 def get_gateway_addr():
-    return netifaces.gateways()["default"][netifaces.AF_INET][0]
+    """Use netifaces to get the gateway address, if we can't import it then
+       fall back to a hack to obtain the current gateway automatically, since
+       Python has no interface to sysctl().
+
+       This may or may not be the gateway we should be contacting.
+       It does not guarantee correct results.
+
+       This function requires the presence of netstat on the path on POSIX
+    and NT.
+    """
+    try:
+        import netifaces
+        return netifaces.gateways()["default"][netifaces.AF_INET][0]
+    except ImportError:
+        shell_command = 'netstat -rn'
+        if os.name == "posix":
+            pattern = \
+                re.compile('(?:default|0\.0\.0\.0|::/0)\s+([\w\.:]+)\s+.*UG')
+        elif os.name == "nt":
+            if platform.version().startswith("6.1"):
+                pattern = re.compile(".*?0.0.0.0[ ]+0.0.0.0[ ]+(.*?)[ ]+?.*?\n")
+            else:
+                pattern = re.compile(".*?Default Gateway:[ ]+(.*?)\n")
+        system_out = os.popen(shell_command, 'r').read()
+        if not system_out:
+            raise NATPMPNetworkError(NATPMP_GATEWAY_CANNOT_FIND,
+                                     error_str(NATPMP_GATEWAY_CANNOT_FIND))
+        match = pattern.search(system_out)
+        if not match:
+            raise NATPMPNetworkError(NATPMP_GATEWAY_CANNOT_FIND,
+                                     error_str(NATPMP_GATEWAY_CANNOT_FIND))
+        addr = match.groups()[0].strip()
+        return addr
 
 
 def error_str(result_code):
@@ -286,7 +319,6 @@ def get_public_address(gateway_ip=None, retry=9):
     """
     if gateway_ip is None:
         gateway_ip = get_gateway_addr()
-    addr = None
     addr_request = PublicAddressRequest()
     addr_response = send_request_with_retry(gateway_ip, addr_request,
                                             response_data_class=
@@ -444,9 +476,9 @@ class NatPMP:
             dest_port = src_port
 
         if proto == "TCP":
-            proto = 1
+            proto = NATPMP_PROTOCOL_UDP
         else:
-            proto = 2
+            proto = NATPMP_PROTOCOL_TCP
         return map_port(proto, src_port, dest_port)
 
 if __name__ == "__main__":
