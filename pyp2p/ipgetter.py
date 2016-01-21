@@ -36,18 +36,16 @@ from threading import Timer
 
 from sys import version_info
 
-PY3K = version_info >= (3, 0)
+from future.standard_library import install_aliases
+install_aliases()
+import urllib
 
-if PY3K:
-    import urllib.request as urllib
-else:
-    import urllib2 as urllib
 
 __version__ = "0.6"
 
 
 def myip():
-    return IPgetter().get_externalip()
+    return IPgetter().get_external_ip()
 
 
 class IPgetter(object):
@@ -109,10 +107,10 @@ class IPgetter(object):
         self.timeout = 1.6
         self.url = None
 
-    def get_externalip(self):
-        '''
+    def get_external_ip(self):
+        """
         This function gets your IP from a random server
-        '''
+        """
 
         random.shuffle(self.server_list)
         myip = ''
@@ -130,14 +128,15 @@ class IPgetter(object):
             self.url = None
 
     def fetch(self, server):
-        '''
+        """
         This function gets your IP from a specific server
-        '''
+        """
         t = None
         socket_default_timeout = socket.getdefaulttimeout()
         opener = urllib.build_opener()
         opener.addheaders = [('User-agent',
-                              "Mozilla/5.0 (X11; Linux x86_64; rv:24.0) Gecko/20100101 Firefox/24.0")]
+                              "Mozilla/5.0 (X11; Linux x86_64; rv:24.0)"
+                              " Gecko/20100101 Firefox/24.0")]
 
         try:
             # Close url resource if fetching not finished within timeout.
@@ -163,7 +162,7 @@ class IPgetter(object):
                 except UnicodeDecodeError:
                     content = content.decode('ISO-8859-1')
 
-            p  = '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.('
+            p = '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.('
             p += '25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|['
             p += '01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
             m = re.search(

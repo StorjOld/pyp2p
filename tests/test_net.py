@@ -1,15 +1,11 @@
+import unittest
 from unittest import TestCase
-from pyp2p.lib import *
-from pyp2p.dht_msg import DHT
+
+from twisted.internet import reactor
+
 from pyp2p.net import *
 from pyp2p.sys_clock import SysClock
-from twisted.internet import reactor
-from pyp2p.rendezvous_client import RendezvousClient
-from pyp2p.rendezvous_server import RendezvousFactory, RendezvousProtocol, LineReceiver
-import random
-from threading import Thread
-import time
-import unittest
+from pyp2p.rendezvous_server import RendezvousFactory
 
 
 class TestNet(TestCase):
@@ -78,11 +74,10 @@ class TestNet(TestCase):
             passive_port=0,
             servers=rendezvous_servers
         ).start()
-        assert(net.enable_bootstrap)
+        assert net.enable_bootstrap
         net.bootstrap()
         assert(len(net.outbound))
         net.stop()
-
 
         time.sleep(2)
         rendezvous_servers = [
@@ -118,7 +113,7 @@ class TestNet(TestCase):
         time.sleep(2)
         print(lan_ip)
         sock = Sock(lan_ip, 8001, blocking=1)
-        assert(sock.connected)
+        assert sock.connected
 
         # Test bootstrap.
         sock.send_line("BOOTSTRAP 5")
@@ -138,7 +133,7 @@ class TestNet(TestCase):
         assert("REMOTE" in ret)
 
         # Test candidate.
-        msg = "CANDIDATE %s TCP 3232 2345 2245" % (lan_ip)
+        msg = "CANDIDATE %s TCP 3232 2345 2245" % lan_ip
         sock.send_line(msg)
         ret = sock.recv_line()
         assert("PREDICTION" in ret)
@@ -197,14 +192,15 @@ class TestNet(TestCase):
         unl_value = "AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc="
         for i in range(0, 5):
             """
-            The reason this test sometimes fails is due to
-             timing: the packets need to cross in such a way that the timing for the connects that Travis CI makes to the
-              NATed' test node need to arrive -BEFORE- the
-               test nodes connect times out otherwise
-                subsequent connects from Travis yield RST packets.
+            The reason this test sometimes fails is due to timing: the packets
+            need to cross in such a way that the timing for the connects that
+            Travis CI makes to the NATed' test node need to arrive -BEFORE- the
+            test nodes connect times out otherwise subsequent connects from
+            Travis yield RST packets.
 
-            The TCP setup for the NATed test node isn't a true NAT / is typical of NATs that are in the wild.
-            Alternatively: the hosts are too close.
+            The TCP setup for the NATed test node isn't a true NAT / is typical
+            of NATs that are in the wild. Alternatively: the hosts are too
+            close.
             """
             net.unl.connect(unl_value, events)
 
@@ -228,12 +224,12 @@ class TestNet(TestCase):
         net.stop()
 
         if not connected:
-            assert(0)
+            assert 0
 
     def test_net_config(self):
         """
-        Tests whether the Net class behaviours as expected relative to manually setting networking info
-         and interacting with key functions.
+        Tests whether the Net class behaviours as expected relative to manually
+        setting networking info and interacting with key functions.
 
         "enable_bootstrap": "default",
         "enable_advertise": "default",
@@ -498,11 +494,12 @@ class TestNet(TestCase):
             net.start()
 
             # Check net is started.
-            assert(net != None)
+            assert(net is not None)
             assert(net.is_net_started == 1)
 
             # Check duplicate connections state.
-            assert(net.enable_duplicate_ip_cons == test["expected"]["duplicate_cons"])
+            assert(net.enable_duplicate_ip_cons ==
+                   test["expected"]["duplicate_cons"])
 
             # Check config.
             for key in list(config):
@@ -523,7 +520,7 @@ class TestNet(TestCase):
 
             # Check the passive server is started.
             if config["node_type"] == "passive":
-                assert(net.passive != None)
+                assert(net.passive is not None)
 
             # Setup functions to check.
             functions = {
@@ -542,8 +539,8 @@ class TestNet(TestCase):
                 if expected == "self":
                     assert(ret == net)
 
-                if expected == None:
-                    assert(ret == None)
+                if expected is None:
+                    assert(ret is None)
 
             # Stop net.
             net.stop()
@@ -580,7 +577,8 @@ class TestNet(TestCase):
 
         # Buld networks.
         for node in nodes:
-            node["net"] = Net(net_type="direct", node_type="passive", passive_port=node["port"], debug=1)
+            node["net"] = Net(net_type="direct", node_type="passive",
+                              passive_port=node["port"], debug=1)
             node["net"].disable_forwarding()
             node["net"].disable_bootstrap()
             node["net"].disable_advertise()
@@ -591,7 +589,8 @@ class TestNet(TestCase):
 
         """
         Make connections.
-        Note: duplicate connections will be rejected resulting in just one connection from one node to the other nodes.
+        Note: duplicate connections will be rejected resulting in just one
+        connection from one node to the other nodes.
         """
         for our_node in nodes:
             for their_node in nodes:
@@ -600,7 +599,8 @@ class TestNet(TestCase):
                     continue
 
                 # Connect to them.
-                our_node["net"].add_node(get_lan_ip(), their_node["port"], "passive")
+                our_node["net"].add_node(get_lan_ip(), their_node["port"],
+                                         "passive")
 
         # Accept cons:
         for node in nodes:
@@ -620,8 +620,8 @@ class TestNet(TestCase):
             for con in node["net"]:
                 con.set_blocking(blocking=1, timeout=5)
                 line = con.recv_line()
-                assert(con.connected)
-                assert(line == "test")
+                assert con.connected
+                assert line == "test"
 
         # Close cons.
         for node in nodes:
@@ -636,13 +636,15 @@ class TestNet(TestCase):
     def test_00000001(self):
         # Test seen messages
         from pyp2p.net import rendezvous_servers
-        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct", passive_port=10234)
+        net = Net(debug=1, nat_type="preserving", node_type="simultaneous",
+                  net_type="direct", passive_port=10234)
         net.disable_advertise()
         net.disable_bootstrap()
         net.disable_duplicates()
         net.start()
         for i in range(0, 2):
-            con = net.add_node(rendezvous_servers[i]["addr"], rendezvous_servers[i]["port"], "passive")
+            con = net.add_node(rendezvous_servers[i]["addr"],
+                               rendezvous_servers[i]["port"], "passive")
             if con is not None:
                 break
 
@@ -697,13 +699,15 @@ class TestNet(TestCase):
 
     def test_00000002(self):
         from pyp2p.net import forwarding_servers
-        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct", passive_port=40408)
+        net = Net(debug=1, nat_type="preserving", node_type="simultaneous",
+                  net_type="direct", passive_port=40408)
         net.disable_advertise()
         net.disable_bootstrap()
         net.start()
 
         # Test passive outbound connection.
-        net.add_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"], "passive")
+        net.add_node(forwarding_servers[0]["addr"],
+                     forwarding_servers[0]["port"], "passive")
         assert(len(net.outbound) == 1)
         assert(net.get_connection_no() == 1)
 
@@ -712,10 +716,11 @@ class TestNet(TestCase):
         def threaded_add_node(node_ip, node_port, node_type, net, events):
             def add_node(node_ip, node_port, node_type, net, events):
                 con = net.add_node(node_ip, node_port, node_type)
-                if con != None:
+                if con is not None:
                     events["success"](con)
 
-            t = Thread(target=add_node, args=(node_ip, node_port, node_type, net, events))
+            t = Thread(target=add_node,
+                       args=(node_ip, node_port, node_type, net, events))
             t.start()
 
         cons = []
@@ -749,10 +754,10 @@ class TestNet(TestCase):
             for con in cons:
                 con.close()
         else:
-            assert(0)
+            assert 0
 
         def failure_notify(con):
-            assert(0)
+            assert 0
 
         def success_notify(con):
             con.close()
@@ -766,9 +771,11 @@ class TestNet(TestCase):
         # NATed VPS: AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc=
 
         # This is the not-NATed test node.
-        net.unl.connect("AlNFMHVDaEVJZ3FnZjl2cXVLcVV1c2dtRMUG79qiBu/aotbFMn4=", events)
+        net.unl.connect("AlNFMHVDaEVJZ3FnZjl2cXVLcVV1c2dtRMUG79qiBu/aotbFMn4=",
+                        events)
 
-        assert(net.validate_node(forwarding_servers[0]["addr"], forwarding_servers[0]["port"]))
+        assert(net.validate_node(forwarding_servers[0]["addr"],
+                                 forwarding_servers[0]["port"]))
 
         time.sleep(15)
 
@@ -776,13 +783,16 @@ class TestNet(TestCase):
 
     def test_queued_sim_open(self):
         # Test add node.
-        net = Net(debug=1, nat_type="preserving", node_type="simultaneous", net_type="direct", passive_port=20283)
+        net = Net(debug=1, nat_type="preserving", node_type="simultaneous",
+                  net_type="direct", passive_port=20283)
         net.disable_advertise()
         net.disable_bootstrap()
         net.start()
 
-        net.unl.connect("AlNFMHVDaEVJZ3FnZjl2cXVLcVV1c2dtRMUG79qiBu/aotbFMn4=", events=None)
-        net.unl.connect("AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc=", events=None)
+        net.unl.connect("AlNFMHVDaEVJZ3FnZjl2cXVLcVV1c2dtRMUG79qiBu/aotbFMn4=",
+                        events=None)
+        net.unl.connect("AnRBam11OG1IUEhGVkRKOHQ3cEs4c2dtRMWDYbvALwOowOEG0lc=",
+                        events=None)
         time.sleep(2)
         assert(len(net.unl.pending_sim_open) == 2)
         net.stop()

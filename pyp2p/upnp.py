@@ -1,18 +1,12 @@
+import select
+
 from .lib import *
 from .sock import *
-import re, sys, select, socket, time
 
-try:
-    from urllib.request import urlopen
-    from urllib.request import Request
-except:
-    from urllib2 import urlopen
-    from urllib2 import Request
+from future.moves.urllib.request import urlopen, Request
 
-import multiprocessing
-import threading
-import subprocess
 import platform
+import subprocess
 from threading import Thread
 
 """
@@ -28,7 +22,7 @@ for the code.
 """
 
 
-class UPnP():
+class UPnP:
     def __init__(self, interface=u"default"):
         """
         Port used to listen to UPnP replies on.
@@ -63,14 +57,14 @@ class UPnP():
 
         # Create socket for UDP broadcasts.
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('', self.upnp_port)) # All addresses.
+        s.bind(('', self.upnp_port))  # All addresses.
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         s.setblocking(0)
 
         # Broadcast search message to multicast address.
-        search_msg =  b"M-SEARCH * HTTP/1.1\r\n"
+        search_msg = b"M-SEARCH * HTTP/1.1\r\n"
         search_msg += b"HOST: %s" + self.multicast + b":"
-        if sys.version_info >= (3,0,0):
+        if sys.version_info >= (3, 0, 0):
             search_msg += str(self.upnp_port).encode("ascii")
         else:
             search_msg += str(self.upnp_port)
@@ -94,23 +88,27 @@ class UPnP():
             s = None
 
         # Error: no UPnP replies - try guess gateway.
-        if replies == []:
+        if not replies:
             default_gateway = get_default_gateway(self.interface)
             if default_gateway is None or default_gateway == {}:
                 return None
             else:
                 # Optimise scanning.
-                likely_candidates = [80, 1780, 1900, 1981, 2468, 5555, 5678, 49000, 55345, 65535]
+                likely_candidates = [80, 1780, 1900, 1981, 2468, 5555, 5678,
+                                     49000, 55345, 65535]
 
                 def check_gateway(self, ip, port):
                     try:
                         # Fast connect() / SYN open scanning.
-                        s = Sock(ip, port, blocking=1, timeout=5, interface=self.interface)
+                        s = Sock(ip, port, blocking=1, timeout=5,
+                                 interface=self.interface)
                         s.close()
 
                         # Build http request.
-                        gateway_addr = "http://" + str(ip) + ":" + str(port) + "/"
-                        buf = urlopen(gateway_addr, timeout=self.timeout).read().decode("utf-8")
+                        gateway_addr = "http://" + str(ip) + ":" +\
+                                       str(port) + "/"
+                        buf = urlopen(gateway_addr, timeout=self.timeout).\
+                            read().decode("utf-8")
 
                         # Check response is XML and device is a router.
                         if 'InternetGatewayDevice' in buf:
@@ -120,7 +118,8 @@ class UPnP():
 
                 # Brute force port by scanning.
                 for port in likely_candidates:
-                    t = Thread(target=check_gateway, args=(self, default_gateway, port))
+                    t = Thread(target=check_gateway,
+                               args=(self, default_gateway, port))
                     t.start()
 
                 time.sleep(5)
@@ -187,8 +186,12 @@ class UPnP():
 
         # Use UPnP binary for forwarding on Windows.
         if platform.system() == "Windows":
-            cmd = "upnpc-static.exe -a %s %s %s %s" % (get_lan_ip(), str(src_port), str(dest_port), proto)
-            out, err = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+            cmd = "upnpc-static.exe -a %s %s %s %s" % (get_lan_ip(),
+                                                       str(src_port),
+                                                       str(dest_port),
+                                                       proto)
+            out, err = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE).communicate()
             if "is not recognized" in err:
                 raise Exception("Missing upnpc-static.exe")
             
@@ -205,13 +208,14 @@ class UPnP():
         res = res.replace('\r', '')
         res = res.replace('\n', '')
         res = res.replace('\t', '')
-        pres = res.split('<serviceId>urn:upnp-org:serviceId:WANIPConn1</serviceId>')
+        pres = res.split('<serviceId>urn:upnp-org:serviceId:WANIPConn1'
+                         '</serviceId>')
         p2res = pres[1].split('</controlURL>')
         p3res = p2res[0].split('<controlURL>')
         ctrl = p3res[1]
         rip = res.split('<presentationURL>')
         rip1 = rip[1].split('</presentationURL>')
-        routerIP = rip1[0]
+        router_ip = rip1[0]
 
         port_map_desc = "PyP2P"
         msg = \
@@ -223,7 +227,7 @@ class UPnP():
 
         # Attempt to add new port map.
         x = 'http://' + rhost[1] + '/' + ctrl
-        if sys.version_info >= (3,0,0):
+        if sys.version_info >= (3, 0, 0):
             msg = bytes(msg, "utf-8")
 
         req = Request('http://' + rhost[1] + '/' + ctrl, msg)
@@ -247,5 +251,3 @@ if __name__ == "__main__":
     print(UPnP().forward_port("TCP", port, addr))
     print(is_port_forwarded(get_lan_ip(), str(port), "TCP", forwarding_servers))
     """
-
-
