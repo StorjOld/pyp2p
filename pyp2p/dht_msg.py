@@ -9,9 +9,9 @@ import string
 import binascii
 
 try:
-    from Queue import Queue, Full  # py2
+    from Queue import Queue  # py2
 except ImportError:
-    from queue import Queue, Full  # py3
+    from queue import Queue  # py3
 
 import time
 import logging
@@ -82,10 +82,9 @@ class DHT:
             call += urlencode({"password": password})
 
             # Make API call.
-            response = requests.get(call, timeout=5)
+            requests.get(call, timeout=5)
             return 1
-        except Exception as e:
-            print(e)
+        except Exception:
             self.debug_print("Register timed out in DHT msg")
             time.sleep(1)
             self.register(node_id, password, no)
@@ -113,7 +112,6 @@ class DHT:
         if node_id in self.relay_links:
             relay_link = self.relay_links[node_id]
             msg = self.build_dht_response(msg)
-            print("in relay link put")
             relay_link.protocol.messages_received.put_nowait(msg)
             return
 
