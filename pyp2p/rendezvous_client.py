@@ -415,18 +415,7 @@ class RendezvousClient:
 
         # Get current network time accurate to
         # ~50 ms over WAN (apparently.)
-        gc.disable()
-        sys.setcheckinterval(999999999)
-        if sys.version_info > (3, 0, 0):
-            sys.setswitchinterval(1000)
-        p = psutil.Process(os.getpid())
-        try:
-            if platform.system() == "Windows":
-                p.nice(psutil.HIGH_PRIORITY_CLASS)
-            else:
-                p.nice(10)
-        except psutil.AccessDenied:
-            pass
+        p = request_priority_execution()
         log.debug("Getting NTP")
         if self.sys_clock is not None:
             our_ntp = self.sys_clock.time()
@@ -453,17 +442,7 @@ class RendezvousClient:
             return 0
 
         busy_wait(sleep_time)
-        sys.setcheckinterval(100)
-        if sys.version_info > (3, 0, 0):
-            sys.setswitchinterval(0.005)
-        try:
-            if platform.system() == "Windows":
-                p.nice(psutil.NORMAL_PRIORITY_CLASS)
-            else:
-                p.nice(5)
-        except psutil.AccessDenied:
-            pass
-        gc.enable()
+        release_priority_execution(p)
 
         log.debug("At fight")
         """
