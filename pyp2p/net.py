@@ -827,6 +827,10 @@ class Net:
                 self.debug_print(unl)
                 self.debug_print(con.unl)
                 if unl == con.unl:
+                    # Connection not ready.
+                    if con.nonce is None and self.net_type == "direct":
+                        continue
+
                     return con
             else:
                 self.debug_print("\a")
@@ -841,7 +845,7 @@ class Net:
             # Used to block UNLs until nonces are received.
             # Otherwise they might try do I/O and ruin their protocols.
             if self.net_type == "direct":
-                if node["con"].nonce is None:
+                if node["con"].nonce is None and self.net_type == "direct":
                     continue
 
             if node["ip"] == ip:
@@ -903,7 +907,7 @@ class Net:
     def con_by_id(self, expected_id):
         for node in self.outbound + self.inbound:
             # Nothing to test.
-            if node["con"].nonce is None:
+            if node["con"].nonce is None and self.net_type == "direct":
                 self.debug_print("Nonce not set")
                 continue
 

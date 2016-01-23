@@ -58,4 +58,3 @@ net.stop()
 
 if not connected:
     assert 0
-
