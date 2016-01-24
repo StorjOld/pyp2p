@@ -36,9 +36,7 @@ from threading import Timer
 
 from sys import version_info
 
-from future.standard_library import install_aliases
-install_aliases()
-import urllib
+from future.moves import urllib
 
 
 __version__ = "0.6"
