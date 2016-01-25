@@ -33,8 +33,7 @@ def get_unused_port(port=None):
         try:
             s.bind(('', port))  # Try to open port
         except socket.error as e:
-            if e.errno in (98, 10048):  # Error num 98 or 10048 means address
-                                        # already bound
+            if e.errno in (98, 10048):  # 98, 10048 means address already bound
                 return get_unused_port(None)
             raise e
         s.close()
