@@ -423,6 +423,3 @@ Overwrite:
 
         # Unpatch sock.send.
         Sock.send = unpatched_send
-
-
-

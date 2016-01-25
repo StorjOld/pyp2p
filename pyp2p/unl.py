@@ -121,6 +121,14 @@ class UNL:
 
         int_our_unl = int(binascii.hexlify(our_unl), 16)
         int_their_unl = int(binascii.hexlify(their_unl), 16)
+        if int_our_unl == int_their_unl:
+            print("=================================")
+            print("OUR UNL == THEIR UNL EDGE CASE")
+            print(int_our_unl)
+            print(our_unl)
+            print(int_their_unl)
+            print(their_unl)
+
         if int_our_unl > int_their_unl:
             master = 1
         else:

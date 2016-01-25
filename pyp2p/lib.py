@@ -3,7 +3,8 @@ import os
 import struct
 import sys
 import time
-
+import psutil
+import gc
 import ipaddress
 import ntplib
 from future.moves.urllib.request import urlopen
@@ -398,11 +399,39 @@ def get_wan_ip(n=0):
     time.sleep(1)
     return get_wan_ip(n + 1)
 
+
+def request_priority_execution():
+    gc.disable()
+    sys.setcheckinterval(999999999)
+    if sys.version_info > (3, 0, 0):
+        sys.setswitchinterval(1000)
+    p = psutil.Process(os.getpid())
+    try:
+        if platform.system() == "Windows":
+            p.nice(psutil.HIGH_PRIORITY_CLASS)
+        else:
+            p.nice(10)
+    except psutil.AccessDenied:
+        pass
+
+    return p
+
+
+def release_priority_execution(p):
+    sys.setcheckinterval(100)
+    if sys.version_info > (3, 0, 0):
+        sys.setswitchinterval(0.005)
+    try:
+        if platform.system() == "Windows":
+            p.nice(psutil.NORMAL_PRIORITY_CLASS)
+        else:
+            p.nice(5)
+    except psutil.AccessDenied:
+        pass
+    gc.enable()
+
 if __name__ == "__main__":
     # print(get_wan_ip())
     # pass
     print("In lib")
-
-
-
 
