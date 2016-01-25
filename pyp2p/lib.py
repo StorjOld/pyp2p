@@ -25,7 +25,7 @@ else:
 
 def get_unused_port(port=None):
     """Checks if port is already in use."""
-    if port is None or port <= 1024 or port >= 65535:
+    if port is None or port < 1024 or port > 65535:
         port = random.randint(1024, 65535)
     assert(1024 <= port <= 65535)
     while True:
