@@ -23,7 +23,7 @@ else:
     ip = None
 
 
-def get_unused_port(port):
+def get_unused_port(port=None):
     """Checks if port is already in use."""
     if port is None or port <= 1024 or port >= 65535:
         port = random.randint(1024, 65535)
