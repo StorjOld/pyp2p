@@ -7,6 +7,7 @@ import psutil
 import gc
 import ipaddress
 import ntplib
+import re
 from future.moves.urllib.request import urlopen
 
 import traceback
@@ -365,6 +366,14 @@ def memoize(function):
     return wrapper
 
 
+def extract_ip(s):
+    ip = re.findall("[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+", s)
+    if len(ip):
+        return ip[0]
+
+    return ""
+
+
 @memoize
 def get_wan_ip(n=0):
     """
@@ -374,14 +383,18 @@ def get_wan_ip(n=0):
     our own infrastructure.
     """
 
-    if n == 5:
+    if n == 2:
         try:
-            return myip()
-        except:
+            ip = myip()
+            ip = extract_ip(ip)
+            if is_ip_valid(ip):
+                return ip
+        except Exception as e:
+            print(str(e))
             return None
 
     # Fail-safe: use centralized server for IP lookup.
-    from .net import forwarding_servers
+    from pyp2p.net import forwarding_servers
     for forwarding_server in forwarding_servers:
         url = "http://" + forwarding_server["addr"] + ":"
         url += str(forwarding_server["port"])
@@ -390,9 +403,11 @@ def get_wan_ip(n=0):
         try:
             r = urlopen(url, timeout=5)
             response = r.read().decode("utf-8")
+            response = extract_ip(response)
             if is_ip_valid(response):
                 return response
-        except:
+        except Exception as e:
+            print(str(e))
             continue
 
     time.sleep(1)

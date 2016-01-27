@@ -55,12 +55,12 @@ rendezvous_servers = [
 # And get WAN IP address.
 forwarding_servers = [
     {
-        "addr": "158.69.201.105",
+        "addr": "185.86.149.128",
         "port": 80,
-        "url": "/pyp2p/net.php"
+        "url": "/net.php"
     },
     {
-        "addr": "185.86.149.128",
+        "addr": "185.61.148.22",
         "port": 80,
         "url": "/net.php"
     }

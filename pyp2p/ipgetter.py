@@ -36,8 +36,9 @@ from threading import Timer
 
 from sys import version_info
 
-from future.moves import urllib
-
+import future.moves.urllib.request
+urllib = future.moves.urllib.request
+PY3K = version_info >= (3, 0)
 
 __version__ = "0.6"
 
