@@ -46,7 +46,7 @@ if(isset($_GET["ip"]))
     $ip = $_GET["ip"];
 }
 
-$port = "";
+$port = "1";
 if(isset($_GET["port"]))
 {
     $port = $_GET["port"];
@@ -74,6 +74,7 @@ if(isset($_GET["list_pop"]))
 if(!empty($call) && !empty($node_id))
 {
     #Check password.
+    $node = 0;
     if(($call == "list" && $list_pop == 1) || ($call != "register" && $call != "list"))
     {
         $node = check_password($node_id, $password);
@@ -297,7 +298,10 @@ if(!empty($call) && !empty($node_id))
             }
             
             #Update node last alive.
-            node_last_alive($node);
+            if($node != 0)
+            {
+                node_last_alive($node);
+            }
 
             #Return messages as JSON.
             echo(json_encode($messages));

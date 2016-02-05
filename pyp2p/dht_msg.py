@@ -317,7 +317,7 @@ class DHT:
                 call = dht_msg_endpoint + "?call=put&"
                 call += urlencode({"dest_node_id": node_id}) + "&"
                 msg = self.serialize_message(msg)
-                call += urlencode({"msg": str(msg)}) + "&"
+                call += urlencode({"msg": msg}) + "&"
                 call += urlencode({"node_id": self.node_id}) + "&"
                 call += urlencode({"password": self.password}) + "&"
                 call += urlencode({"list_pop": list_pop})
