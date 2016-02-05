@@ -1,64 +1,210 @@
 <?php
 
-
-#dht_msg.php?call=register&node_id=node&password=pass
-#dht_msg.php?call=put&node_id=node&msg=test
+#dht_msg.php?call=register&node_id=node&password=pass&ip=127.0.0.1&port=1337
+#dht_msg.php?call=put&node_id=node&password=pass&dest_node_id=node&msg=test
 #dht_msg.php?call=list&node_id=node&password=pass
+#dht_msg.php?call=get_mutex&node_id=node&password=pass
+#dht_msg.php?call=last_alive&node_id=node&password=pass
+#dht_msg.php?call=find_neighbours&node_id=node&password=pass
 
 require_once("config.php");
+require_once("lib.php");
 
-//Connect to DB.
-$con = mysql_connect($config["db"]["host"], $config["db"]["user"], $config["db"]["pass"]);
-if(!$con) {
-    die('Not connected : ' . mysql_error());
-}
+//Get connection.
+$con = get_con();
 
-//Select DB.
-$db_selected = mysql_select_db($config["db"]["name"], $con);
-if(!$db_selected) {
-    die('Can\'t use foo : ' . mysql_error());
-}
+//Cleanup old DHT + relay messages.
+cleanup_messages();
 
 //No cache.
 header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
 
-function get_node($node_id)
+#Parse URL vars.
+$call = "";
+if(isset($_GET["call"]))
 {
-    global $con;
-
-    $node_id = mysql_real_escape_string($node_id);
-    $sql = "SELECT * FROM `nodes` WHERE `node_id`='$node_id';";
-    $result = mysql_query($sql, $con);
-
-    $ret = mysql_fetch_assoc($result);
-    return $ret;
+    $call = $_GET["call"];
 }
 
-function get_messages($node_id)
+$node_id = "";
+if(isset($_GET["node_id"]))
 {
-    global $con;
+    $node_id = $_GET["node_id"];
+}
 
-    $node_id = mysql_real_escape_string($node_id);
-    $sql = "SELECT * FROM `messages` WHERE `node_id`='$node_id';";
-    $result = mysql_query($sql, $con);
-    $messages = array();
-    while($row = mysql_fetch_assoc($result)) {
-        $messages[] = $row["message"];
+$password = "";
+if(isset($_GET["password"]))
+{
+    $password = $_GET["password"];
+}
+
+$ip = $_SERVER['REMOTE_ADDR'];
+if(isset($_GET["ip"]))
+{
+    $ip = $_GET["ip"];
+}
+
+$port = "";
+if(isset($_GET["port"]))
+{
+    $port = $_GET["port"];
+}
+
+$network_id = "default";
+if(isset($_GET["network_id"]))
+{
+    $network_id = $_GET["network_id"];
+}
+
+$list_pop = 1;
+if(isset($_GET["list_pop"]))
+{
+    $temp = $_GET["list_pop"];
+    if(is_numeric($temp))
+    {
+        if($temp >= 0 && $temp <= 1)
+        {
+            $list_pop = $temp;
+        }
     }
-
-    return $messages;
 }
 
-$call = $_GET["call"];
-$node_id = $_GET["node_id"];
 if(!empty($call) && !empty($node_id))
 {
+    #Check password.
+    if(($call == "list" && $list_pop == 1) || ($call != "register" && $call != "list"))
+    {
+        $node = check_password($node_id, $password);
+        if($node == 0)
+        {
+            echo("failure");
+            $call = "";
+        }
+    }
+    
+    
     switch($call)
     {
+        case "find_neighbours":
+            global $con;
+            global $config;
+            
+            $limit = $config["neighbour_limit"];
+            start_transaction($con);
+            $timestamp = time();
+            $freshness = time() - $config["alive_timeout"];
+            $network_id = mysql_real_escape_string($network_id, $con);
+            $nodes = array();
+            
+            #Fetch one random node to reserve for testing.
+            if($node["has_mutex"] == 1)
+            {
+                #Fetch nodes to reserve.
+                $sql = "SELECT * FROM `nodes` WHERE (`reservation_expiry`<$timestamp  OR `reservation_expiry`=0) AND `last_alive`>=$freshness AND `network_id`='$network_id' ORDER BY rand() LIMIT 1 FOR UPDATE";
+                $result = mysql_query($sql, $con);
+                while($row = mysql_fetch_assoc($result))
+                {
+                    $row["can_test"] = 1;
+                    $nodes[] = $row;
+                }
+                
+                #Reserve those nodes.
+                $expiry = time() + $config["reservation_timeout"];
+                foreach($nodes as $value)
+                {
+                    $id = $value["id"];
+                    $sql = "UPDATE `nodes` SET `reservation_expiry`=$expiry WHERE `id`=$id";
+                    mysql_query($sql, $con);
+                }
+                
+                #Reduce limit for next section (since we just got a node.)
+                $limit -= 1;
+            }
+            
+            #Fetch remaining nodes.
+            if($limit)
+            {
+                $sql = "SELECT * FROM `nodes` WHERE `last_alive`>=$freshness AND `network_id`='$network_id' ORDER BY rand() LIMIT $limit FOR UPDATE";
+                $result = mysql_query($sql, $con);
+                while($row = mysql_fetch_assoc($result))
+                {
+                    $row["can_test"] = 0;
+                    $nodes[] = $row;
+                }
+            }
+            
+            end_transaction($con, 1);
+            
+            $neighbours = array();
+            foreach($nodes as $value)
+            {
+                $neighbour = array();
+                $neighbour["ip"] = $value["ip"];
+                $neighbour["port"] = $value["port"];
+                $neighbour["id"] = $value["node_id"];
+                $neighbour["can_test"] = $value["can_test"];
+                if($value["node_id"] == $node["node_id"])
+                {
+                    continue;
+                }
+                $neighbours[] = $neighbour;
+            }
+            
+            #Return messages as JSON.
+            echo(json_encode($neighbours));
+            break;
+            
+        case "last_alive":
+            #Update node last alive.
+            node_last_alive($node);
+            
+            echo("success");
+            break;
+        
+        case "get_mutex":
+            global $con;
+            global $config;
+                        
+            #Get mutex -- causes new nodes that join to have evenly distributed
+            #mutexes so tests line up perfectly. After that - its random.
+            start_transaction($con);
+            #mysql_query("LOCK TABLES `nodes` WRITE", $con);
+            $sql = "SELECT * FROM `nodes` WHERE `id`=" . $node["id"] . "FOR UPDATE";
+            mysql_query($sql, $con);
+            $fresh_node_no = count_fresh_nodes($con);
+            #$config["neighbour_limit"] + 1
+            if($fresh_node_no % 2 == 0 && $fresh_node_no != 0)
+            {
+                $has_mutex = 1;
+            }
+            else
+            {
+                $has_mutex = 0;
+            }
+            
+            #Already has a mutex -- use random.
+            if($node["has_mutex"] != -1)
+            {
+                $has_mutex = rand(0, 1);
+            }
+            
+            
+            echo($has_mutex);
+            
+            $id = $node["id"];
+            $last_alive = time();
+            $sql = "UPDATE `nodes` SET `has_mutex`=$has_mutex,`last_alive`=$last_alive WHERE `id`=$id";
+            mysql_query($sql, $con);
+            #mysql_query("UNLOCK TABLES", $con);
+            end_transaction($con, 1);
+            
+            break;
+        
         case "register":
-            $password = $_GET["password"];
+            global $con;
+        
             if(empty($password))
             {
                 break;
@@ -67,54 +213,81 @@ if(!empty($call) && !empty($node_id))
             #Register new node.
             if(get_node($node_id) == FALSE)
             {
-                $node_id = mysql_real_escape_string($node_id);
-                $password = mysql_real_escape_string($password);
-                $sql = "INSERT INTO `nodes` (`node_id`, `password`) VALUES ('$node_id', '$password');";
+                $node_id = mysql_real_escape_string($node_id, $con);
+                $password = mysql_real_escape_string($password, $con);
+                $ip = mysql_real_escape_string($ip, $con);
+                $port = mysql_real_escape_string($port, $con);
+                $network_id = mysql_real_escape_string($network_id, $con);
+                $timestamp = time();
+                $sql = "INSERT INTO `nodes` (`node_id`, `ip`, `port`, `password`, `last_alive`, `reservation_expiry`, `network_id`) VALUES ('$node_id', '$ip', $port, '$password', $timestamp, 0, '$network_id');";
                 mysql_query($sql);
             }
-
+            else
+            {
+                echo("Already registered.");
+            }
+            
+            echo("success");
             break;
 
         case "put":
+            global $con;
+            global $config;
+        
             $msg = $_GET["msg"];
             if(empty($msg))
             {
+                echo("failure");
                 break;
             }
-
+            
+            $dest_node_id = $_GET["dest_node_id"];
+            if(empty($dest_node_id))
+            {
+                echo("failure");
+                break;
+            }
+            
             #Put message into DB.
-            $msg = mysql_real_escape_string($msg);
-            $node_id = mysql_real_escape_string($node_id);
-            $sql = "INSERT INTO `messages` (`node_id`, `message`) VALUES ('$node_id', '$msg');";
+            $msg = mysql_real_escape_string($msg, $con);
+            $dest_node_id = mysql_real_escape_string($dest_node_id, $con);
+            $timestamp = time();
+            $expiry = time() + $config["message_timeout"];
+            $sql = "INSERT INTO `messages` (`node_id`, `message`, `list_pop`, `timestamp`, `cleanup_expiry`) VALUES ('$dest_node_id', '$msg', $list_pop, $timestamp, $expiry);";
             mysql_query($sql);
+            echo("success");
             break;
 
         case "list":
-            $password = $_GET["password"];
-            if(empty($password))
+            global $con;
+            global $config;
+            
+            if($config["long_polling"])
             {
-                break;
+                $messages = array();
+                while(!count($messages))
+                {
+                    // Long poll - kind of.
+                    list ($messages, $old_ids) = get_messages($node_id, $list_pop);
+                    usleep(10000);
+                }
             }
-
-            #Check password.
-            $password = mysql_real_escape_string($password);
-            $node = get_node($node_id);
-            if($node == FALSE)
+            else
             {
-                break;
+                list ($messages, $old_ids) = get_messages($node_id, $list_pop);
             }
-            if($node["password"] != $password)
-            {
-                break;
-            }
-
-            #Get messages.
-            $messages = get_messages($node_id);
 
             #Delete old messages.
-            $node_id = mysql_real_escape_string($node_id);
-            $sql = "DELETE FROM `messages` WHERE `node_id`='$node_id'";
-            mysql_query($sql);
+            $node_id = mysql_real_escape_string($node_id, $con);
+            foreach($old_ids as $old_id)
+            {
+                $old_id = mysql_real_escape_string($old_id, $con);
+                $sql = "DELETE FROM `messages` WHERE `id`='$old_id' AND `list_pop`=1";
+                mysql_query($sql);
+            }
+            
+            #Update node last alive.
+            node_last_alive($node);
 
             #Return messages as JSON.
             echo(json_encode($messages));
@@ -126,7 +299,8 @@ if(!empty($call) && !empty($node_id))
     }
 }
 
-//All done.
 mysql_close($con);
+flush();
+ob_flush();
 
 ?>

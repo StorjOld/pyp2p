@@ -40,7 +40,7 @@ class DHTProtocol:
 
 
 class DHT:
-    def __init__(self, node_id=None, ip=None, port=0, password=None, network_id="default", debug=1, networking=1):
+    def __init__(self, node_id=None, ip=None, port=0, password=None, network_id="default", debug=0, networking=1):
         self.node_id = node_id or self.rand_str(20)
         if sys.version_info >= (3, 0, 0):
             if type(self.node_id) == str:
@@ -84,8 +84,6 @@ class DHT:
         self.message_handlers = set()
 
     def stop(self):
-        print("sim dht stop + ")
-        print(self.handles)
         self.running = 0
         for handle in self.handles:
             handle.close()
@@ -121,10 +119,7 @@ class DHT:
     def check_for_new_messages(self):
         def do(args):
             for msg in self.list(self.node_id, self.password):
-                print("queuing new message")
-                print(msg)
                 self.protocol.messages_received.put(msg)
-                print("Done queuing new msg")
 
             return 0
 
@@ -266,8 +261,6 @@ class DHT:
         self.retry_in_thread(do, mappings)
 
     def build_dht_response(self, msg):
-        print("build dht response")
-        print(msg)
         msg = binascii.unhexlify(msg)
         msg = umsgpack.unpackb(msg)
         try:
@@ -287,13 +280,11 @@ class DHT:
     def async_dht_put(self, key, value):
         d = defer.Deferred()
         def do(args):
-            print("stuck in put")
             t = self.put(key, value, list_pop=0)
             while t.isAlive():
                 time.sleep(1)
 
             d.callback("success")
-            print("out of put")
             return 1
 
         self.retry_in_thread(do)
@@ -302,29 +293,20 @@ class DHT:
     def async_dht_get(self, key):
         d = defer.Deferred()
         def do(args):
-            print("stuck in get")
             ret = self.list(node_id=key, list_pop=0, timeout=5)
-            print(ret)
-
-            print("out of get")
-
             if len(ret):
-                print("len ret")
                 d.callback(ret[0])
             else:
-                print("Returning none")
                 d.callback(None)
             return 1
 
         self.retry_in_thread(do)
-        print("about to return get")
         return d
 
     def put(self, node_id, msg, list_pop=1):
         def do(node_id, msg):
             self.debug_print("Sim DHT Put " + str(node_id))
             if node_id in self.relay_links:
-                print("Relay static put")
                 relay_link = self.relay_links[node_id]
                 msg = self.build_dht_response(self.serialize_message(msg))
                 relay_link.protocol.messages_received.put_nowait(msg)
@@ -344,7 +326,6 @@ class DHT:
                 ret = requests.get(call, timeout=5)
                 self.handles.append(ret)
                 if "success" not in ret.text:
-                    print("Put failed")
                     return 0
 
                 self.debug_print(ret.text)
@@ -377,7 +358,6 @@ class DHT:
             call += urlencode({"node_id": node_id}) + "&"
             call += urlencode({"password": password}) + "&"
             call += urlencode({"list_pop": list_pop})
-            print(call)
 
             # Make API call.
             if timeout is None:
@@ -413,7 +393,6 @@ class DHT:
         return self.send_direct_message(node_id, msg)
 
     def relay_message(self, node_id, msg):
-        print("Relaying to node: " + str(node_id))
         return self.send_direct_message(node_id, msg)
 
     def repeat_relay_message(self, node_id, msg):
