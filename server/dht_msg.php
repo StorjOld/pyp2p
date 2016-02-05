@@ -119,7 +119,7 @@ if(!empty($call) && !empty($node_id))
                 foreach($nodes as $value)
                 {
                     $id = $value["id"];
-                    $id = mysql_real_escape_string($expiry, $id);
+                    $id = mysql_real_escape_string($id, $con);
                     $sql = "UPDATE `nodes` SET `reservation_expiry`=$expiry WHERE `id`=$id";
                     mysql_query($sql, $con);
                 }
@@ -176,7 +176,7 @@ if(!empty($call) && !empty($node_id))
             #mutexes so tests line up perfectly. After that - its random.
             start_transaction($con);
             #mysql_query("LOCK TABLES `nodes` WRITE", $con);
-            $node_id = mysql_real_escape_string($node["id"], $id);
+            $node_id = mysql_real_escape_string($node["id"], $con);
             $sql = "SELECT * FROM `nodes` WHERE `id`=" . $node_id . "FOR UPDATE";
             mysql_query($sql, $con);
             $fresh_node_no = count_fresh_nodes($con);
@@ -201,8 +201,8 @@ if(!empty($call) && !empty($node_id))
             
             $id = $node["id"];
             $last_alive = time();
-            $id = mysql_real_escape_string($id, $id);
-            $last_alive = mysql_real_escape_string($last_alive, $id);
+            $id = mysql_real_escape_string($id, $con);
+            $last_alive = mysql_real_escape_string($last_alive, $con);
             $sql = "UPDATE `nodes` SET `has_mutex`=$has_mutex,`last_alive`=$last_alive WHERE `id`=$id";
             mysql_query($sql, $con);
             #mysql_query("UNLOCK TABLES", $con);
