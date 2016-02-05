@@ -1,4 +1,5 @@
-import Queue
+import future
+from queue import Queue
 from pyp2p.net import *
 from pyp2p.sock import Sock
 from unittest import TestCase

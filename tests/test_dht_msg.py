@@ -1,5 +1,6 @@
+import future
 import logging
-import Queue
+from queue import Queue
 from unittest import TestCase
 from pyp2p.dht_msg import DHT
 
