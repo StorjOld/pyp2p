@@ -1,3 +1,4 @@
+storjkademlia
 psutil
 netifaces >= 0.10.4
 ntplib >= 0.3.3

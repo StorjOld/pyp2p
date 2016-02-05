@@ -1,3 +1,4 @@
+import Queue
 from pyp2p.net import *
 from pyp2p.sock import Sock
 from unittest import TestCase
@@ -107,11 +108,16 @@ class TestUNL(TestCase):
     def test_reverse_connect(self):
         # Setup Alice as master.
         alice_dht = DHT()
+        bob_dht = DHT()
+        alice_dht.protocol.messages_received = Queue.Queue()
+        bob_dht.protocol.messages_received = Queue.Queue()
+        bob_dht.add_relay_link(alice_dht)
+        alice_dht.add_relay_link(bob_dht)
         alice_direct = Net(
             net_type="direct",
             node_type="passive",
             nat_type="preserving",
-            passive_port="34005",
+            passive_port=0,
             dht_node=alice_dht,
             debug=1
         ).start()
@@ -119,15 +125,15 @@ class TestUNL(TestCase):
         assert(alice_direct.node_type == "passive")
 
         # Setup Bob as slave.
-        bob_dht = DHT()
         bob_direct = Net(
             net_type="direct",
             node_type="active",
             nat_type="preserving",
-            passive_port="34009",
+            passive_port=0,
             dht_node=bob_dht,
             debug=1
         ).start()
+
 
         assert(bob_direct.node_type == "active")
 

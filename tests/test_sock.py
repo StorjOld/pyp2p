@@ -93,7 +93,7 @@ class SockDownload:
         os.close(fp)
         remaining = file_size
         with open(path, "ab") as fp:
-            future = time.time() + 10
+            future = time.time() + 30 # Slow connections are slow.
             while con.connected and remaining:
                 data = con.recv(remaining, encoding=encoding)
                 if len(data):
