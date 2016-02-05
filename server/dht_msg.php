@@ -102,6 +102,7 @@ if(!empty($call) && !empty($node_id))
             $nodes = array();
             
             #Fetch one random node to reserve for testing.
+            $restrictions = "";
             if($node["has_mutex"] == 1)
             {
                 #Fetch nodes to reserve.
@@ -111,6 +112,8 @@ if(!empty($call) && !empty($node_id))
                 {
                     $row["can_test"] = 1;
                     $nodes[] = $row;
+                    $node_id = mysql_real_escape_string($row["id"], $con);
+                    $restrictions = " AND `id`<>$node_id";
                 }
                 
                 #Reserve those nodes.
@@ -131,7 +134,7 @@ if(!empty($call) && !empty($node_id))
             #Fetch remaining nodes.
             if($limit)
             {
-                $sql = "SELECT * FROM `nodes` WHERE `last_alive`>=$freshness AND `network_id`='$network_id' ORDER BY rand() LIMIT $limit FOR UPDATE";
+                $sql = "SELECT * FROM `nodes` WHERE `last_alive`>=$freshness AND `network_id`='$network_id' $restrictions ORDER BY rand() LIMIT $limit FOR UPDATE";
                 $result = mysql_query($sql, $con);
                 while($row = mysql_fetch_assoc($result))
                 {

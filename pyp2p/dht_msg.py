@@ -23,8 +23,8 @@ except ImportError:
 import time
 import logging
 
-dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
-# dht_msg_endpoint = "http://localhost/dht_msg.php"
+# dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
+dht_msg_endpoint = "http://localhost/dht_msg.php"
 logging.basicConfig()
 log = logging.getLogger(__name__)
 
@@ -137,7 +137,7 @@ class DHT:
 
             # Make API call.
             ret = requests.get(call, timeout=5).text
-            if ret in ("1", "0"):
+            if "1" in ret or "2" in ret:
                 self.has_mutex = int(ret)
             self.is_mutex_ready.set()
 
@@ -164,6 +164,13 @@ class DHT:
             if neighbour.id == id:
                 if neighbour.can_test:
                     return 1
+
+        return 0
+
+    def has_testable_neighbours(self):
+        for neighbour in self.neighbours:
+            if neighbour.can_test:
+                return 1
 
         return 0
 
@@ -195,7 +202,7 @@ class DHT:
                     id=binascii.unhexlify(neighbour["id"].encode("ascii")),
                     ip=neighbour["ip"],
                     port=neighbour["port"],
-                    can_test=int(neighbour["port"])
+                    can_test=int(neighbour["can_test"])
                 )
 
                 neighbours.append(knode)
