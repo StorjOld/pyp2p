@@ -23,8 +23,8 @@ except ImportError:
 import time
 import logging
 
-# dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
-dht_msg_endpoint = "http://localhost/dht_msg.php"
+dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
+# dht_msg_endpoint = "http://localhost/dht_msg.php"
 logging.basicConfig()
 log = logging.getLogger(__name__)
 
