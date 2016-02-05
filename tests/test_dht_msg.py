@@ -25,8 +25,8 @@ class TestDHTMsg(TestCase):
     def test_relay_link(self):
         bob = DHT(networking=0)
         alice = DHT(networking=0)
-        alice.protocol.messages_received = Queue.Queue()
-        bob.protocol.messages_received = Queue.Queue()
+        alice.protocol.messages_received = Queue()
+        bob.protocol.messages_received = Queue()
         bob.add_relay_link(alice)
         alice.add_relay_link(bob)
         msg = u"test"

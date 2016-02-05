@@ -110,8 +110,8 @@ class TestUNL(TestCase):
         # Setup Alice as master.
         alice_dht = DHT()
         bob_dht = DHT()
-        alice_dht.protocol.messages_received = Queue.Queue()
-        bob_dht.protocol.messages_received = Queue.Queue()
+        alice_dht.protocol.messages_received = Queue()
+        bob_dht.protocol.messages_received = Queue()
         bob_dht.add_relay_link(alice_dht)
         alice_dht.add_relay_link(bob_dht)
         alice_direct = Net(
