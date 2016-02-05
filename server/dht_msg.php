@@ -94,7 +94,9 @@ if(!empty($call) && !empty($node_id))
             $limit = $config["neighbour_limit"];
             start_transaction($con);
             $timestamp = time();
+            $timestamp = mysql_real_escape_string($timestamp, $con);
             $freshness = time() - $config["alive_timeout"];
+            $freshness = mysql_real_escape_string($freshness, $con);
             $network_id = mysql_real_escape_string($network_id, $con);
             $nodes = array();
             
@@ -112,9 +114,11 @@ if(!empty($call) && !empty($node_id))
                 
                 #Reserve those nodes.
                 $expiry = time() + $config["reservation_timeout"];
+                $expiry = mysql_real_escape_string($expiry, $con);
                 foreach($nodes as $value)
                 {
                     $id = $value["id"];
+                    $id = mysql_real_escape_string($expiry, $id);
                     $sql = "UPDATE `nodes` SET `reservation_expiry`=$expiry WHERE `id`=$id";
                     mysql_query($sql, $con);
                 }
@@ -171,7 +175,8 @@ if(!empty($call) && !empty($node_id))
             #mutexes so tests line up perfectly. After that - its random.
             start_transaction($con);
             #mysql_query("LOCK TABLES `nodes` WRITE", $con);
-            $sql = "SELECT * FROM `nodes` WHERE `id`=" . $node["id"] . "FOR UPDATE";
+            $node_id = mysql_real_escape_string($node["id"], $id);
+            $sql = "SELECT * FROM `nodes` WHERE `id`=" . $node_id . "FOR UPDATE";
             mysql_query($sql, $con);
             $fresh_node_no = count_fresh_nodes($con);
             #$config["neighbour_limit"] + 1
@@ -191,10 +196,12 @@ if(!empty($call) && !empty($node_id))
             }
             
             
-            echo($has_mutex);
+            echo(htmlspecialchars($has_mutex));
             
             $id = $node["id"];
             $last_alive = time();
+            $id = mysql_real_escape_string($id, $id);
+            $last_alive = mysql_real_escape_string($last_alive, $id);
             $sql = "UPDATE `nodes` SET `has_mutex`=$has_mutex,`last_alive`=$last_alive WHERE `id`=$id";
             mysql_query($sql, $con);
             #mysql_query("UNLOCK TABLES", $con);
@@ -253,6 +260,9 @@ if(!empty($call) && !empty($node_id))
             $dest_node_id = mysql_real_escape_string($dest_node_id, $con);
             $timestamp = time();
             $expiry = time() + $config["message_timeout"];
+            $list_pop = mysql_real_escape_string($list_pop, $con);
+            $timestamp = mysql_real_escape_string($timestamp, $con);
+            $expiry = mysql_real_escape_string($expiry, $con);
             $sql = "INSERT INTO `messages` (`node_id`, `message`, `list_pop`, `timestamp`, `cleanup_expiry`) VALUES ('$dest_node_id', '$msg', $list_pop, $timestamp, $expiry);";
             mysql_query($sql);
             echo("success");

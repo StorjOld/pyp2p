@@ -23,15 +23,15 @@ except ImportError:
 import time
 import logging
 
-# dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
-dht_msg_endpoint = "http://localhost/dht_msg.php"
+dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
+# dht_msg_endpoint = "http://localhost/dht_msg.php"
 logging.basicConfig()
 log = logging.getLogger(__name__)
 
 LONG_POLLING = True
 RESERVATION_TIMEOUT = (10 * 60) - 5
 MUTEX_TIMEOUT = RESERVATION_TIMEOUT
-ALIVE_TIMEOUT = 120 - 5
+ALIVE_TIMEOUT = 60 - 5
 
 
 class DHTProtocol:
@@ -215,7 +215,8 @@ class DHT:
         self.relay_links[node_id.decode("utf-8")] = dht
 
     def debug_print(self, msg):
-        print(str(msg))
+        if self.debug:
+            print(str(msg))
 
     def add_message_handler(self, handler):
         self.message_handlers.add(handler)
@@ -305,7 +306,6 @@ class DHT:
 
     def put(self, node_id, msg, list_pop=1):
         def do(node_id, msg):
-            self.debug_print("Sim DHT Put " + str(node_id))
             if node_id in self.relay_links:
                 relay_link = self.relay_links[node_id]
                 msg = self.build_dht_response(self.serialize_message(msg))
@@ -328,7 +328,6 @@ class DHT:
                 if "success" not in ret.text:
                     return 0
 
-                self.debug_print(ret.text)
                 return 1
 
             except Exception as e:

@@ -25,6 +25,7 @@ function count_fresh_nodes($con)
     global $config;
     
     $freshness = time() - $config["alive_timeout"];
+    $freshness = mysql_real_escape_string($freshness, $con);
     $sql = "SELECT COUNT(DISTINCT `id`) as total FROM `nodes` WHERE `last_alive` >= $freshness";
     $result = mysql_query($sql, $con);
     $data = mysql_fetch_assoc($result);
@@ -69,6 +70,7 @@ function get_messages($node_id, $list_pop)
     global $con;
     
     $node_id = mysql_real_escape_string($node_id, $con);
+    $list_pop = mysql_real_escape_string($list_pop, $con);
     $sql = "SELECT * FROM `messages` WHERE `node_id`='$node_id' AND `list_pop`=$list_pop";
     $result = mysql_query($sql, $con);
     $messages = array();
@@ -104,8 +106,9 @@ function node_last_alive($node)
 {
     global $con;
     
-    $id = mysql_real_escape_string($node["id"]);
+    $id = mysql_real_escape_string($node["id"], $con);
     $last_alive = time();
+    $last_alive = mysql_real_escape_string($last_alive, $con);
     $sql = "UPDATE `nodes` SET `last_alive`=$last_alive WHERE `id`=$id";
     mysql_query($sql, $con);
 }
@@ -115,6 +118,7 @@ function cleanup_messages()
     global $con;
     
     $timestamp = time();
+    $timestamp = mysql_real_escape_string($timestamp, $con);
     $sql = "DELETE FROM `messages` WHERE `cleanup_expiry`<=$timestamp";
     mysql_query($sql, $con);
 }
