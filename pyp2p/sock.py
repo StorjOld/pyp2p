@@ -91,8 +91,8 @@ class Sock:
             self.set_blocking(self.blocking, self.timeout)
 
     def debug_print(self, msg):
-        msg = "> " + str(msg)
         if self.debug:
+            msg = "> " + str(msg)
             print(msg)
 
     def set_keep_alive(self, sock, after_idle_sec=5, interval_sec=60,
@@ -294,7 +294,6 @@ class Sock:
             max_chunks = fixed_limit
 
         self.debug_print("Get chunks blocking mode = ")
-        self.debug_print(str(self.s.gettimeout()))
         while repeat:
             chunk_size = self.chunk_size
             while True:
@@ -356,7 +355,6 @@ class Sock:
                             self.buf += chunk.decode("utf-8")
                         else:
                             self.buf += chunk.decode("latin-1")
-                        self.alive = time.time()
                     except Exception as e:
                         self.debug_print(e)
                         self.debug_print("Get chunk: can't decode.")
@@ -382,7 +380,6 @@ class Sock:
                     # Partial response.
                     if self.delimiter not in self.buf:
                         repeat = 1
-                        time.sleep(wait)
 
     def reply_callback(self, callback):
         self.reply_callback = callback
@@ -407,21 +404,10 @@ class Sock:
     def send(self, msg, send_all=0, timeout=5):
         # Sanity check.
         assert (len(msg))
-        # Not connected.
-        if not self.connected:
-            return 0
 
         # Update timeout.
         if timeout != self.timeout and self.blocking:
             self.set_blocking(self.blocking, timeout)
-
-        # Check socket is in correct blocking mode.
-        if self.debug:
-            blocking = self.s.gettimeout()
-            if self.blocking:
-                assert (blocking >= 1 or blocking is None)
-            else:
-                assert (blocking == 0.0)
 
         try:
             # Convert to bytes Python 2 & 3
@@ -432,31 +418,28 @@ class Sock:
                 if type(msg) == unicode:
                     msg = str(msg)
 
+            # Work out stop time.
+            if send_all:
+                future = time.time() + (timeout or self.timeout)
+            else:
+                future = 0
+
             repeat = 1
             total_sent = 0
-            future = time.time() + (timeout or self.timeout)
             while repeat:
                 repeat = 0
                 while True:
                     # Attempt to send all.
                     # This won't work if the network buffer is already full.
                     try:
-                        self.debug_print("Attempting to send: ")
-                        self.debug_print(
-                                str(len(msg[total_sent:self.chunk_size])))
-                        self.debug_print(
-                                "Blocking mode = " + str(self.s.gettimeout()))
                         bytes_sent = self.s.send(
                                 msg[total_sent:self.chunk_size])
                     except socket.timeout as e:
                         err = e.args[0]
-                        self.debug_print("Con send: " + str(e))
-                        self.debug_print(err)
                         if err == "timed out":
                             return 0
                     except socket.error as e:
                         err = e.args[0]
-                        self.debug_print("Con send: " + str(e))
                         if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
                             break
                         else:
@@ -467,8 +450,6 @@ class Sock:
 
                     # Connection broken.
                     if not bytes_sent or bytes_sent is None:
-                        self.debug_print(bytes_sent)
-                        self.debug_print("Con send bytes none!")
                         self.close()
                         return 0
 
@@ -487,19 +468,16 @@ class Sock:
                     if not send_all:
                         break
 
-                    # Avoid 100% CPU.
-                    time.sleep(0.002)
-
                 # Avoid looping forever.
-                if time.time() >= future:
-                    repeat = 0
-                    break
+                if send_all:
+                    if time.time() >= future:
+                        repeat = 0
+                        break
 
                 # Send the rest if blocking:
                 if total_sent < len(msg) and send_all:
                     repeat = 1
 
-            self.alive = time.time()
             return total_sent
         except Exception as e:
             self.debug_print("Con send: " + str(e))
@@ -512,51 +490,19 @@ class Sock:
         # Sanity checking.
         assert n
 
-        # Disconnect.
-        if not self.connected:
-            if encoding == "unicode":
-                return u""
-            else:
-                return b""
-
         # Update timeout.
         if timeout != self.timeout and self.blocking:
             self.set_blocking(self.blocking, timeout)
 
-        # Check socket is in correct blocking mode.
-        if self.debug:
-            blocking = self.s.gettimeout()
-            if self.blocking:
-                assert (blocking >= 1 or blocking is None)
-            else:
-                assert (blocking == 0.0)
-
         try:
-            # Save current buffer state.
-            temp_buf = self.buf[:]
-
-            # Clear buffer.
-            self.buf = u""
-
             # Get data.
-            future = time.time() + (timeout or self.timeout)
-            while True:
-                self.get_chunks(n, encoding=encoding)
-                if not (len(self.buf) < n and self.connected and self.blocking):
-                    break
+            self.get_chunks(n, encoding=encoding)
 
-                # Avoid 100% CPU.
-                time.sleep(0.002)
+            # Return the current buffer.
+            ret = self.buf
 
-                # Avoid looping forever.
-                if time.time() >= future:
-                    break
-
-            # Save current buffer.
-            ret = self.buf[:]
-
-            # Restore old buffer.
-            self.buf = temp_buf
+            # Reset the old buffer.
+            self.buf = u""
 
             # Return results.
             if encoding != "unicode":
@@ -686,9 +632,6 @@ class Sock:
                 # Timeout elapsed.
                 if time.time() >= future and self.blocking:
                     break
-
-                # Avoid 100% CPU.
-                time.sleep(0.002)
 
             if len(self.replies):
                 temp = self.replies[0]
