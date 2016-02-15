@@ -24,7 +24,7 @@ import time
 import logging
 
 dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
-# dht_msg_endpoint = "http://localhost/dht_msg.php"
+dht_msg_endpoint = "http://localhost/dht_msg.php"
 logging.basicConfig()
 log = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class DHTProtocol:
 
 
 class DHT:
-    def __init__(self, node_id=None, ip=None, port=0, password=None, network_id="default", debug=0, networking=1):
+    def __init__(self, node_id=None, ip=None, port=0, password=None, network_id="default", debug=1, networking=1):
         self.node_id = node_id or self.rand_str(20)
         if sys.version_info >= (3, 0, 0):
             if type(self.node_id) == str:

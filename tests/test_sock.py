@@ -96,6 +96,7 @@ class SockDownload:
             future = time.time() + 30 # Slow connections are slow.
             while con.connected and remaining:
                 data = con.recv(remaining, encoding=encoding)
+                print(type(data))
                 if len(data):
                     remaining -= len(data)
                     fp.write(data)
@@ -257,36 +258,12 @@ class TestSock(TestCase):
         assert(ret == b"R")
         ret = s.recv_line()
         assert(u"EMOTE" in ret)
-        s.close()
-
-    def test_recv_recvline_switch(self):
-        client = RendezvousClient(nat_type="preserving",
-                                  rendezvous_servers=rendezvous_servers)
-        s = client.server_connect()
-        s.send_line("SOURCE TCP 32")
-        ret = s.recv(1)
-        assert(ret[0] == u"R")
-        assert(not len(s.buf))
-        s.buf = u"test"
-        ret = s.recv(1)
-        assert(ret[0] == u"E")
-        assert(s.buf == u"test")
-        s.buf = u"example\r\nxsfsdf"
-        junk = s.buf[:]
         s.send_line("SOURCE TCP 50")
-
-        ret = s.recv_line()
-        print(ret)
-        assert("example" in ret)
-        print(s.buf)
-        print(junk)
-        ret = s.recv_line()
-        assert("xsfsdf" in ret)
-        print(s.buf)
-        print(junk)
-        ret = s.recv_line()
-        assert("MOTE" in ret)
-
+        ret = s.recv(1, encoding="unicode")
+        if sys.version_info >= (3, 0, 0):
+            assert(type(ret) == str)
+        else:
+            assert(type(ret) == unicode)
         s.close()
 
     def test_0000001_sock(self):
@@ -339,41 +316,41 @@ class TestSock(TestCase):
         s.close()
 
         s = Sock()
-        s.buf = "\r\nx\r\n"
+        s.buf = b"\r\nx\r\n"
         x = s.parse_buf()
         assert (x[0] == "x")
 
-        s.buf = "\r\n"
+        s.buf = b"\r\n"
         x = s.parse_buf()
         assert (x == [])
 
-        s.buf = "\r\n\r\n"
+        s.buf = b"\r\n\r\n"
         x = s.parse_buf()
         assert (x == [])
 
-        s.buf = "\r\r\n\r\n"
+        s.buf = b"\r\r\n\r\n"
         x = s.parse_buf()
         assert (x[0] == "\r")
 
-        s.buf = "\r\n\r\n\r\nx"
+        s.buf = b"\r\n\r\n\r\nx"
         x = s.parse_buf()
         assert (x == [])
 
-        s.buf = "\r\n\r\nx\r\nsdfsdfsdf\r\n"
+        s.buf = b"\r\n\r\nx\r\nsdfsdfsdf\r\n"
         x = s.parse_buf()
         assert (x[0] == "x" and x[1] == "sdfsdfsdf")
 
-        s.buf = "sdfsdfsdf\r\n"
+        s.buf = b"sdfsdfsdf\r\n"
         s.parse_buf()
-        s.buf += "abc\r\n"
+        s.buf += b"abc\r\n"
         x = s.parse_buf()
         assert (x[0] == "abc")
 
-        s.buf += "\r\ns\r\n"
+        s.buf += b"\r\ns\r\n"
         x = s.parse_buf()
         assert (x[0] == "s")
 
-        s.buf = "reply 1\r\nreply 2\r\n"
+        s.buf = b"reply 1\r\nreply 2\r\n"
         s.replies = []
         s.update()
         assert (s.pop_reply(), "reply 1")

@@ -714,7 +714,8 @@ class RendezvousClient:
             # This gives them the timewait state (we also connect to another
             # server anyway so as to avoid using the exact same con tuple.)
             con.send_line("SOURCE TCP " + str(source_port))
-            remote_port = self.parse_remote_port(con.recv_line(timeout=2))
+            remote_port = con.recv_line(timeout=2)
+            remote_port = self.parse_remote_port(remote_port)
             con.send_line("QUIT")
 
             return source_port, remote_port, server

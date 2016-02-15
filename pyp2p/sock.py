@@ -46,6 +46,7 @@ import sys
 import time
 
 from pyp2p.lib import get_lan_ip, parse_exception, log_exception
+from pyp2p.lib import encode_str
 
 error_log_path = "error.log"
 
@@ -56,7 +57,7 @@ class Sock:
         self.nonce = None
         self.nonce_buf = u""
         self.reply_filter = None
-        self.buf = u""
+        self.buf = b""
         self.max_buf = 1024 * 1024  # 1 MB.
         self.max_chunks = 1024  # Prevents spamming of multiple short messages.
         self.chunk_size = 1024 * 4
@@ -73,7 +74,7 @@ class Sock:
 
         self.connected = 0
         self.interface = interface
-        self.delimiter = u"\r\n"
+        self.delimiter = b"\r\n"
         self.debug = debug
 
         # Set keep alive.
@@ -127,13 +128,8 @@ class Sock:
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
     def set_blocking(self, blocking, timeout=5):
-        self.debug_print(self.s is None)
-        self.debug_print("TRYING to set blocking")
-
         if self.s is None:
             return
-
-        self.debug_print("Setting blocking")
 
         # Update blocking mode.
         self.s.setblocking(blocking)
@@ -148,7 +144,6 @@ class Sock:
         self.blocking = blocking
 
     def set_sock(self, s):
-        self.debug_print("Setting sock")
         self.close()  # Close old socket.
         self.s = s
         self.set_blocking(self.blocking, self.timeout)
@@ -197,8 +192,6 @@ class Sock:
                     raise e
 
         try:
-            self.debug_print(addr)
-            self.debug_print(port)
             self.s.connect((addr, int(port)))
             self.connected = 1
             self.set_blocking(self.blocking, self.timeout)
@@ -211,7 +204,6 @@ class Sock:
 
     def close(self):
         self.connected = 0
-        self.debug_print("Closing con!!!")
 
         # Attempt graceful shutdown.
         try:
@@ -225,7 +217,8 @@ class Sock:
 
         self.s = None
 
-    def parse_buf(self):
+
+    def parse_buf(self, encoding="unicode"):
         """
         Since TCP is a stream-orientated protocol, responses aren't guaranteed
         to be complete when they arrive. The buffer stores all the data and
@@ -234,11 +227,13 @@ class Sock:
         """
         buf_len = len(self.buf)
         replies = []
-        reply = u""
+        reply = b""
         chop = 0
         skip = 0
         i = 0
-        for ch in self.buf:
+        buf_len = len(self.buf)
+        for i in range(0, buf_len):
+            ch = self.buf[i:i + 1]
             if skip:
                 skip -= 1
                 i += 1
@@ -246,11 +241,15 @@ class Sock:
 
             nxt = i + 1
             if nxt < buf_len:
-                if ch == u"\r" and self.buf[nxt] == u"\n":
+                if ch == b"\r" and self.buf[nxt:nxt + 1] == b"\n":
+
                     # Append new reply.
-                    if reply != u"":
-                        replies.append(reply)
-                        reply = u""
+                    if reply != b"":
+                        if encoding == "unicode":
+                            replies.append(encode_str(reply, encoding))
+                        else:
+                            replies.append(reply)
+                        reply = b""
 
                     # Truncate the whole buf if chop is out of bounds.
                     chop = nxt + 1
@@ -293,7 +292,6 @@ class Sock:
             max_buf = fixed_limit
             max_chunks = fixed_limit
 
-        self.debug_print("Get chunks blocking mode = ")
         while repeat:
             chunk_size = self.chunk_size
             while True:
@@ -333,9 +331,7 @@ class Sock:
                         return
                 except socket.error as e:
                     # Will block on nonblocking non-SSL sockets.
-                    self.debug_print("Get chunks socket.error")
                     err = e.args[0]
-                    self.debug_print(err)
                     if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
                         break
                     else:
@@ -345,21 +341,11 @@ class Sock:
                         return
                 else:
                     if chunk == b"":
-                        self.debug_print("Get chunk: b''")
                         self.close()
                         return
 
                     # Avoid decoding errors.
-                    try:
-                        if encoding == "unicode":
-                            self.buf += chunk.decode("utf-8")
-                        else:
-                            self.buf += chunk.decode("latin-1")
-                    except Exception as e:
-                        self.debug_print(e)
-                        self.debug_print("Get chunk: can't decode.")
-                        chunk_no += 1
-                        continue
+                    self.buf += chunk
 
                     # Otherwise the loop will be endless.
                     if self.blocking:
@@ -376,10 +362,11 @@ class Sock:
 
             # Block until there's a full reply or there's a timeout.
             if self.blocking:
-                if fixed_limit is None and encoding == "unicode":
+                if fixed_limit is None:
                     # Partial response.
                     if self.delimiter not in self.buf:
                         repeat = 1
+                        time.sleep(wait)
 
     def reply_callback(self, callback):
         self.reply_callback = callback
@@ -401,22 +388,16 @@ class Sock:
             self.replies = replies
 
     # Blocking or non-blocking.
-    def send(self, msg, send_all=0, timeout=5):
-        # Sanity check.
-        assert (len(msg))
-
+    def send(self, msg, send_all=0, timeout=5, encoding="ascii"):
         # Update timeout.
         if timeout != self.timeout and self.blocking:
             self.set_blocking(self.blocking, timeout)
 
         try:
             # Convert to bytes Python 2 & 3
-            if sys.version_info >= (3, 0, 0):
-                if type(msg) == str:
-                    msg = msg.encode("ascii")
-            else:
-                if type(msg) == unicode:
-                    msg = str(msg)
+            # The caller should ensure correct encoding.
+            if type(msg) == type(u""):
+                msg = encode_str(msg, "ascii")
 
             # Work out stop time.
             if send_all:
@@ -426,6 +407,7 @@ class Sock:
 
             repeat = 1
             total_sent = 0
+            msg_len = len(msg)
             while repeat:
                 repeat = 0
                 while True:
@@ -461,12 +443,15 @@ class Sock:
                         break
 
                     # Everything sent.
-                    if total_sent >= len(msg):
+                    if total_sent >= msg_len:
                         break
 
                     # Don't block.
                     if not send_all:
                         break
+
+                    # Avoid 100% CPU.
+                    time.sleep(0.001)
 
                 # Avoid looping forever.
                 if send_all:
@@ -475,7 +460,7 @@ class Sock:
                         break
 
                 # Send the rest if blocking:
-                if total_sent < len(msg) and send_all:
+                if total_sent < msg_len and send_all:
                     repeat = 1
 
             return total_sent
@@ -502,27 +487,11 @@ class Sock:
             ret = self.buf
 
             # Reset the old buffer.
-            self.buf = u""
+            self.buf = b""
 
             # Return results.
-            if encoding != "unicode":
-                # Convert from unicode string with latin-1 encoding
-                # To a byte string.
-                if sys.version_info >= (3, 0, 0):
-                    codes = []
-                    for ch in ret:
-                        codes.append(ord(ch))
-
-                    if len(codes):
-                        return bytes(codes)
-                    else:
-                        return b""
-                else:
-                    byte_str = b""
-                    for ch in ret:
-                        byte_str += chr(ord(ch))
-
-                    return byte_str
+            if encoding == "unicode":
+                ret = encode_str(ret, encoding)
 
             return ret
         except Exception as e:
@@ -549,28 +518,13 @@ class Sock:
         if timeout != self.timeout and self.blocking:
             self.set_blocking(self.blocking, timeout)
 
-        # Check socket is in correct blocking mode.
-        if self.debug:
-            blocking = self.s.gettimeout()
-            if self.blocking:
-                assert (blocking >= 1 or blocking is None)
-            else:
-                assert (blocking == 0.0)
-
         try:
             # Convert to bytes Python 2 & 3
-            if sys.version_info >= (3, 0, 0):
-                if type(msg) == str:
-                    msg = msg.encode("ascii")
-            else:
-                if type(msg) == unicode:
-                    msg = str(msg)
+            if type(msg) == type(u""):
+                msg = encode_str(msg, "ascii")
 
             # Convert delimiter to bytes.
-            if sys.version_info >= (3, 0, 0):
-                msg += self.delimiter.encode("ascii")
-            else:
-                msg += str(self.delimiter)
+            msg += self.delimiter
 
             """
             The inclusion of the send_all flag makes this function behave like
@@ -601,14 +555,6 @@ class Sock:
         if timeout != self.timeout and self.blocking:
             self.set_blocking(self.blocking, timeout)
 
-        # Check socket is in correct blocking mode.
-        if self.debug:
-            blocking = self.s.gettimeout()
-            if self.blocking:
-                assert (blocking >= 1 or blocking is None)
-            else:
-                assert (blocking == 0.0)
-
         # Return existing reply.
         if len(self.replies):
             temp = self.replies[0]
@@ -633,6 +579,9 @@ class Sock:
                 if time.time() >= future and self.blocking:
                     break
 
+                # Avoid 100% CPU.
+                time.sleep(0.002)
+
             if len(self.replies):
                 temp = self.replies[0]
                 self.replies = self.replies[1:]
@@ -640,7 +589,10 @@ class Sock:
 
             return u""
         except Exception as e:
-            pass
+            self.debug_print("recv line error")
+            error = parse_exception(e)
+            self.debug_print(error)
+            log_exception(error_log_path, error)
 
     """
     These functions here make the class behave like a list. The

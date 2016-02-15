@@ -298,6 +298,16 @@ class Net:
         # Set to 1 when self.start() has been called.
         self.is_net_started = 0
 
+        # Start synchronize thread.
+        #t = Thread(target=self.synchronize_loop)
+        #t.setDaemon(True)
+        #t.start()
+
+    def synchronize_loop(self):
+        while 1:
+            self.synchronize()
+            time.sleep(5)
+
     def debug_print(self, msg):
         log.debug(str(msg))
 

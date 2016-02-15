@@ -1,5 +1,6 @@
 import hashlib
 import tempfile
+from threading import Thread
 from pyp2p.lib import *
 from pyp2p.net import Net
 from pyp2p.sys_clock import SysClock
@@ -20,6 +21,11 @@ if sys.version_info >= (3, 0, 0):
     pass
 else:
     pass
+
+from pyp2p.rendezvous_client import RendezvousClient
+from pyp2p.net import rendezvous_servers
+
+
 
 def md5sum(fname):
     my_hash = hashlib.md5()
@@ -102,15 +108,18 @@ class SockDownload:
 
         return req
 
+"""
 fs = 10485760
 sd = SockDownload(
     url="http://cachefly.cachefly.net/10mb.test",
     expected_hash=None,
-    file_size=fs
+    file_size=fs,
+    encoding="ascii"
 )
 x = sd.start_time
 y = timer()
 print(fs)
+"""
 
 """
 x = time.time()
@@ -134,11 +143,59 @@ except urllib2.HTTPError, e:
 content = page.read()
 """
 
-y = time.time()
+node1 = Net(
+    node_type="passive",
+    nat_type="preserving",
+    passive_port=0,
+    net_type="direct"
+).start()
+
+node2 = Net(
+    node_type="passive",
+    nat_type="preserving",
+    passive_port=0,
+    net_type="direct"
+).start()
+
+fs = 1024 * 1024 * 1024 * 10
 
 
-speed = (((fs / (y - x)) / 1024) / 1024) * 8
+node2.unl.connect(node1.unl.value, {})
+#node2.add_node(get_lan_ip(), node1.passive_port, "passive")
+
+time.sleep(5)
+
+print(node2.outbound + node2.inbound)
+print(node1.outbound + node1.inbound)
+
+print(list(node1))
+
+#time.sleep(5)
+
+
+x = timer()
+
+
+chunk = b"0" * (1024 * 12)
+sent = 0
+while sent < fs:
+    for con in node2:
+        ret = con.send(chunk, encoding="ascii")
+        if ret:
+            sent += ret
+
+    for con in node1:
+        con.recv(len(chunk), encoding="ascii")
+
+
+y = timer()
+
+
+#speed = (((fs / (y - x)) / 1024) / 1024) * 8
 #print(fs)
+speed = (fs / (y - x))
 print(speed)
 
 
+for node in [node1, node2]:
+    node.stop()
