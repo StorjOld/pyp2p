@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 LONG_POLLING = True
 RESERVATION_TIMEOUT = (10 * 60) - 5
 MUTEX_TIMEOUT = RESERVATION_TIMEOUT
-ALIVE_TIMEOUT = 60 - 5
+ALIVE_TIMEOUT = (60 * 10) - 5
 
 
 class DHTProtocol:
