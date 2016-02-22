@@ -24,21 +24,18 @@ else:
     ip = None
 
 
-def get_unused_port(port=None):
+def get_unused_port():
     """Checks if port is already in use."""
-    if port is None or port < 1024 or port > 65535:
-        port = random.randint(1024, 65535)
-    assert(1024 <= port <= 65535)
-    while True:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            s.bind(('', port))  # Try to open port
-        except socket.error as e:
-            if e.errno in (98, 10048):  # 98, 10048 means address already bound
-                return get_unused_port(None)
-            raise e
-        s.close()
-        return port
+    port = random.randint(1024, 65535)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(('', port))  # Try to open port
+    except socket.error as e:
+        if e.errno in (98, 10048):  # 98, 10048 means address already bound
+            return get_unused_port()
+        raise e
+    s.close()
+    return port
 
 
 def log_exception(file_path, msg):

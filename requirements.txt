@@ -1,4 +1,4 @@
-psutil
+psutil >= 4.0.0
 netifaces >= 0.10.4
 ntplib >= 0.3.3
 twisted >= 15.4.0
