@@ -34,7 +34,7 @@ class TestNet(TestCase):
                 print(parse_exception(e))
                 pass
 
-        Thread(target=run_rendezvous_server).start()
+        run_rendezvous_server()
 
         def run_rendezvous_server():
             try:
@@ -44,11 +44,10 @@ class TestNet(TestCase):
                 print(parse_exception(e))
                 pass
 
-        Thread(target=run_rendezvous_server).start()
+        run_rendezvous_server()
 
         def run_rendezvous_server():
             try:
-                print("Starting rendezvous srever")
                 factory = RendezvousFactory()
                 reactor.listenTCP(8001, factory, interface=lan_ip)
                 reactor.run()
@@ -56,105 +55,106 @@ class TestNet(TestCase):
                 print(parse_exception(e))
                 pass
 
-        Thread(target=run_rendezvous_server).start()
+        def server_check():
+            time.sleep(2)
+            rendezvous_servers = [
+                {
+                    "addr": lan_ip,
+                    "port": 8002
+                }
+            ]
 
-        time.sleep(2)
-        rendezvous_servers = [
-            {
-                "addr": lan_ip,
-                "port": 8002
-            }
-        ]
+            net = Net(
+                debug=1,
+                net_type="p2p",
+                node_type="simultaneous",
+                nat_type="preserving",
+                passive_port=0,
+                servers=rendezvous_servers
+            ).start()
+            assert net.enable_bootstrap
+            net.bootstrap()
+            net.stop()
 
-        net = Net(
-            debug=1,
-            net_type="p2p",
-            node_type="simultaneous",
-            nat_type="preserving",
-            passive_port=0,
-            servers=rendezvous_servers
-        ).start()
-        assert net.enable_bootstrap
-        net.bootstrap()
-        assert(len(net.outbound))
-        net.stop()
+            time.sleep(2)
+            rendezvous_servers = [
+                {
+                    "addr": lan_ip,
+                    "port": 8003
+                }
+            ]
 
-        time.sleep(2)
-        rendezvous_servers = [
-            {
-                "addr": lan_ip,
-                "port": 8003
-            }
-        ]
+            alice = Net(
+                debug=1,
+                net_type="direct",
+                node_type="simultaneous",
+                nat_type="preserving",
+                passive_port=0,
+                servers=rendezvous_servers
+            ).start()
 
-        alice = Net(
-            debug=1,
-            net_type="direct",
-            node_type="simultaneous",
-            nat_type="preserving",
-            passive_port=0,
-            servers=rendezvous_servers
-        ).start()
+            bob = Net(
+                debug=1,
+                net_type="direct",
+                node_type="simultaneous",
+                nat_type="preserving",
+                passive_port=0,
+                servers=rendezvous_servers
+            ).start()
+            bob.advertise()
+            alice.add_node(lan_ip, 0, "simultaneous")
+            alice.stop()
+            bob.stop()
 
-        bob = Net(
-            debug=1,
-            net_type="direct",
-            node_type="simultaneous",
-            nat_type="preserving",
-            passive_port=0,
-            servers=rendezvous_servers
-        ).start()
-        bob.advertise()
-        alice.add_node(lan_ip, 0, "simultaneous")
-        alice.stop()
-        bob.stop()
+            print("Ready")
+            time.sleep(2)
+            print(lan_ip)
+            sock = Sock(lan_ip, 8001, blocking=1)
+            assert sock.connected
 
-        print("Ready")
-        time.sleep(2)
-        print(lan_ip)
-        sock = Sock(lan_ip, 8001, blocking=1)
-        assert sock.connected
+            # Test bootstrap.
+            sock.send_line("BOOTSTRAP 5")
+            nodes = sock.recv_line()
+            print(nodes)
+            assert("NODES" in nodes)
 
-        # Test bootstrap.
-        sock.send_line("BOOTSTRAP 5")
-        nodes = sock.recv_line()
-        print(nodes)
-        assert("NODES" in nodes)
+            # Test passive ready.
+            sock.send_line("PASSIVE READY 8001 100")
 
-        # Test passive ready.
-        sock.send_line("PASSIVE READY 8001 100")
+            # Test simultaneous ready.
+            sock.send_line("SIMULTANEOUS READY 0 100")
 
-        # Test simultaneous ready.
-        sock.send_line("SIMULTANEOUS READY 0 100")
+            # Test get remote port.
+            sock.send_line("SOURCE TCP")
+            ret = sock.recv_line()
+            assert("REMOTE" in ret)
 
-        # Test get remote port.
-        sock.send_line("SOURCE TCP")
-        ret = sock.recv_line()
-        assert("REMOTE" in ret)
+            # Test candidate.
+            msg = "CANDIDATE %s TCP 3232 2345 2245" % lan_ip
+            sock.send_line(msg)
+            ret = sock.recv_line()
+            assert("PREDICTION" in ret)
+            ret = sock.recv_line()
+            assert("CHALLENGE" in ret)
 
-        # Test candidate.
-        msg = "CANDIDATE %s TCP 3232 2345 2245" % lan_ip
-        sock.send_line(msg)
-        ret = sock.recv_line()
-        assert("PREDICTION" in ret)
-        ret = sock.recv_line()
-        assert("CHALLENGE" in ret)
+            # Test accept.
+            msg = "ACCEPT %s 3423 23423 34 TCP %s" % (lan_ip, str(time.time()))
+            sock.send_line(msg)
+            ret = sock.recv_line()
+            assert("FIGHT" in ret)
 
-        # Test accept.
-        msg = "ACCEPT %s 3423 23423 34 TCP %s" % (lan_ip, str(time.time()))
-        sock.send_line(msg)
-        ret = sock.recv_line()
-        assert("FIGHT" in ret)
+            # Test clear.
+            sock.send_line("CLEAR")
 
-        # Test clear.
-        sock.send_line("CLEAR")
+            # Test quit.
+            sock.send_line("QUIT")
 
-        # Test quit.
-        sock.send_line("QUIT")
+            # Cleanup.
+            sock.close()
+            reactor.stop()
 
-        # Cleanup.
-        sock.close()
-        reactor.stop()
+        Thread(target=server_check, args=()).start()
+        run_rendezvous_server()
 
     @unittest.skip("Not implemented")
     def test_con_by_id(self):

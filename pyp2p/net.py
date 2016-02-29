@@ -719,7 +719,10 @@ class Net:
                          " connection alive management!")
 
         # Register a cnt + c handler
-        signal.signal(signal.SIGINT, self.stop)
+        try:
+            signal.signal(signal.SIGINT, self.stop)
+        except:
+            pass
 
         # Save WAN IP.
         self.debug_print("WAN IP = " + str(self.wan_ip))
