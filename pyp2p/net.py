@@ -42,11 +42,7 @@ sim_open_interval = 2
 # Bootstrapping + TCP hole punching server.
 rendezvous_servers = [
     {
-        "addr": "185.61.148.22",
-        "port": 8000
-    },
-    {
-        "addr": "185.86.149.128",
+        "addr": "162.243.213.95",
         "port": 8000
     }
 ]
@@ -299,13 +295,14 @@ class Net:
         self.is_net_started = 0
 
         # Start synchronize thread.
-        #t = Thread(target=self.synchronize_loop)
-        #t.setDaemon(True)
-        #t.start()
+        # t = Thread(target=self.synchronize_loop)
+        # t.setDaemon(True)
+        # t.start()
 
     def synchronize_loop(self):
         while 1:
-            self.synchronize()
+            if self.is_net_started:
+                self.synchronize()
             time.sleep(5)
 
     def debug_print(self, msg):

@@ -744,6 +744,7 @@ class RendezvousClient:
             if return_instantly:
                 return nat_type
 
+        """
         # Test reuse.
         log.debug("Testing reuse")
         reuse = 0
@@ -755,6 +756,7 @@ class RendezvousClient:
             src, remote, junk = custom_server_con(mapping["source"], servers)
             if remote == mapping["remote"]:
                 reuse += 1
+
 
         # Check reuse results.
         if reuse >= (self.nat_tests - self.port_collisions):
@@ -770,6 +772,7 @@ class RendezvousClient:
                 remote_port = self.parse_remote_port(con.recv_line(timeout=2))
                 mappings[i]["remote"] = int(remote_port)
                 con.s.close()
+        """
 
         # Delta test.
         delta_ret = self.delta_test(mappings)
