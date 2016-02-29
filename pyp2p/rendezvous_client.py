@@ -714,7 +714,8 @@ class RendezvousClient:
             # This gives them the timewait state (we also connect to another
             # server anyway so as to avoid using the exact same con tuple.)
             con.send_line("SOURCE TCP " + str(source_port))
-            remote_port = self.parse_remote_port(con.recv_line(timeout=2))
+            remote_port = con.recv_line(timeout=2)
+            remote_port = self.parse_remote_port(remote_port)
             con.send_line("QUIT")
 
             return source_port, remote_port, server
@@ -743,6 +744,7 @@ class RendezvousClient:
             if return_instantly:
                 return nat_type
 
+        """
         # Test reuse.
         log.debug("Testing reuse")
         reuse = 0
@@ -754,6 +756,7 @@ class RendezvousClient:
             src, remote, junk = custom_server_con(mapping["source"], servers)
             if remote == mapping["remote"]:
                 reuse += 1
+
 
         # Check reuse results.
         if reuse >= (self.nat_tests - self.port_collisions):
@@ -769,6 +772,7 @@ class RendezvousClient:
                 remote_port = self.parse_remote_port(con.recv_line(timeout=2))
                 mappings[i]["remote"] = int(remote_port)
                 con.s.close()
+        """
 
         # Delta test.
         delta_ret = self.delta_test(mappings)

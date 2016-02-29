@@ -441,6 +441,49 @@ def release_priority_execution(p):
         pass
     gc.enable()
 
+
+def encode_str(s, encoding="unicode"):
+    # Encode unsafe binary to unicode
+    # Encode unsafe unicode to binary
+    if sys.version_info >= (3, 0, 0):
+        # str in Python 3+ is unicode.
+        if type(s) == str:
+            if encoding == "ascii":
+                # Encodes unicode directly as bytes.
+                codes = []
+                for ch in s:
+                    codes.append(ord(ch))
+
+                if len(codes):
+                    return bytes(codes)
+                else:
+                    return b""
+        else:
+            # bytes
+            if encoding == "unicode":
+                # Converts bytes to unicode.
+                return s.decode("utf-8")
+    else:
+        # unicode in python 2 is unicode.
+        if type(s) == unicode:
+            # Encodes unicode directly as bytes.
+            if encoding == "ascii":
+                byte_str = b""
+                for ch in s:
+                    byte_str += chr(ord(ch))
+
+                return byte_str
+        else:
+            # bytes.
+            if encoding == "unicode":
+                # Converts bytes to unicode.
+                return s.decode("utf-8")
+
+    if type(s) == type(u""):
+        s = s.encode("utf-8")
+
+    return s
+
 if __name__ == "__main__":
     # print(get_wan_ip())
     # pass
