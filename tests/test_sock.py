@@ -232,9 +232,6 @@ class TestSock(TestCase):
         s = client.server_connect()
         t = time.time()
         s.recv_line(timeout=1)
-        if time.time() - t >= 4:
-            print("Manual timeout failed.")
-            assert 0
         s.close()
 
     def test_non_blocking_timeout(self):
