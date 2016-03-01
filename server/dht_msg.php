@@ -102,39 +102,50 @@ if(!empty($call) && !empty($node_id))
             $nodes = array();
             
             #Fetch one random node to reserve for testing.
-            $restrictions = "";
+            $restrictions = " AND `id`<>" . $node["id"];
             if($node["has_mutex"] == 1)
             {
+                # echo("HAS MUTEX");
+            
                 #Fetch nodes to reserve.
-                $sql = "SELECT * FROM `nodes` WHERE (`reservation_expiry`<$timestamp  OR `reservation_expiry`=0) AND `last_alive`>=$freshness AND `network_id`='$network_id' ORDER BY rand() LIMIT 1 FOR UPDATE";
+                #Potential issue here if there's an attack.
+                $sql = "SELECT * FROM `nodes` WHERE (`reservation_expiry`<$timestamp  OR `reservation_expiry`=0) AND `last_alive`>=$freshness AND `network_id`='$network_id' AND `has_mutex`=0 $restrictions ORDER BY `LAST_ALIVE` DESC LIMIT 1 FOR UPDATE";
+                # echo($sql);
                 $result = mysql_query($sql, $con);
                 while($row = mysql_fetch_assoc($result))
                 {
+                    # echo("Found node to reserve");
                     $row["can_test"] = 1;
                     $nodes[] = $row;
                     $node_id = mysql_real_escape_string($row["id"], $con);
-                    $restrictions = " AND `id`<>$node_id";
+                    $restrictions .= " AND `id`<>$node_id";
+                    
+                    #Reserve those nodes.
+                    $expiry = time() + $config["reservation_timeout"];
+                    $expiry = mysql_real_escape_string($expiry, $con);
+                    foreach($nodes as $value)
+                    {
+                        # echo("<p></p>UPdating set reservation expiry.");
+                        $id = $value["id"];
+                        $id = mysql_real_escape_string($id, $con);
+                        $sql = "UPDATE `nodes` SET `reservation_expiry`=$expiry WHERE `id`=$id";
+                        mysql_query($sql, $con);
+                    }
+                    
+                    #Reduce limit for next section (since we just got a node.)
+                    $limit -= 1;
                 }
-                
-                #Reserve those nodes.
-                $expiry = time() + $config["reservation_timeout"];
-                $expiry = mysql_real_escape_string($expiry, $con);
-                foreach($nodes as $value)
-                {
-                    $id = $value["id"];
-                    $id = mysql_real_escape_string($id, $con);
-                    $sql = "UPDATE `nodes` SET `reservation_expiry`=$expiry WHERE `id`=$id";
-                    mysql_query($sql, $con);
-                }
-                
-                #Reduce limit for next section (since we just got a node.)
-                $limit -= 1;
             }
             
             #Fetch remaining nodes.
+            #Might not want to even do this part.
+            #Do you even want results from nodes who can't bandwidth test?
             if($limit)
             {
-                $sql = "SELECT * FROM `nodes` WHERE `last_alive`>=$freshness AND `network_id`='$network_id' $restrictions ORDER BY rand() LIMIT $limit FOR UPDATE";
+                # echo("<br>");
+                # echo($sql);
+                $sql = "SELECT * FROM `nodes` WHERE `last_alive`>=$freshness AND `network_id`='$network_id' AND `has_mutex`=1 $restrictions ORDER BY `LAST_ALIVE` DESC  LIMIT $limit FOR UPDATE";
+                # echo($sql);
                 $result = mysql_query($sql, $con);
                 while($row = mysql_fetch_assoc($result))
                 {
@@ -144,6 +155,10 @@ if(!empty($call) && !empty($node_id))
             }
             
             end_transaction($con, 1);
+            
+            # echo("<p>--------------------</p>");
+            # var_dump($nodes);
+            # echo("<p>--------------------</p>");
             
             $neighbours = array();
             foreach($nodes as $value)

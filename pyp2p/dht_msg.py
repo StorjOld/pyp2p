@@ -23,8 +23,7 @@ except ImportError:
 import time
 import logging
 
-dht_msg_endpoint = "http://185.61.148.22/dht_msg.php"
-# dht_msg_endpoint = "http://localhost/dht_msg.php"
+dht_msg_endpoint = "http://162.243.213.95/dht_msg.php"
 logging.basicConfig()
 log = logging.getLogger(__name__)
 
@@ -185,6 +184,8 @@ class DHT:
             # Make API call.
             ret = requests.get(call, timeout=5).text
             ret = json.loads(ret)
+            #self.is_neighbours_ready.set()
+            #return
             if type(ret) == dict:
                 ret = [ret]
 
@@ -192,17 +193,22 @@ class DHT:
             neighbours = []
             for neighbour in ret:
                 if not is_ip_valid(neighbour["ip"]):
+                    print("Invalid ip!")
+                    print(neighbour["ip"])
                     continue
 
                 neighbour["port"] = int(neighbour["port"])
                 if not is_valid_port(neighbour["port"]):
+                    print("Invalid port!")
+                    print(neighbour["port"])
                     continue
 
+                neighbour["can_test"] = int(neighbour["can_test"])
                 knode = KadNode(
                     id=binascii.unhexlify(neighbour["id"].encode("ascii")),
                     ip=neighbour["ip"],
                     port=neighbour["port"],
-                    can_test=int(neighbour["can_test"])
+                    can_test=neighbour["can_test"]
                 )
 
                 neighbours.append(knode)
@@ -462,6 +468,24 @@ class DHT:
 
 
 if __name__ == "__main__":
+    node_1 = DHT(ip="127.0.0.1", port=1337)
+    node_2 = DHT(ip="127.0.0.1", port=1338)
+    node_3 = DHT(ip="127.0.0.1", port=1339)
+
+    print(node_1.ip)
+    print(node_1.port)
+    print(node_2.neighbours)
+
+    print("Node 1 has mutex")
+    print(node_1.has_mutex)
+    print()
+    print("Node 2 has mutex")
+    print(node_2.has_mutex)
+    print()
+    print("Node 3 has mutex")
+    print(node_3.has_mutex)
+
+
     #node1 = DHT()
     #print(node1.get_id())
     #print(node1.node_id)
