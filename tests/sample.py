@@ -32,5 +32,13 @@ from twisted.internet import reactor
 # Test challenge protocol for sim open
 # Test rendezvous protocol
 # All in same func due to twisted errors ...
-lan_ip = get_lan_ip()
 
+
+
+
+
+import requests
+import random
+import binascii
+from future.moves.urllib.parse import urlencode
+# Todo use the old server for this.

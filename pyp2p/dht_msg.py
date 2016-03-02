@@ -30,7 +30,10 @@ log = logging.getLogger(__name__)
 LONG_POLLING = True
 RESERVATION_TIMEOUT = (10 * 60) - 5
 MUTEX_TIMEOUT = RESERVATION_TIMEOUT
-ALIVE_TIMEOUT = (60 * 10) - 5
+
+# Keep up to date so when the reservation timeout has expired
+# We're still fairly fresh on the stack.
+ALIVE_TIMEOUT = 60 * 5
 
 
 class DHTProtocol:
@@ -136,7 +139,7 @@ class DHT:
 
             # Make API call.
             ret = requests.get(call, timeout=5).text
-            if "1" in ret or "2" in ret:
+            if "1" in ret or "0" in ret:
                 self.has_mutex = int(ret)
             self.is_mutex_ready.set()
 

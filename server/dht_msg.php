@@ -109,7 +109,7 @@ if(!empty($call) && !empty($node_id))
             
                 #Fetch nodes to reserve.
                 #Potential issue here if there's an attack.
-                $sql = "SELECT * FROM `nodes` WHERE (`reservation_expiry`<$timestamp  OR `reservation_expiry`=0) AND `last_alive`>=$freshness AND `network_id`='$network_id' AND `has_mutex`=0 $restrictions ORDER BY `LAST_ALIVE` DESC LIMIT 1 FOR UPDATE";
+                $sql = "SELECT * FROM `nodes` WHERE (`reservation_expiry`<=$timestamp  OR `reservation_expiry`=0) AND `last_alive`>=$freshness AND `network_id`='$network_id' AND `has_mutex`=0 $restrictions ORDER BY `LAST_ALIVE` DESC LIMIT 1 FOR UPDATE";
                 # echo($sql);
                 $result = mysql_query($sql, $con);
                 while($row = mysql_fetch_assoc($result))
@@ -179,6 +179,31 @@ if(!empty($call) && !empty($node_id))
             echo(json_encode($neighbours));
             break;
             
+        case "reservation_expiry":
+            # Not enabled for testing.
+            if(!$config["debug_mode"])
+            {
+                break;
+            }
+            
+            # Node to reset.
+            $dest_node_id = $_GET["dest_node_id"];
+            if(empty($dest_node_id))
+            {
+                echo("failure");
+                break;
+            }
+            
+            $dest_node_id = mysql_real_escape_string($dest_node_id, $con);
+            $id = mysql_real_escape_string($dest_node_id, $con);
+            $reservation_expiry = time();
+            $reservation_expiry = mysql_real_escape_string($reservation_expiry, $con);
+            $sql = "UPDATE `nodes` SET `reservation_expiry`=$reservation_expiry WHERE `node_id`='$dest_node_id'";
+            mysql_query($sql, $con);
+            
+            echo("success");
+            break;
+            
         case "last_alive":
             #Update node last alive.
             node_last_alive($node);
@@ -193,13 +218,10 @@ if(!empty($call) && !empty($node_id))
             #Get mutex -- causes new nodes that join to have evenly distributed
             #mutexes so tests line up perfectly. After that - its random.
             start_transaction($con);
-            #mysql_query("LOCK TABLES `nodes` WRITE", $con);
             $node_id = mysql_real_escape_string($node["id"], $con);
             $sql = "SELECT * FROM `nodes` WHERE `id`=" . $node_id . "FOR UPDATE";
             mysql_query($sql, $con);
-            $fresh_node_no = count_fresh_nodes($con);
-            #$config["neighbour_limit"] + 1
-            if($fresh_node_no % 2 == 0 && $fresh_node_no != 0)
+            if($node["id"] % 2 == 0 && $node["id"] != 0)
             {
                 $has_mutex = 1;
             }
@@ -216,7 +238,7 @@ if(!empty($call) && !empty($node_id))
             
             
             echo(htmlspecialchars($has_mutex));
-            
+    
             $id = $node["id"];
             $last_alive = time();
             $id = mysql_real_escape_string($id, $con);
