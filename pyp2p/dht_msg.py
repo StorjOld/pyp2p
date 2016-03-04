@@ -42,7 +42,7 @@ class DHTProtocol:
 
 
 class DHT:
-    def __init__(self, node_id=None, ip=None, port=0, password=None, network_id="default", debug=1, networking=1):
+    def __init__(self, node_id=None, ip=None, port=0, password=None, network_id="default", debug=0, networking=1):
         self.node_id = node_id or self.rand_str(20)
         if sys.version_info >= (3, 0, 0):
             if type(self.node_id) == str:
@@ -107,8 +107,6 @@ class DHT:
 
                     return
                 except Exception as e:
-                    print("unknown exception")
-                    print(e)
                     time.sleep(1)
 
         t = Thread(target=thread_loop, args=(self,))
@@ -196,14 +194,10 @@ class DHT:
             neighbours = []
             for neighbour in ret:
                 if not is_ip_valid(neighbour["ip"]):
-                    print("Invalid ip!")
-                    print(neighbour["ip"])
                     continue
 
                 neighbour["port"] = int(neighbour["port"])
                 if not is_valid_port(neighbour["port"]):
-                    print("Invalid port!")
-                    print(neighbour["port"])
                     continue
 
                 neighbour["can_test"] = int(neighbour["can_test"])
@@ -265,7 +259,6 @@ class DHT:
                 self.is_registered.set()
                 return 1
             except Exception as e:
-                print(e)
                 self.debug_print("Register timed out in DHT msg")
 
             self.debug_print("DHT REGISTER FAILED")
@@ -399,9 +392,7 @@ class DHT:
 
             return ret
         except Exception as e:
-            print("EXCEPTION IN DHT MSG LIST")
             self.debug_print("Exception in dht msg list")
-            print(e)
             return []
 
     def direct_message(self, node_id, msg):
