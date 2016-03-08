@@ -22,14 +22,8 @@ setup(
     test_suite="tests",
     license='MIT',
     packages=find_packages(exclude=('tests', 'docs')),
-    install_requires=[
-        'netifaces>=0.10.4',
-        'ntplib>=0.3.3',
-        'twisted>=15.4.0',
-        'ipaddress>=1.0.14',
-        'requests>=2.8.1',
-        'pyroute2>=0.3.15'
-    ],
+    install_requires=open("requirements.txt").readlines(),
+    tests_require=open("test_requirements.txt").readlines(),
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
